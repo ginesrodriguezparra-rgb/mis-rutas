@@ -1688,7 +1688,10 @@ a{color:var(--green)}
     const mios = CLUB.mis.filter(m => m.rol === 'admin' || m.rol === 'socio');
     const pend = CLUB.mis.filter(m => m.rol === 'pendiente');
     const misIds = new Set(mios.map(m => m.club));
-    const proximos = CLUBWEB.filter(w => misIds.has(w.club) && days(w.date) >= 0);
+    const todosEv = CLUBWEB.filter(w => days(w.date) >= 0);
+    let filtroEv = 'todos'; try { filtroEv = localStorage.getItem('rutas-filtro-club') || 'todos'; } catch(e){}
+    const FILTROS_EV = [['todos', 'Todos', todosEv], ['mios', 'Mis clubs', todosEv.filter(w => misIds.has(w.club))], ['publicos', 'Públicos', todosEv.filter(w => w.publico)]];
+    const proximos = (FILTROS_EV.find(f => f[0] === filtroEv) || FILTROS_EV[0])[2];
     let h = '';
     if(invClubs.length || invEv.length){
       h += `<div class="cfglabel">Invitaciones</div><div class="cfgbox">`;
@@ -1700,7 +1703,9 @@ a{color:var(--green)}
       <div class="btns"><button class="btn pri" id="knuevo">＋ Crear un club</button></div></div>`;
     if(pend.length) h += `<div class="cfglabel">Solicitudes enviadas</div><div class="cfgbox">${pend.map(m => filaClub(m, `<button class="chip" data-kleave="${esc(m.club)}">Cancelar</button>`)).join('')}</div>`;
     h += `<div class="cfglabel">Buscar clubs</div><div class="cfgbox"><input id="kq" placeholder="Nombre, localidad o provincia" autocorrect="off"><div id="kres"></div></div>`;
-    h += `<div class="cfglabel">Próximos eventos de mis clubs</div>${proximos.length ? proximos.map(cardWeb).join('') : '<div class="cfgbox"><div class="sub">Aquí verás las rutas y eventos que organicen tus clubs.</div></div>'}`;
+    h += `<div class="cfglabel">Próximos eventos de club</div>
+      <div class="bar" style="margin:0 0 10px">${FILTROS_EV.map(([k, l, arr]) => `<button class="chip ${filtroEv === k ? 'on' : ''}" data-fev="${k}">${l} · ${arr.length}</button>`).join('')}</div>
+      ${proximos.length ? proximos.map(cardWeb).join('') : `<div class="cfgbox"><div class="sub">${filtroEv === 'mios' ? 'Tus clubs no tienen eventos próximos.' : filtroEv === 'publicos' ? 'No hay eventos públicos de clubs próximamente.' : 'Aquí verás las rutas y eventos de los clubs: los públicos de todos los clubs y también los privados de tus clubs.'}</div></div>`}`;
     el.innerHTML = h;
     el.querySelectorAll('[data-club]').forEach(b => b.onclick = ev => { if(ev.target.closest('button')) return; clubPantalla(b.dataset.club); });
     el.querySelectorAll('[data-kjoin]').forEach(b => b.onclick = async () => { if(await necesitaUsuario(renderClub)) clubRpc('unirse_club', {p_club: b.dataset.kjoin}, '¡Ya eres socio! ✓'); });
@@ -1716,6 +1721,7 @@ a{color:var(--green)}
       $('#kres').querySelectorAll('[data-club]').forEach(b => b.onclick = () => clubPantalla(b.dataset.club, r.find(c => c.id === b.dataset.club)));
     };
     $('#kq').oninput = ev => { clearTimeout(qt); const q = ev.target.value.trim(); if(q.length < 2){ $('#kres').innerHTML = ''; return; } qt = setTimeout(() => buscar(q), 350); };
+    el.querySelectorAll('[data-fev]').forEach(b => b.onclick = () => { try { localStorage.setItem('rutas-filtro-club', b.dataset.fev); } catch(e){} renderClub(); });
     el.querySelectorAll('[data-add]').forEach(b => b.onclick = () => addFromWeb(b.dataset.add, b.dataset.st));
     el.querySelectorAll('[data-cev]').forEach(b => b.onclick = () => eventoPantalla(b.dataset.cev));
     el.querySelectorAll('[data-share]').forEach(b => bindShare(b, () => state.web.find(x => x.id === b.dataset.share)));
