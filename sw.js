@@ -1,5 +1,5 @@
 // Mis rutas y trails: funciona sin conexión y se actualiza sola
-const CACHE = 'mis-rutas-v1';
+const CACHE = 'mis-rutas-v2';
 const BASE = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'eventos.json'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(BASE)).then(() => self.skipWaiting()));
@@ -19,7 +19,8 @@ self.addEventListener('fetch', e => {
   if(url.origin !== location.origin) return;
   // la app y los eventos: primero internet (siempre lo último); sin conexión, la copia guardada
   const key = url.pathname.endsWith('eventos.json') ? new Request(url.origin + url.pathname) : req;
-  e.respondWith(fetch(req).then(res => {
+  // pedir siempre la versión más reciente al servidor (sin usar la caché del navegador)
+  e.respondWith(fetch(req, {cache: 'no-cache'}).then(res => {
     if(res.ok){ const copy = res.clone(); caches.open(CACHE).then(c => c.put(key, copy)); }
     return res;
   }).catch(() => caches.match(key, {ignoreSearch: true}).then(r => r || caches.match('index.html'))));
