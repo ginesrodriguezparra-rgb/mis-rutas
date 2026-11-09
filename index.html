@@ -277,6 +277,10 @@ body{position:fixed;inset:0}
 .okc{color:var(--green) !important;font-weight:600}
 .evrow{cursor:pointer;border-bottom:0 !important;padding:12px 14px !important}
 textarea{resize:vertical;min-height:70px}
+.pernav{display:flex;align-items:center;justify-content:space-between;gap:8px}.pernav b{font-size:15.5px;text-align:center}
+.adm{font-size:11px;text-transform:none;letter-spacing:0;background:var(--green2);color:var(--green);border-radius:999px;padding:2px 8px;margin-left:6px}
+.cfggroup .cfgsub{display:block}
+#kf input,#kf select,#kf textarea{width:100%;min-width:0;box-sizing:border-box}
 .two>div{min-width:0}
 #ef input,#ef select,#ef textarea{width:100%;min-width:0;box-sizing:border-box}
 #ef input[type=date],#ef input[type=time]{display:block;-webkit-appearance:none;appearance:none;text-align:left}
@@ -1621,6 +1625,27 @@ a{color:var(--green)}
   var WEBBASE = [], CLUBWEB = [];
   var CLUB = {cargado: false, mis: [], eventos: [], resp: new Map(), pendientesAdmin: new Map(), syncT: null};
   const DIFS = ['Fácil', 'Moderada', 'Difícil', 'Muy difícil'];
+  const CLUB_CAMPOS = 'id,nombre,descripcion,localidad,provincia,abierto,cuota,periodo,mes_inicio';
+  const MESES_C = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  // periodo de cuota: '2026' (año natural) o '2026-27' (temporada que empieza en mes_inicio)
+  function periodoActual(c, desplaza){
+    const d = today(), y = d.getFullYear(), m = d.getMonth() + 1;
+    if(c.periodo !== 'temporada') return String(y + (desplaza || 0));
+    const ini = (m >= (c.mes_inicio || 9) ? y : y - 1) + (desplaza || 0);
+    return ini + '-' + String((ini + 1) % 100).padStart(2, '0');
+  }
+  function periodoTxt(c, ref){
+    if(c.periodo !== 'temporada') return 'Año ' + ref;
+    const ini = +ref.slice(0, 4), mi = c.mes_inicio || 9, mf = mi === 1 ? 12 : mi - 1;
+    return 'Temporada ' + MESES_C[mi - 1].slice(0, 3) + ' ' + ini + ' – ' + MESES_C[mf - 1].slice(0, 3) + ' ' + (mi === 1 ? ini : ini + 1);
+  }
+  function cuotaTxt(c){
+    if(!c.cuota) return '';
+    const imp = precioBonito(c.cuota);
+    if(imp === 'Gratis') return 'Cuota: gratis';
+    if(c.periodo === 'temporada'){ const mi = c.mes_inicio || 9, mf = mi === 1 ? 12 : mi - 1; return 'Cuota: ' + imp + ' por temporada (' + MESES_C[mi - 1] + ' a ' + MESES_C[mf - 1] + ')'; }
+    return 'Cuota: ' + imp + ' al año (enero a diciembre)';
+  }
   const TIPOS_EV = [['senderismo', 'Senderismo'], ['trail', 'Trail'], ['carrera', 'Carrera'], ['mtb', 'MTB'], ['otro', 'Otro']];
   const hoyISO = () => iso(today());
   const rolDe = club => { const m = CLUB.mis.find(x => x.club === club); return m ? m.rol : null; };
@@ -1650,7 +1675,9 @@ a{color:var(--green)}
     if(!sesion) return;
     try {
       const yo = sesion.user.id;
-      const mis = await sbRest('club_miembros?select=club,rol,clubs(id,nombre,descripcion,localidad,provincia,abierto)&usuario=eq.' + yo) || [];
+      let mis;
+      try { mis = await sbRest('club_miembros?select=club,rol,clubs(' + CLUB_CAMPOS + ')&usuario=eq.' + yo) || []; }
+      catch(e){ mis = await sbRest('club_miembros?select=club,rol,clubs(id,nombre,descripcion,localidad,provincia,abierto)&usuario=eq.' + yo) || []; }
       // si una parte falla, el resto sigue funcionando
       const intenta = async (path, def) => { try { return await sbRest(path) || def; } catch(e){ console.warn('clubs:', path, e.message); return def; } };
       const eventos = await intenta('club_eventos?select=*,clubs(nombre)&fecha=gte.' + hoyISO() + '&order=fecha.asc,hora.asc&limit=300', []);
@@ -1784,21 +1811,30 @@ a{color:var(--green)}
       <label>Descripción</label><textarea name="descripcion" rows="3" maxlength="600" placeholder="Qué hacéis, cuándo salís…">${esc(c.descripcion || '')}</textarea>
       <label>Localidad</label><input name="localidad" maxlength="60" value="${esc(c.localidad || '')}">
       <label>Provincia</label><select name="provincia">${provOpts}</select>
+      <label>Cuota de socio</label><input name="cuota" inputmode="decimal" maxlength="30" value="${esc(c.cuota || '')}" placeholder="Ej. 30 (vacío = sin cuota, 0 = gratis)">
+      <label>La cuota es…</label>
+      <div class="cfgradio"><button type="button" data-per="anual" class="${c.periodo === 'temporada' ? '' : 'on'}">Anual (enero a diciembre)<span>${c.periodo === 'temporada' ? '' : '✓'}</span></button><button type="button" data-per="temporada" class="${c.periodo === 'temporada' ? 'on' : ''}">Por temporada<span>${c.periodo === 'temporada' ? '✓' : ''}</span></button></div>
+      <div id="kmes" ${c.periodo === 'temporada' ? '' : 'hidden'}><label>La temporada empieza en</label><select name="mes_inicio">${MESES_C.map((m, i) => `<option value="${i + 1}" ${(c.mes_inicio || 9) === i + 1 ? 'selected' : ''}>${m.charAt(0).toUpperCase() + m.slice(1)}</option>`).join('')}</select><div class="sub" id="kmestxt" style="margin-top:6px"></div></div>
       <label>¿Cómo se entra en el club?</label>
       <div class="cfgradio"><button type="button" data-ab="0" class="${c.abierto ? '' : 'on'}">Con aprobación de un administrador<span>${c.abierto ? '' : '✓'}</span></button><button type="button" data-ab="1" class="${c.abierto ? 'on' : ''}">Entrada libre<span>${c.abierto ? '✓' : ''}</span></button></div>
       <div class="amsg" id="amsg"></div>
       <div class="btns"><button class="btn pri" type="submit">${c.id ? 'Guardar' : 'Crear club'}</button></div></form></div>`, false);
     $('#sheet').dataset.vista = c.id ? 'club:' + c.id : '';
     if(c.id) $('#cfgx').onclick = () => clubPantalla(c.id);
-    let abierto = !!c.abierto;
+    let abierto = !!c.abierto, periodo = c.periodo === 'temporada' ? 'temporada' : 'anual';
+    const pintaMes = () => { const mi = +$('#kf').mes_inicio.value, mf = mi === 1 ? 12 : mi - 1, y = today().getFullYear(); $('#kmestxt').textContent = 'Ejemplo: de ' + MESES_C[mi - 1] + ' de ' + y + ' a ' + MESES_C[mf - 1] + ' de ' + (mi === 1 ? y : y + 1) + '.'; };
+    document.querySelectorAll('[data-per]').forEach(b => b.onclick = () => { periodo = b.dataset.per; document.querySelectorAll('[data-per]').forEach(x => { x.classList.toggle('on', x === b); x.querySelector('span').textContent = x === b ? '✓' : ''; }); $('#kmes').hidden = periodo !== 'temporada'; pintaMes(); });
+    $('#kf').mes_inicio.onchange = pintaMes; pintaMes();
     document.querySelectorAll('[data-ab]').forEach(b => b.onclick = () => { abierto = b.dataset.ab === '1'; document.querySelectorAll('[data-ab]').forEach(x => { x.classList.toggle('on', x === b); x.querySelector('span').textContent = x === b ? '✓' : ''; }); });
     $('#kf').onsubmit = async ev => {
       ev.preventDefault();
       const f = ev.target, d = {nombre: f.nombre.value.trim(), descripcion: f.descripcion.value.trim(), localidad: f.localidad.value.trim(), provincia: f.provincia.value, abierto};
+      const dc = {cuota: f.cuota.value.trim(), periodo, mes_inicio: +f.mes_inicio.value};
       if(d.nombre.length < 3){ $('#amsg').textContent = 'El nombre debe tener al menos 3 letras.'; return; }
       try {
-        if(c.id){ await sbRest('clubs?id=eq.' + c.id, {method: 'PATCH', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify(d)}); toast('Club guardado ✓'); await clubCargar(); clubPantalla(c.id); }
-        else { const id = await sbRest('rpc/crear_club', {method: 'POST', body: JSON.stringify({p_nombre: d.nombre, p_descripcion: d.descripcion, p_localidad: d.localidad, p_provincia: d.provincia, p_abierto: abierto})}); toast('¡Club creado! Eres su administrador ✓'); await clubCargar(); clubPantalla(id); }
+        const guardarCuota = async id => { try { await sbRest('clubs?id=eq.' + id, {method: 'PATCH', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify(dc)}); } catch(e){ toast('Guardado, pero la cuota no: falta ejecutar cuotas.sql en Supabase.'); } };
+        if(c.id){ await sbRest('clubs?id=eq.' + c.id, {method: 'PATCH', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify(d)}); await guardarCuota(c.id); toast('Club guardado ✓'); await clubCargar(); clubPantalla(c.id); }
+        else { const id = await sbRest('rpc/crear_club', {method: 'POST', body: JSON.stringify({p_nombre: d.nombre, p_descripcion: d.descripcion, p_localidad: d.localidad, p_provincia: d.provincia, p_abierto: abierto})}); await guardarCuota(id); toast('¡Club creado! Eres su administrador ✓'); await clubCargar(); clubPantalla(id); }
       } catch(e){ $('#amsg').textContent = 'No se pudo guardar. Revisa tu conexión.'; }
     };
   }
@@ -1807,7 +1843,7 @@ a{color:var(--green)}
   async function clubPantalla(id, info, codigoEnlace){
     const m = CLUB.mis.find(x => x.club === id);
     let c = m && m.clubs || info;
-    if(!c){ try { c = (await sbRest('clubs?select=id,nombre,descripcion,localidad,provincia,abierto&id=eq.' + id))[0]; } catch(e){} }
+    if(!c || c.cuota === undefined){ try { c = (await sbRest('clubs?select=' + CLUB_CAMPOS + '&id=eq.' + id))[0] || c; } catch(e){ try { c = c || (await sbRest('clubs?select=id,nombre,descripcion,localidad,provincia,abierto&id=eq.' + id))[0]; } catch(e2){} } }
     if(!c){ toast('No se encontró el club'); return; }
     const rol = rolDe(id), socio = esSocioDe(id), admin = esAdminDe(id);
     let miembros = [], perf = new Map();
@@ -1831,10 +1867,11 @@ a{color:var(--green)}
       <div class="cfgbox" style="text-align:center">${avatar({nombre: c.nombre}, 72)}<div style="font-weight:700;font-size:19px;margin-top:8px">${esc(c.nombre)}</div>
         <div class="sub">${esc([c.localidad, c.provincia].filter(Boolean).join(', '))}${c.localidad || c.provincia ? ' · ' : ''}${c.abierto ? 'Entrada libre' : 'Con aprobación'}${socio ? ' · ' + socios.length + (socios.length === 1 ? ' socio' : ' socios') : ''}</div>
         ${c.descripcion ? `<p style="margin:10px 0 0;font-size:14.5px;line-height:1.45;text-align:left;white-space:pre-line">${esc(c.descripcion)}</p>` : ''}
+        ${cuotaTxt(c) ? `<div class="sub" style="margin-top:8px;font-weight:600">💶 ${esc(cuotaTxt(c))}</div>` : ''}
         ${rol ? `<div style="margin-top:10px"><span class="rol">${esc(ROL_TXT[rol])}</span></div>` : ''}
         ${accion ? `<div class="btns">${accion}</div>` : ''}</div>
       ${socio ? `<div class="cfgbox" style="margin-top:14px"><b style="font-size:15.5px">Invita a más gente</b><div class="sub" style="margin-top:4px">Comparte un enlace por WhatsApp, Telegram… Quien lo abra podrá crearse una cuenta en la app y ${c.abierto ? 'entrar directamente en el club' : 'pedir unirse, y un administrador tendrá que aceptarle'}.</div><div class="btns"><button class="btn pri" id="kshare">Invitar con un enlace</button></div>${codigoAdmin ? '<button class="alink" id="kreset" style="margin:4px 0 0">Cambiar enlace (los anteriores dejarán de funcionar)</button>' : ''}</div>` : ''}
-      ${admin ? `<div class="cfggroup" style="margin-top:14px"><button id="knev">＋ Crear ruta o evento${CHEV}</button><button id="kinv">Invitar usuarios de la app al club${CHEV}</button><button id="kedit">Editar club${CHEV}</button></div>` : ''}
+      ${admin ? `<div class="cfggroup" style="margin-top:14px"><button id="knev">＋ Crear ruta o evento${CHEV}</button><button id="kinv">Invitar usuarios de la app al club${CHEV}</button><button id="kcuotas">Cuotas de socios<span class="cfgsub">Solo lo ven los administradores</span>${CHEV}</button><button id="kedit">Editar club${CHEV}</button></div>` : ''}
       ${admin && solicitudes.length ? `<div class="cfglabel">Solicitudes para entrar (${solicitudes.length})</div><div class="cfgbox">${solicitudes.map(x => filaPersona(P(x.usuario), `<button class="chip greenl" data-kg="aceptar" data-u="${x.usuario}">Aceptar</button><button class="chip" data-kg="quitar" data-u="${x.usuario}">✕</button>`)).join('')}</div>` : ''}
       <div class="cfglabel">Próximas rutas y eventos</div>
       ${evs.length ? evs.map(w => { const d = pd(w.date), r = CLUB.resp.get(w.clubEv); return `<div class="cfgbox frow evrow" data-kev="${esc(w.clubEv)}" style="margin-bottom:8px"><div class="date t-${esc(w.tipo)}"><b>${d.getDate()}</b><span>${MESES[d.getMonth()]}</span></div><div class="finfo"><b>${esc(w.nombre)}</b><span>${esc([w.lugar, w.modalidades].filter(Boolean).join(' · '))}</span>${r === 'voy' ? '<span class="okc">✓ Vas</span>' : r === 'interesa' ? '<span class="okc">★ Te interesa</span>' : ''}${!w.publico ? '<span>🔒 Solo socios</span>' : ''}</div>${CHEV}</div>`; }).join('')
@@ -1852,6 +1889,7 @@ a{color:var(--green)}
     const del = $('#kdel'); if(del) del.onclick = async () => { if(await confirmDlg('¿Borrar el club?', 'Se borrarán el club, sus socios y todos sus eventos. No se puede deshacer.', 'Borrar club')){ try { await sbRest('clubs?id=eq.' + id, {method: 'DELETE', headers: {'Prefer': 'return=minimal'}}); toast('Club borrado'); close(); clubCargar(); } catch(e){ toast('No se pudo borrar.'); } } };
     const ne = $('#knev'); if(ne) ne.onclick = () => eventoForm(id);
     const ed = $('#kedit'); if(ed) ed.onclick = () => clubForm(c);
+    const kc = $('#kcuotas'); if(kc) kc.onclick = () => cuotasPantalla(c, socios.map(x => x.usuario), perf, 0);
     const iv = $('#kinv'); if(iv) iv.onclick = () => invitarUsuarios('Invitar al club', async ids => { for(const u of ids) await sbRest('rpc/gestionar_socio', {method: 'POST', body: JSON.stringify({p_club: id, p_usuario: u, p_accion: 'invitar'})}); return ids.length; }, () => clubPantalla(id), new Set(miembros.map(x => x.usuario)));
     document.querySelectorAll('[data-kg]').forEach(b => b.onclick = () => clubRpc('gestionar_socio', {p_club: id, p_usuario: b.dataset.u, p_accion: b.dataset.kg}, b.dataset.kg === 'aceptar' ? 'Socio aceptado ✓' : 'Hecho'));
     document.querySelectorAll('[data-kev]').forEach(b => b.onclick = () => eventoPantalla(b.dataset.kev));
@@ -1979,6 +2017,7 @@ a{color:var(--green)}
       <div class="cfgbox"><div class="resp"><button class="chip ${mine && mine.estado === 'inscrito' ? 'act-ins' : 'greenl'}" data-r="voy">✓ Voy</button><button class="chip ${mine && mine.estado === 'interesado' ? 'act-int' : 'amber'}" data-r="interesa">★ Me interesa</button><button class="chip ${!mine && r === 'no' ? 'act-no' : ''}" data-r="no">No voy</button></div>
         <div class="sub" style="margin-top:8px">${mine ? 'Está en tu agenda.' : r === 'invitado' ? 'Te han invitado a este evento.' : 'Si respondes «Voy» o «Me interesa», se añade a tu agenda.'}</div></div>
       ${socio ? `<div class="cfglabel">Asistentes</div><div class="cfgbox">${fila('✓ Van', grupo('voy') || '—')}${fila('★ Les interesa', grupo('interesa'))}${fila('No van', grupo('no'))}${admin ? fila('Invitados sin responder', grupo('invitado')) : ''}</div>` : ''}
+      ${admin ? `<div class="cfglabel">Pagos del evento <span class="adm">solo administradores</span></div><div class="cfgbox" id="epagos"><div class="sub">Cargando…</div></div>` : ''}
       ${admin ? `<div class="cfggroup" style="margin-top:14px"><button id="einvall">Invitar a todos los socios${CHEV}</button><button id="einv">Invitar a usuarios concretos${CHEV}</button><button id="eedit">Editar evento${CHEV}</button><button id="edel" class="cdel">Borrar evento${CHEV}</button></div>` : ''}
       <div class="btns"><button class="btn" id="eshare">Compartir</button><button class="btn" id="eclub">Ver el club</button></div>`, false);
     $('#sheet').dataset.vista = 'ev:' + id;
@@ -1996,6 +2035,7 @@ a{color:var(--green)}
     const ed = $('#eedit'); if(ed) ed.onclick = () => eventoForm(e.club, e);
     const dl = $('#edel'); if(dl) dl.onclick = async () => { if(await confirmDlg('¿Borrar este evento?', 'Desaparecerá para todos los socios e invitados.', 'Borrar')){ try { await sbRest('club_eventos?id=eq.' + id, {method: 'DELETE', headers: {'Prefer': 'return=minimal'}}); toast('Evento borrado'); await clubCargar(); clubPantalla(e.club); } catch(err){ toast('No se pudo borrar.'); } } };
     $('#eclub').onclick = () => clubPantalla(e.club);
+    if(admin) pagosEvento(e, asist, perf);
     $('#eshare').onclick = () => { const w = state.web.find(x => x.id === wid) || clubAWeb(e); quickShare(w); };
     const sub = $('#eshare').closest('.btns'); if(sub) sub.insertAdjacentHTML('beforebegin', `<div class="sub" style="margin:12px 4px 0">${e.publico ? 'Al compartir se envía un enlace al evento: cualquiera con cuenta podrá verlo y apuntarse.' : 'Al compartir se envía un enlace al evento: solo podrán abrirlo los socios del club y los invitados.'}</div>`);
   }
@@ -2106,6 +2146,59 @@ a{color:var(--green)}
     $('#bx').onclick = close; $('#breg').onclick = () => cuentaPantalla('registro'); $('#bent').onclick = () => cuentaPantalla('entrar');
   }
   if(invEv && !sesion) setTimeout(procesarInvEvento, 750);
+
+  // ----- cuotas y pagos (solo administradores) -----
+  async function pagosDe(club, tipo, ref){
+    try { return new Set((await sbRest('club_pagos?select=usuario&club=eq.' + club + '&tipo=eq.' + tipo + '&ref=eq.' + encodeURIComponent(ref)) || []).map(x => x.usuario)); }
+    catch(e){ return null; }
+  }
+  async function marcarPago(club, usuario, tipo, ref, pagado){
+    if(pagado) await sbRest('club_pagos', {method: 'POST', headers: {'Prefer': 'return=minimal,resolution=ignore-duplicates'}, body: JSON.stringify({club, usuario, tipo, ref, anotado_por: sesion.user.id})});
+    else await sbRest('club_pagos?club=eq.' + club + '&usuario=eq.' + usuario + '&tipo=eq.' + tipo + '&ref=eq.' + encodeURIComponent(ref), {method: 'DELETE', headers: {'Prefer': 'return=minimal'}});
+  }
+  function filaPago(p, pagado, extra){
+    return filaPersona(p, `${extra || ''}<button class="chip ${pagado ? 'act-ins' : ''}" data-pago="${esc(p.id)}">${pagado ? '✓ Pagado' : 'Sin pagar'}</button>`);
+  }
+  async function cuotasPantalla(c, socios, perf, desplaza){
+    const ref = periodoActual(c, desplaza), pag = await pagosDe(c.id, 'cuota', ref);
+    const P = u => perf.get(u) || {id: u, usuario: '…', nombre: ''};
+    const lista = socios.slice().sort((a, b) => nombreDe(P(a)).localeCompare(nombreDe(P(b)), 'es'));
+    const n = pag ? lista.filter(u => pag.has(u)).length : 0;
+    cfgPage('Cuotas de socios', `
+      <div class="cfgbox"><div class="pernav"><button class="chip" id="cprev">‹</button><b>${esc(periodoTxt(c, ref))}</b><button class="chip" id="cnext">›</button></div>
+        <div class="sub" style="text-align:center;margin-top:8px">${c.cuota ? esc(cuotaTxt(c)) + ' · ' : ''}${pag ? `<b>${n} de ${lista.length}</b> han pagado` : ''}</div></div>
+      ${pag === null ? '<div class="cfgbox" style="margin-top:10px"><div class="sub">Para usar el control de cuotas, ejecuta antes el archivo cuotas.sql en Supabase.</div></div>'
+        : `<div class="cfgbox" style="margin-top:10px">${lista.length ? lista.map(u => filaPago(P(u), pag.has(u))).join('') : '<div class="sub">El club aún no tiene socios.</div>'}</div>`}
+      <div class="sub" style="margin:12px 4px">🔒 Esta información solo la ven los administradores del club.</div>`, false);
+    $('#cfgx').onclick = () => clubPantalla(c.id);
+    $('#cprev').onclick = () => cuotasPantalla(c, socios, perf, desplaza - 1);
+    $('#cnext').onclick = () => cuotasPantalla(c, socios, perf, desplaza + 1);
+    document.querySelectorAll('[data-pago]').forEach(b => b.onclick = async () => {
+      const u = b.dataset.pago, ya = pag.has(u);
+      b.disabled = true;
+      try { await marcarPago(c.id, u, 'cuota', ref, !ya); ya ? pag.delete(u) : pag.add(u); cuotasPantalla(c, socios, perf, desplaza); }
+      catch(e){ toast('No se pudo guardar. Revisa tu conexión.'); b.disabled = false; }
+    });
+  }
+  async function pagosEvento(e, asist, perf){
+    const box = $('#epagos'); if(!box) return;
+    const pag = await pagosDe(e.club, 'evento', e.id);
+    if(!document.body.contains(box)) return;
+    if(pag === null){ box.innerHTML = '<div class="sub">Para anotar pagos, ejecuta antes el archivo cuotas.sql en Supabase.</div>'; return; }
+    const van = asist.filter(x => x.estado === 'voy').map(x => x.usuario);
+    const P = u => perf.get(u) || {id: u, usuario: '…', nombre: ''};
+    const pinta = () => {
+      const n = van.filter(u => pag.has(u)).length;
+      box.innerHTML = van.length ? `<div class="sub" style="margin-bottom:4px">${preciosTxt(e) ? esc(preciosTxt(e)) + ' · ' : ''}<b>${n} de ${van.length}</b> han pagado</div>` + van.map(u => filaPago(P(u), pag.has(u))).join('')
+        : '<div class="sub">Cuando alguien responda «Voy», podrás anotar aquí si ha pagado.</div>';
+      box.querySelectorAll('[data-pago]').forEach(b => b.onclick = async () => {
+        const u = b.dataset.pago, ya = pag.has(u); b.disabled = true;
+        try { await marcarPago(e.club, u, 'evento', e.id, !ya); ya ? pag.delete(u) : pag.add(u); pinta(); }
+        catch(err){ toast('No se pudo guardar. Revisa tu conexión.'); b.disabled = false; }
+      });
+    };
+    pinta();
+  }
 
   render(); showTab(); cargarEventos();
   document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && Date.now() - (window._evAt||0) > 3*3600e3){ window._evAt = Date.now(); cargarEventos(); } });
