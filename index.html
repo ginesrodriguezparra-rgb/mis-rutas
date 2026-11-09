@@ -271,7 +271,7 @@ body{position:fixed;inset:0}
 .resp{display:flex;gap:8px;flex-wrap:wrap}
 .chip.act-no{background:var(--ink);color:var(--card);border-color:var(--ink)}
 .okc{color:var(--green) !important;font-weight:600}
-.evrow{cursor:pointer;border-bottom:0 !important}
+.evrow{cursor:pointer;border-bottom:0 !important;padding:12px 14px !important}
 textarea{resize:vertical;min-height:70px}
 #kq{width:100%}
 /* hojas */
@@ -1786,11 +1786,9 @@ a{color:var(--green)}
     const socios = miembros.filter(x => x.rol === 'admin' || x.rol === 'socio').sort((a, b) => (a.rol === 'admin' ? 0 : 1) - (b.rol === 'admin' ? 0 : 1));
     const solicitudes = miembros.filter(x => x.rol === 'pendiente'), invitados = miembros.filter(x => x.rol === 'invitado');
     const evs = CLUBWEB.filter(w => w.club === id && days(w.date) >= 0);
-    let codigoAdmin = '';
-    if(admin && !c.abierto){ try { codigoAdmin = await sbRest('rpc/codigo_invitacion', {method: 'POST', body: JSON.stringify({p_club: id, p_nuevo: false})}) || ''; } catch(e){} }
+    const codigoAdmin = ''; // los clubs con aprobación siempre requieren que un administrador acepte, también con enlace
     let accion = '';
-    if(codigoEnlace && (!rol || rol === 'pendiente' || rol === 'invitado')) accion = `<button class="btn pri" id="kjoincod">Unirme al club</button>`;
-    else if(!rol) accion = `<button class="btn pri" id="kjoin">${c.abierto ? 'Unirme al club' : 'Solicitar unirme'}</button>`;
+    if(!rol) accion = `<button class="btn pri" id="kjoin">${c.abierto ? 'Unirme al club' : 'Solicitar unirme'}</button>`;
     else if(rol === 'invitado') accion = `<button class="btn pri" id="kjoin">Aceptar invitación</button><button class="btn" id="kleave">Rechazar</button>`;
     else if(rol === 'pendiente') accion = `<button class="btn" id="kleave">Cancelar solicitud</button>`;
     cfgPage(c.nombre, `
@@ -1799,7 +1797,7 @@ a{color:var(--green)}
         ${c.descripcion ? `<p style="margin:10px 0 0;font-size:14.5px;line-height:1.45;text-align:left;white-space:pre-line">${esc(c.descripcion)}</p>` : ''}
         ${rol ? `<div style="margin-top:10px"><span class="rol">${esc(ROL_TXT[rol])}</span></div>` : ''}
         ${accion ? `<div class="btns">${accion}</div>` : ''}</div>
-      ${socio ? `<div class="cfgbox" style="margin-top:14px"><b style="font-size:15.5px">Invita a más gente</b><div class="sub" style="margin-top:4px">Comparte un enlace por WhatsApp, Telegram… Quien lo abra podrá crearse una cuenta en la app y ${c.abierto || codigoAdmin ? 'entrar directamente en el club' : 'pedir unirse (lo aprobará un administrador)'}.</div><div class="btns"><button class="btn pri" id="kshare">Invitar con un enlace</button></div>${codigoAdmin ? '<button class="alink" id="kreset" style="margin:4px 0 0">Cambiar enlace (los anteriores dejarán de funcionar)</button>' : ''}</div>` : ''}
+      ${socio ? `<div class="cfgbox" style="margin-top:14px"><b style="font-size:15.5px">Invita a más gente</b><div class="sub" style="margin-top:4px">Comparte un enlace por WhatsApp, Telegram… Quien lo abra podrá crearse una cuenta en la app y ${c.abierto ? 'entrar directamente en el club' : 'pedir unirse, y un administrador tendrá que aceptarle'}.</div><div class="btns"><button class="btn pri" id="kshare">Invitar con un enlace</button></div>${codigoAdmin ? '<button class="alink" id="kreset" style="margin:4px 0 0">Cambiar enlace (los anteriores dejarán de funcionar)</button>' : ''}</div>` : ''}
       ${admin ? `<div class="cfggroup" style="margin-top:14px"><button id="knev">＋ Crear ruta o evento${CHEV}</button><button id="kinv">Invitar usuarios de la app al club${CHEV}</button><button id="kedit">Editar club${CHEV}</button></div>` : ''}
       ${admin && solicitudes.length ? `<div class="cfglabel">Solicitudes para entrar (${solicitudes.length})</div><div class="cfgbox">${solicitudes.map(x => filaPersona(P(x.usuario), `<button class="chip greenl" data-kg="aceptar" data-u="${x.usuario}">Aceptar</button><button class="chip" data-kg="quitar" data-u="${x.usuario}">✕</button>`)).join('')}</div>` : ''}
       <div class="cfglabel">Próximas rutas y eventos</div>
