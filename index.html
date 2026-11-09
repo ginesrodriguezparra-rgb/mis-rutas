@@ -1599,10 +1599,12 @@ a{color:var(--green)}
     try {
       const yo = sesion.user.id;
       const mis = await sbRest('club_miembros?select=club,rol,clubs(id,nombre,descripcion,localidad,provincia,abierto)&usuario=eq.' + yo) || [];
-      const eventos = await sbRest('club_eventos?select=*,clubs(nombre)&fecha=gte.' + hoyISO() + '&order=fecha.asc,hora.asc&limit=300') || [];
-      const resp = await sbRest('evento_respuestas?select=evento,estado&usuario=eq.' + yo) || [];
+      // si una parte falla, el resto sigue funcionando
+      const intenta = async (path, def) => { try { return await sbRest(path) || def; } catch(e){ console.warn('clubs:', path, e.message); return def; } };
+      const eventos = await intenta('club_eventos?select=*,clubs(nombre)&fecha=gte.' + hoyISO() + '&order=fecha.asc,hora.asc&limit=300', []);
+      const resp = await intenta('evento_respuestas?select=evento,estado&usuario=eq.' + yo, []);
       const admins = mis.filter(m => m.rol === 'admin').map(m => m.club);
-      const pend = admins.length ? await sbRest('club_miembros?select=club&rol=eq.pendiente&club=in.(' + admins.join(',') + ')') || [] : [];
+      const pend = admins.length ? await intenta('club_miembros?select=club&rol=eq.pendiente&club=in.(' + admins.join(',') + ')', []) : [];
       CLUB.mis = mis.filter(m => m.clubs); CLUB.eventos = eventos; CLUB.resp = new Map(resp.map(r => [r.evento, r.estado]));
       CLUB.pendientesAdmin = new Map(); pend.forEach(p => CLUB.pendientesAdmin.set(p.club, (CLUB.pendientesAdmin.get(p.club) || 0) + 1));
       CLUB.cargado = true;
