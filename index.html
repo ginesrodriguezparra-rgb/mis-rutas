@@ -223,6 +223,20 @@ body{position:fixed;inset:0}
 .install b{display:block;font-size:15px}
 .install button{margin-left:auto;background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer;padding:0 2px}
 .cfggroup .cfgsub{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.acard{background:var(--green2);border-radius:18px;padding:14px 16px;margin:4px 0 16px}
+.acard b{display:block;font-size:16px}.acard span{color:var(--muted);font-size:14px}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--bg);border-radius:12px;padding:3px;margin-bottom:6px}
+.seg button{border:0;background:none;padding:9px;border-radius:10px;font:600 14px Inter,sans-serif;color:var(--muted);cursor:pointer}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.chk{display:flex;gap:8px;align-items:flex-start;font-weight:400 !important;font-size:13.5px;line-height:1.4;margin-top:12px}
+.chk input{width:auto !important;margin-top:2px}.chk a{color:var(--green)}
+.amsg{min-height:20px;font-size:13.5px;color:var(--red);margin-top:8px}
+.alink{background:none;border:0;color:var(--green);font:500 14px Inter,sans-serif;padding:10px 0 0;cursor:pointer;display:block;margin:0 auto}
+.ordiv{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;margin:14px 0}
+.ordiv:before,.ordiv:after{content:"";flex:1;height:1px;background:var(--line)}
+.sso{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:600 15px Inter,sans-serif;cursor:pointer;margin-bottom:8px}
+.crow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line);font-size:16.5px}
+.cfggroup .cdel{color:var(--red)}
 /* hojas */
 .ovl{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
 .ovl.show{display:flex}
@@ -576,7 +590,7 @@ a{color:var(--green)}
         <div class="stat"><b>${st.pas}</b><span>Rutas pasadas</span></div>
         <div class="stat"><b>${Math.round(st.km)} km</b><span>${st.des ? st.des.toLocaleString('es-ES') + ' m D+' : 'Recorridos'}</span></div>
       </div>`;
-    $('#perfil').innerHTML = h;
+    $('#perfil').innerHTML = cuentaBanner() + h; bindCuentaBanner();
     // foto: mantener pulsado (o tocar si aún no hay foto)
     const ph = $('#pphoto'), fi = $('#pfile'); let t0 = 0, moved = false;
     ph.addEventListener('pointerdown', () => { t0 = Date.now(); moved = false; ph.classList.add('press'); });
@@ -637,7 +651,7 @@ a{color:var(--green)}
     $('#ovl').classList.add('show');
   }
   function ajustes(){
-    cfgPage('Configuración', `
+    cfgPage('Configuración', `${cuentaCfgHTML()}
       <div class="cfggroup">
         <button data-cfg="personal">Información personal${CHEV}</button>
         <button data-cfg="prefs">Tus preferencias${CHEV}</button>
@@ -656,8 +670,9 @@ a{color:var(--green)}
         <div class="cfgver">Versión 1.0</div></div>`);
     const go = {personal: cfgPersonal, copia: cfgCopia, prefs: cfgPrefs, notif: cfgNotif, ayuda: cfgAyuda, condiciones: cfgCondiciones, privacidad: cfgPrivacidad};
     document.querySelectorAll('[data-cfg]').forEach(b => b.onclick = () => go[b.dataset.cfg]());
+    bindCuentaCfg();
     $('#cfgborrar').onclick = async () => {
-      if(await confirmDlg('¿Borrar todos tus datos?', 'Se borrarán de este móvil tu agenda, tu perfil (nombre y foto), tus provincias y los eventos descartados. Los eventos de la lista no se borran.', 'Borrar todo')){
+      if(await confirmDlg('¿Borrar todos tus datos?', (sesion ? 'Se borrarán de este móvil y de tu cuenta tu agenda, tu perfil (nombre y foto), tus provincias' : 'Se borrarán de este móvil tu agenda, tu perfil (nombre y foto), tus provincias')+' y los eventos descartados. Los eventos de la lista no se borran.', 'Borrar todo')){
         state.events = []; state.ocultas = []; state.prefs = {}; fprovs.clear(); saveLocalProvs();
         try { localStorage.removeItem(USER_KEY); localStorage.removeItem('rutas-provs'); localStorage.removeItem('rutas-ui'); } catch(e){}
         $('#sheet').classList.remove('cfg'); close(); save();
@@ -746,9 +761,9 @@ a{color:var(--green)}
   }
   function cfgPrivacidad(){
     cfgPage('Política de privacidad', `<div class="cfgbox help">
-      <p>Tus datos (agenda, nombre, localidad, foto y provincias) se guardan solo en tu móvil, dentro de la app. No se envían a ningún servidor y nadie más puede verlos.</p>
+      <p><b>Sin cuenta:</b> tus datos (agenda, nombre, localidad, foto y provincias) se guardan solo en tu móvil y no se envían a ningún servidor.</p><p><b>Con cuenta:</b> guardamos tu correo electrónico y esos mismos datos para que puedas usarlos en cualquier dispositivo. Se almacenan en servidores de Supabase situados en la Unión Europea (Frankfurt, Alemania). Tu contraseña se guarda cifrada y nadie puede verla. Si entras con Google, solo recibimos tu correo.</p><p>Solo tú puedes ver y cambiar tus datos. No los vendemos ni los compartimos con nadie, y no los usamos para publicidad.</p>
       <p>La app no usa tu ubicación ni envía tus datos a las webs de eventos. Al pulsar «Ver web», WhatsApp o Telegram, se abre esa web o app fuera de aquí.</p>
-      <p>Si borras los datos del navegador o desinstalas la app, se pierden: usa Configuración › Copia de seguridad. Puedes borrarlos tú desde Configuración › Borrar mis datos.</p></div>`, true);
+      <p>Puedes borrar tu cuenta y todos sus datos cuando quieras desde Configuración › Borrar mi cuenta. Sin cuenta, si borras los datos del navegador o desinstalas la app se pierden: usa Configuración › Copia de seguridad.</p></div>`, true);
   }
   async function sharePerfil(){
     const p = state.prefs, st = perfilStats(), dd = pd(p.desde);
@@ -1007,7 +1022,7 @@ a{color:var(--green)}
     try { localStorage.setItem(USER_KEY, JSON.stringify({events: state.events, ocultas: state.ocultas, prefs: state.prefs})); return true; }
     catch(e){ toast('No hay espacio para guardar. Prueba con una foto de perfil más pequeña.'); return false; }
   }
-  async function save(){ render(); userSave(); }
+  async function save(){ render(); userSave(); if(typeof nubeGuardar === 'function') nubeGuardar(); }
   async function cargarEventos(){
     try {
       const r = await fetch('eventos.json?t=' + Date.now(), {cache: 'no-store'});
@@ -1034,6 +1049,233 @@ a{color:var(--green)}
     el.innerHTML = `<div class="install"><div><b>Instala la app</b>Pulsa <b style="display:inline">Compartir</b> y luego «Añadir a pantalla de inicio».</div><button aria-label="Cerrar">✕</button></div>`;
     el.querySelector('button').onclick = () => { el.innerHTML = ''; try { localStorage.setItem('rutas-install-off','1'); } catch(e){} };
   })();
+  // ---------- cuentas de usuario (Supabase) ----------
+  const SB_URL = 'https://vytbyxgwdxvzpriolkmx.supabase.co';
+  const SB_KEY = 'sb_publishable_M0daQjXAPYh2NTZw94jOIA_Zz-an6Ou';
+  const APPLE_ON = false; // se activará cuando haya cuenta de desarrollador de Apple
+  const SES_KEY = 'rutas-sesion', SYNC_KEY = 'rutas-sync';
+  const APP_URL = location.origin + location.pathname;
+  let sesion = null, nubeT = null, nubeOcupada = false, nubePendiente = false;
+  try { sesion = JSON.parse(localStorage.getItem(SES_KEY) || 'null'); } catch(e){}
+  const guardarSesion = s => { sesion = s; try { s ? localStorage.setItem(SES_KEY, JSON.stringify(s)) : localStorage.removeItem(SES_KEY); } catch(e){} };
+  const syncInfo = () => { try { return JSON.parse(localStorage.getItem(SYNC_KEY) || '{}'); } catch(e){ return {}; } };
+  const setSync = o => { try { localStorage.setItem(SYNC_KEY, JSON.stringify(Object.assign(syncInfo(), o))); } catch(e){} };
+  function sesionDe(d){
+    if(!d || !d.access_token) return null;
+    return {access_token: d.access_token, refresh_token: d.refresh_token, expires_at: d.expires_at || (Math.floor(Date.now()/1000) + (+d.expires_in || 3600)), user: d.user ? {id: d.user.id, email: d.user.email} : (sesion && sesion.user)};
+  }
+  const MSG = {
+    'Invalid login credentials': 'Correo o contraseña incorrectos.',
+    'Email not confirmed': 'Todavía no has confirmado tu correo. Revisa tu bandeja de entrada (y la carpeta de spam).',
+    'User already registered': 'Ya existe una cuenta con ese correo. Prueba a iniciar sesión.',
+    'Password should be at least 6 characters.': 'La contraseña debe tener al menos 6 caracteres.',
+    'Unable to validate email address: invalid format': 'Ese correo no parece válido.',
+    'Email rate limit exceeded': 'Se han enviado demasiados correos. Espera un rato y vuelve a intentarlo.',
+    'email rate limit exceeded': 'Se han enviado demasiados correos. Espera un rato y vuelve a intentarlo.',
+    'New password should be different from the old password.': 'La nueva contraseña debe ser distinta de la anterior.'
+  };
+  const traducir = m => MSG[m] || (/weak|short|characters/i.test(m||'') ? 'La contraseña es demasiado débil: usa al menos 8 caracteres con letras y números.' : (m || 'Ha ocurrido un error. Inténtalo de nuevo.'));
+  async function sbAuth(path, body, method){
+    const h = {'apikey': SB_KEY, 'Content-Type': 'application/json'};
+    if(sesion && /^(user|logout)/.test(path)) h.Authorization = 'Bearer ' + sesion.access_token;
+    const r = await fetch(SB_URL + '/auth/v1/' + path, {method: method || 'POST', headers: h, body: body ? JSON.stringify(body) : undefined});
+    let d = {}; try { d = await r.json(); } catch(e){}
+    if(!r.ok) throw new Error(d.msg || d.error_description || d.message || d.error || ('Error ' + r.status));
+    return d;
+  }
+  async function tokenValido(){
+    if(!sesion) return null;
+    if(sesion.expires_at - 60 > Date.now()/1000) return sesion.access_token;
+    try { guardarSesion(sesionDe(await sbAuth('token?grant_type=refresh_token', {refresh_token: sesion.refresh_token}))); return sesion.access_token; }
+    catch(e){ if(/refresh|invalid|not found|revoked/i.test(e.message)){ guardarSesion(null); render(); } return null; }
+  }
+  async function sbRest(path, opts){
+    const t = await tokenValido(); if(!t) throw new Error('sin sesión');
+    const r = await fetch(SB_URL + '/rest/v1/' + path, Object.assign({}, opts, {headers: Object.assign({'apikey': SB_KEY, 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json'}, (opts && opts.headers) || {})}));
+    if(!r.ok){ let d = {}; try { d = await r.json(); } catch(e){} throw new Error(d.message || ('Error ' + r.status)); }
+    const txt = await r.text(); return txt ? JSON.parse(txt) : null;
+  }
+  const datosLocales = () => ({events: state.events, ocultas: state.ocultas, prefs: Object.assign({}, state.prefs, {provs: [...fprovs]})});
+  function aplicarDatos(d){
+    state.events = Array.isArray(d.events) ? d.events : [];
+    state.ocultas = Array.isArray(d.ocultas) ? d.ocultas : [];
+    state.prefs = d.prefs || {};
+    fprovs = new Set(Array.isArray(state.prefs.provs) ? state.prefs.provs : []); saveLocalProvs();
+    userSave(); render();
+  }
+  // Subir a la nube (con un pequeño retraso para agrupar cambios)
+  function nubeGuardar(){
+    if(!sesion) return;
+    nubePendiente = true; setSync({pendiente: true});
+    clearTimeout(nubeT); nubeT = setTimeout(nubeSubir, 1200);
+  }
+  async function nubeSubir(){
+    if(!sesion || nubeOcupada || !nubePendiente) return;
+    nubeOcupada = true; nubePendiente = false;
+    const ahora = new Date().toISOString();
+    try {
+      await sbRest('datos_usuario?on_conflict=user_id', {method: 'POST', headers: {'Prefer': 'resolution=merge-duplicates,return=minimal'}, body: JSON.stringify({user_id: sesion.user.id, datos: datosLocales(), actualizado: ahora})});
+      setSync({pendiente: false, actualizado: ahora});
+    } catch(e){ nubePendiente = true; setSync({pendiente: true}); }
+    finally { nubeOcupada = false; if(nubePendiente) { clearTimeout(nubeT); nubeT = setTimeout(nubeSubir, 15000); } }
+  }
+  // Traer de la nube (al iniciar sesión, al abrir la app o al volver a ella)
+  async function nubeTraer(alEntrar){
+    if(!sesion) return;
+    let filas;
+    try { filas = await sbRest('datos_usuario?select=datos,actualizado&user_id=eq.' + sesion.user.id); }
+    catch(e){ return; }
+    const fila = filas && filas[0], info = syncInfo();
+    if(!fila){ nubeGuardar(); return; } // cuenta nueva: subir lo que haya en el móvil
+    if(alEntrar){
+      // unir la agenda del móvil con la de la cuenta, sin perder nada
+      const d = fila.datos || {}, ids = new Set((d.events||[]).map(e => e.id));
+      const extra = state.events.filter(e => !ids.has(e.id));
+      const prefs = Object.assign({}, state.prefs, d.prefs || {});
+      if(!d.prefs || !d.prefs.foto) { if(state.prefs.foto) prefs.foto = state.prefs.foto; }
+      aplicarDatos({events: (d.events||[]).concat(extra), ocultas: [...new Set((d.ocultas||[]).concat(state.ocultas))], prefs});
+      setSync({actualizado: fila.actualizado}); nubeGuardar(); return;
+    }
+    if(info.pendiente){ nubePendiente = true; nubeSubir(); return; }
+    if(!info.actualizado || fila.actualizado > info.actualizado){ aplicarDatos(fila.datos || {}); setSync({actualizado: fila.actualizado}); }
+  }
+  async function entrarCon(d){
+    guardarSesion(sesionDe(d));
+    await nubeTraer(true);
+    render(); toast('Sesión iniciada ✓');
+  }
+  // Vuelta desde un enlace de correo o desde Google: los datos llegan en la dirección (#access_token=…)
+  let vueltaRecuperar = false;
+  (function(){
+    const hsh = location.hash.slice(1);
+    if(!/access_token=|error_description=|error=/.test(hsh)) return;
+    const q = new URLSearchParams(hsh);
+    history.replaceState(null, '', location.pathname + location.search + '#perfil');
+    if(q.get('error_description') || q.get('error')){
+      const m = (q.get('error_description') || q.get('error') || '').replace(/\+/g, ' ');
+      setTimeout(() => toast(/expired|invalid/i.test(m) ? 'El enlace ha caducado o ya se usó. Pide otro.' : traducir(m)), 400);
+      return;
+    }
+    const d = {access_token: q.get('access_token'), refresh_token: q.get('refresh_token'), expires_in: q.get('expires_in'), expires_at: +q.get('expires_at') || undefined};
+    guardarSesion(sesionDe(d));
+    vueltaRecuperar = q.get('type') === 'recovery';
+    // completar el correo del usuario y la sincronización cuando arranque la app
+    setTimeout(async () => {
+      try { const u = await sbAuth('user', null, 'GET'); sesion.user = {id: u.id, email: u.email}; guardarSesion(sesion); } catch(e){}
+      if(vueltaRecuperar){ nuevaClave(); return; }
+      await nubeTraer(true); render();
+      toast(q.get('type') === 'signup' ? '¡Cuenta confirmada! Ya has iniciado sesión ✓' : 'Sesión iniciada ✓');
+    }, 300);
+  })();
+
+  // ---------- pantallas de cuenta ----------
+  const GICON = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="none" stroke="currentColor" stroke-width="1.8"/><text x="12" y="16.6" text-anchor="middle" font-size="12.5" font-weight="700" fill="currentColor" font-family="Inter,sans-serif">G</text></svg>';
+  function cuentaPantalla(modo){
+    modo = modo || 'entrar';
+    const reg = modo === 'registro';
+    $('#sheet').innerHTML = `<div class="cfghead"><button class="cfgx" id="cx" aria-label="Cerrar">✕</button><div class="cfgtitle">${reg ? 'Crear cuenta' : 'Iniciar sesión'}</div><span style="width:44px"></span></div>
+      <div class="cfgbox">
+        <div class="seg"><button type="button" data-m="entrar" class="${reg?'':'on'}">Entrar</button><button type="button" data-m="registro" class="${reg?'on':''}">Crear cuenta</button></div>
+        <form id="af2" autocomplete="on">
+          <label>Correo electrónico</label><input name="email" type="email" inputmode="email" autocomplete="email" required placeholder="tu@correo.com">
+          <label>Contraseña</label><input name="pass" type="password" autocomplete="${reg ? 'new-password' : 'current-password'}" required minlength="6" placeholder="${reg ? 'Mínimo 8 caracteres' : 'Tu contraseña'}">
+          ${reg ? '<label class="chk"><input type="checkbox" name="acepto" required><span>He leído y acepto las <a href="#" id="vcond">condiciones de uso</a> y la <a href="#" id="vpriv">política de privacidad</a>.</span></label>' : ''}
+          <div class="amsg" id="amsg"></div>
+          <div class="btns"><button class="btn pri" type="submit" id="asub">${reg ? 'Crear cuenta' : 'Entrar'}</button></div>
+          ${reg ? '' : '<button type="button" class="alink" id="olvido">¿Has olvidado tu contraseña?</button>'}
+        </form>
+        <div class="ordiv"><span>o</span></div>
+        <button class="sso" id="sgoogle">${GICON}<span>Continuar con Google</span></button>
+        ${APPLE_ON ? '<button class="sso" id="sapple"><span>Continuar con Apple</span></button>' : ''}
+      </div>
+      <div class="sub" style="margin:12px 4px">Con tu cuenta, tu agenda y tu perfil se guardan en la nube y los tienes en cualquier móvil.</div>`;
+    $('#sheet').classList.add('cfg'); $('#ovl').classList.add('show');
+    $('#cx').onclick = close;
+    document.querySelectorAll('.seg [data-m]').forEach(b => b.onclick = () => cuentaPantalla(b.dataset.m));
+    const vc = $('#vcond'); if(vc) vc.onclick = e => { e.preventDefault(); cfgCondiciones(); };
+    const vp = $('#vpriv'); if(vp) vp.onclick = e => { e.preventDefault(); cfgPrivacidad(); };
+    const msg = t => { $('#amsg').textContent = t || ''; };
+    $('#sgoogle').onclick = () => { location.href = SB_URL + '/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(APP_URL); };
+    const sa = $('#sapple'); if(sa) sa.onclick = () => { location.href = SB_URL + '/auth/v1/authorize?provider=apple&redirect_to=' + encodeURIComponent(APP_URL); };
+    const ol = $('#olvido'); if(ol) ol.onclick = async () => {
+      const email = $('#af2').email.value.trim();
+      if(!email){ msg('Escribe tu correo arriba y vuelve a pulsar aquí.'); return; }
+      try { await sbAuth('recover?redirect_to=' + encodeURIComponent(APP_URL), {email}); msg('Si existe una cuenta con ese correo, te hemos enviado un enlace para crear una contraseña nueva.'); }
+      catch(e){ msg(traducir(e.message)); }
+    };
+    $('#af2').onsubmit = async ev => {
+      ev.preventDefault();
+      const f = ev.target, email = f.email.value.trim(), pass = f.pass.value, btn = $('#asub');
+      if(reg && pass.length < 8){ msg('La contraseña debe tener al menos 8 caracteres.'); return; }
+      btn.disabled = true; msg(reg ? 'Creando tu cuenta…' : 'Entrando…');
+      try {
+        if(reg){
+          const d = await sbAuth('signup?redirect_to=' + encodeURIComponent(APP_URL), {email, password: pass});
+          if(d.access_token){ close(); await entrarCon(d); }
+          else if(d.identities && d.identities.length === 0) msg('Ya existe una cuenta con ese correo. Prueba a iniciar sesión.');
+          else { $('#sheet').querySelector('.cfgbox').innerHTML = `<div style="text-align:center;padding:10px 4px"><div style="font-size:40px">✉️</div><p style="font-weight:600;margin:8px 0">Revisa tu correo</p><p class="sub">Te hemos enviado un enlace a <b>${esc(email)}</b> para confirmar tu cuenta. Ábrelo desde este móvil y entrarás directamente.</p><p class="sub">Si no lo ves en unos minutos, mira en la carpeta de spam.</p></div>`; }
+        } else {
+          const d = await sbAuth('token?grant_type=password', {email, password: pass});
+          close(); await entrarCon(d);
+        }
+      } catch(e){ msg(traducir(e.message)); }
+      finally { if(document.body.contains(btn)) btn.disabled = false; }
+    };
+  }
+  function nuevaClave(){
+    $('#sheet').innerHTML = `<div class="cfghead"><span style="width:44px"></span><div class="cfgtitle">Nueva contraseña</div><span style="width:44px"></span></div>
+      <div class="cfgbox"><form id="nc"><label>Nueva contraseña</label><input name="pass" type="password" autocomplete="new-password" required minlength="8" placeholder="Mínimo 8 caracteres">
+      <div class="amsg" id="amsg"></div><div class="btns"><button class="btn pri" type="submit">Guardar contraseña</button></div></form></div>`;
+    $('#sheet').classList.add('cfg'); $('#ovl').classList.add('show');
+    $('#nc').onsubmit = async ev => {
+      ev.preventDefault(); const pass = ev.target.pass.value;
+      if(pass.length < 8){ $('#amsg').textContent = 'Mínimo 8 caracteres.'; return; }
+      try { await tokenValido(); await sbAuth('user', {password: pass}, 'PUT'); close(); await nubeTraer(true); toast('Contraseña cambiada ✓'); }
+      catch(e){ $('#amsg').textContent = traducir(e.message); }
+    };
+  }
+  async function cerrarSesion(){
+    if(!await confirmDlg('¿Cerrar sesión?', 'Tu agenda y tu perfil seguirán guardados en tu cuenta. En este móvil se borrarán hasta que vuelvas a entrar.', 'Cerrar sesión')) return;
+    if(nubePendiente){ clearTimeout(nubeT); await nubeSubir(); }
+    try { await sbAuth('logout', {}); } catch(e){}
+    guardarSesion(null); try { localStorage.removeItem(SYNC_KEY); } catch(e){}
+    $('#sheet').classList.remove('cfg'); close();
+    aplicarDatos({events: [], ocultas: [], prefs: {}}); toast('Sesión cerrada');
+  }
+  async function borrarCuenta(){
+    if(!await confirmDlg('¿Borrar tu cuenta para siempre?', 'Se borrarán tu cuenta, tu agenda y tu perfil de la nube y de este móvil. No se puede deshacer.', 'Borrar cuenta')) return;
+    try { await sbRest('rpc/borrar_mi_cuenta', {method: 'POST', body: '{}'}); }
+    catch(e){ toast('No se pudo borrar la cuenta. Revisa tu conexión e inténtalo de nuevo.'); return; }
+    guardarSesion(null); try { localStorage.removeItem(SYNC_KEY); } catch(e){}
+    $('#sheet').classList.remove('cfg'); close();
+    aplicarDatos({events: [], ocultas: [], prefs: {}}); toast('Cuenta borrada');
+  }
+  function cuentaBanner(){
+    if(sesion) return '';
+    return `<div class="acard"><b>Crea tu cuenta</b><span>Guarda tu agenda en la nube y úsala en cualquier móvil.</span>
+      <div class="btns" style="margin-top:10px"><button class="btn pri" id="bcrear">Crear cuenta</button><button class="btn" id="bentrar">Iniciar sesión</button></div></div>`;
+  }
+  function bindCuentaBanner(){
+    const a = $('#bcrear'), b = $('#bentrar');
+    if(a) a.onclick = () => cuentaPantalla('registro');
+    if(b) b.onclick = () => cuentaPantalla('entrar');
+  }
+  function cuentaCfgHTML(){
+    if(!sesion) return `<div class="cfggroup"><button id="ccuenta"><span>Iniciar sesión o crear cuenta<span class="cfgsub">Guarda tu agenda en la nube</span></span>${CHEV}</button></div>`;
+    const info = syncInfo();
+    return `<div class="cfggroup"><div class="crow"><span>Cuenta<span class="cfgsub">${esc(sesion.user && sesion.user.email || '')}</span></span><span class="cfgsub">${info.pendiente ? 'Pendiente de guardar' : 'Guardado en la nube ✓'}</span></div>
+      <button id="csalir">Cerrar sesión${CHEV}</button><button id="cborrar" class="cdel">Borrar mi cuenta${CHEV}</button></div>`;
+  }
+  function bindCuentaCfg(){
+    const c = $('#ccuenta'); if(c) c.onclick = () => cuentaPantalla('entrar');
+    const s = $('#csalir'); if(s) s.onclick = cerrarSesion;
+    const d = $('#cborrar'); if(d) d.onclick = borrarCuenta;
+  }
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && sesion) nubeTraer(false); });
+  window.addEventListener('hashchange', () => { if(/access_token=|error_description=/.test(location.hash)) location.reload(); });
+  window.addEventListener('online', () => { if(nubePendiente) nubeSubir(); });
+  if(sesion && !location.hash.includes('access_token')) setTimeout(() => nubeTraer(false), 500);
+
   render(); showTab(); cargarEventos();
   document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && Date.now() - (window._evAt||0) > 3*3600e3){ window._evAt = Date.now(); cargarEventos(); } });
   window._evAt = Date.now();
