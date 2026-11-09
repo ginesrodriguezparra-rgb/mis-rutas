@@ -217,7 +217,6 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
 body{position:fixed;inset:0}
 #scroller{position:absolute;top:0;left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
 .tabbar{transform:translateZ(0);will-change:transform}
-.pcount{grid-template-columns:repeat(2,1fr)}
 #scroller{padding-top:env(safe-area-inset-top)}
 .install{display:flex;gap:12px;align-items:flex-start;background:var(--green2);color:var(--ink);border-radius:16px;padding:12px 14px;margin:0 0 12px;font-size:14px;line-height:1.4}
 .install b{display:block;font-size:15px}
@@ -237,6 +236,27 @@ body{position:fixed;inset:0}
 .sso{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:600 15px Inter,sans-serif;cursor:pointer;margin-bottom:8px}
 .crow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line);font-size:16.5px}
 .cfggroup .cdel{color:var(--red)}
+.av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:var(--green2);color:var(--green);font-weight:700;overflow:hidden;flex:0 0 auto}
+.av img{width:100%;height:100%;object-fit:cover}
+.cfgbox .av{font-size:18px}
+.prow,.frow{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.prow:last-child,.frow:last-child{border-bottom:0}
+.prow[data-open]{cursor:pointer}
+.finfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.finfo b{font-size:15.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.finfo span{color:var(--muted);font-size:13.5px}
+.finfo .chip{margin-top:4px}
+.pacts{display:flex;align-items:center;gap:6px;color:var(--muted)}
+.frow .date{flex:0 0 auto}
+.fline{font-size:13px;color:var(--green);margin-top:5px;line-height:1.35}
+.fline b{font-weight:600}
+.atw{display:flex;align-items:center;gap:4px}.atw span{font-weight:600;color:var(--muted)}.atw input{flex:1}
+#aq{width:100%}
+.tabbar a{position:relative}
+.dotn{position:absolute;top:2px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--red);color:#fff;font:700 11px/17px Inter,sans-serif;text-align:center}
+.dotn[hidden]{display:none}
+.pcount button{position:relative}
+.pdot{position:absolute;top:6px;right:22%;width:9px;height:9px;border-radius:50%;background:var(--red)}
 /* hojas */
 .ovl{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
 .ovl.show{display:flex}
@@ -428,6 +448,7 @@ a{color:var(--green)}
       <div class="body"><div class="title">${esc(e.nombre)}</div>
       <div class="meta">${tiposTxt(e)}${e.lugar?' · '+esc(e.lugar):''} · ${fmtDays(n)}</div>
       ${e.modalidades ? `<div class="meta" style="margin-top:3px">${esc(e.modalidades)}</div>` : ''}
+      ${amigosLinea(e.webId)}
       <div class="tags">${tags.join('')}</div>
       <div class="acts">
         <button class="chip ${e.estado==='interesado'?'act-int':'amber'}" data-mst="interesado" data-mid="${esc(e.id)}">${e.estado==='interesado'?'★ Me interesa ✕':'★ Me interesa'}</button>
@@ -489,6 +510,7 @@ a{color:var(--green)}
       <div class="body"><div class="title">${esc(w.nombre)}</div>
       <div class="meta">${tiposTxt(w)}${lugar?' · '+esc(lugar):''} · ${fmtDays(days(w.date))}</div>
       ${w.modalidades ? `<div class="meta" style="margin-top:3px">${esc(w.modalidades)}</div>` : ''}
+      ${amigosLinea(w.id)}
       <div class="tags">${tags.join('')}</div>
       <div class="acts">
         <button class="chip ${mine&&mine.estado==='interesado'?'act-int':'amber'}" data-add="${esc(w.id)}" data-st="interesado">${mine&&mine.estado==='interesado'?'★ Me interesa ✕':'★ Me interesa'}</button>
@@ -583,6 +605,7 @@ a{color:var(--green)}
       </div>
       <input type="file" id="pfile" accept="image/*" hidden>
       <div class="pcount">
+        <button id="pamigos"><b>${amigosCount()}</b><span>Amigos</span>${sesion && AMI.recibidas ? '<i class="pdot"></i>' : ''}</button>
         <button data-goto="agenda"><b>${st.insc}</b><span>Inscrito</span></button>
         <button data-goto="agenda"><b>${st.int}</b><span>Me interesa</span></button>
       </div>
@@ -602,6 +625,7 @@ a{color:var(--green)}
     $('#pedit').onclick = editPerfil;
     $('#pgear').onclick = ajustes;
     $('#pshare').onclick = sharePerfil;
+    $('#pamigos').onclick = amigosPantalla;
     document.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => { location.hash = b.dataset.goto; });
   }
   function setFoto(file){
@@ -618,7 +642,7 @@ a{color:var(--green)}
   function editPerfil(){
     const p = state.prefs;
     $('#sheet').innerHTML = `<h2>Editar perfil</h2><form id="pf">
-      <label>Nombre de usuario</label><input name="nombre" value="${esc(p.nombre||'')}" placeholder="Tu nombre">
+      <label>Nombre</label><input name="nombre" value="${esc(p.nombre||'')}" placeholder="Tu nombre">
       <label>Localidad</label><input name="localidad" value="${esc(p.localidad||'')}" placeholder="Ej. Huércal-Overa">
       <label>Foto de perfil</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pfoto">${p.foto ? 'Cambiar foto' : 'Añadir foto'}</button>${p.foto ? '<button type="button" class="btn del" id="pnofoto">Quitar foto</button>' : ''}</div>
       <div class="btns"><button type="button" class="btn" id="pcancel">Cancelar</button><button class="btn pri" type="submit">Guardar</button></div></form>`;
@@ -645,6 +669,7 @@ a{color:var(--green)}
   const avisoDias = () => (state.prefs && typeof state.prefs.avisoDias === 'number') ? state.prefs.avisoDias : 10;
   const CHEV = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg>';
   function cfgPage(title, body, back){
+    $('#sheet').dataset.vista = '';
     $('#sheet').innerHTML = `<div class="cfghead"><button class="cfgx" id="cfgx" aria-label="${back ? 'Atrás' : 'Cerrar'}">${back ? '‹' : '✕'}</button><div class="cfgtitle">${esc(title)}</div><span style="width:44px"></span></div>${body}`;
     $('#sheet').classList.add('cfg'); $('#sheet').scrollTop = 0;
     $('#cfgx').onclick = back ? ajustes : () => { $('#sheet').classList.remove('cfg'); close(); };
@@ -682,10 +707,12 @@ a{color:var(--green)}
   function cfgPersonal(){
     const p = state.prefs;
     cfgPage('Información personal', `<div class="cfgbox"><form id="pf2">
-      <label>Nombre de usuario</label><input name="nombre" value="${esc(p.nombre||'')}" placeholder="Tu nombre">
+      <label>Nombre</label><input name="nombre" value="${esc(p.nombre||'')}" placeholder="Tu nombre">
       <label>Localidad</label><input name="localidad" value="${esc(p.localidad||'')}" placeholder="Ej. Huércal-Overa">
+      ${sesion ? `<label>@usuario</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pusr">${AMI.yo ? '@' + esc(AMI.yo.usuario) + ' · Cambiar' : 'Elegir @usuario'}</button></div>` : ''}
       <label>Foto de perfil</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pfoto2">${p.foto ? 'Cambiar foto' : 'Añadir foto'}</button>${p.foto ? '<button type="button" class="btn del" id="pnofoto2">Quitar foto</button>' : ''}</div>
       <div class="btns"><button class="btn pri" type="submit">Guardar</button></div></form></div>`, true);
+    const pu = $('#pusr'); if(pu) pu.onclick = () => elegirUsuario();
     $('#pfoto2').onclick = () => { $('#sheet').classList.remove('cfg'); close(); $('#pfile').click(); };
     const nf = $('#pnofoto2'); if(nf) nf.onclick = async () => { if(await confirmDlg('¿Quitar la foto de perfil?', '', 'Quitar')){ delete state.prefs.foto; $('#sheet').classList.remove('cfg'); close(); save(); } };
     $('#pf2').onsubmit = ev => { ev.preventDefault(); const fd = new FormData(ev.target); p.nombre = (fd.get('nombre')||'').toString().trim(); p.localidad = (fd.get('localidad')||'').toString().trim(); $('#sheet').classList.remove('cfg'); close(); save(); };
@@ -749,6 +776,7 @@ a{color:var(--green)}
       <p><b>Buscar rutas</b><br>Escribe en «Encuentra rutas» (nombre, pueblo, provincia…) o usa <b>Filtros</b> para elegir actividad, fechas y provincias en el mapa.</p>
       <p><b>Añadir a tu agenda</b><br>Pulsa <b>★ Me interesa</b> o <b>✓ Inscrito</b> en cualquier evento. Vuelve a pulsarlo para quitarlo.</p>
       <p><b>Compartir</b><br>Toca el icono de compartir de la tarjeta para enviarla por WhatsApp, Telegram… Mantenlo pulsado para compartirla como imagen.</p>
+      <p><b>Amigos</b><br>Con una cuenta, entra en Perfil › Amigos para elegir tu @usuario, invitar a tus amigos con un enlace o buscarlos. Cuando aceptan, veis las rutas a las que vais y en cada evento aparece qué amigos están apuntados.</p>
       <p><b>Instalar la app</b><br>En Safari, pulsa Compartir › «Añadir a pantalla de inicio».</p>
       <p><b>Modalidades sin confirmar</b><br>La web del evento no detalla sus pruebas; puede tener más modalidades (por ejemplo, senderismo).</p>
       <p><b>¿Falta un evento?</b><br>La lista se actualiza cada mañana. Comprueba siempre los datos en la web oficial del evento antes de inscribirte.</p></div>`, true);
@@ -761,7 +789,7 @@ a{color:var(--green)}
   }
   function cfgPrivacidad(){
     cfgPage('Política de privacidad', `<div class="cfgbox help">
-      <p><b>Sin cuenta:</b> tus datos (agenda, nombre, localidad, foto y provincias) se guardan solo en tu móvil y no se envían a ningún servidor.</p><p><b>Con cuenta:</b> guardamos tu correo electrónico y esos mismos datos para que puedas usarlos en cualquier dispositivo. Se almacenan en servidores de Supabase situados en la Unión Europea (Frankfurt, Alemania). Tu contraseña se guarda cifrada y nadie puede verla. Si entras con Google, solo recibimos tu correo.</p><p>Solo tú puedes ver y cambiar tus datos. No los vendemos ni los compartimos con nadie, y no los usamos para publicidad.</p>
+      <p><b>Sin cuenta:</b> tus datos (agenda, nombre, localidad, foto y provincias) se guardan solo en tu móvil y no se envían a ningún servidor.</p><p><b>Con cuenta:</b> guardamos tu correo electrónico y esos mismos datos para que puedas usarlos en cualquier dispositivo. Se almacenan en servidores de Supabase situados en la Unión Europea (Frankfurt, Alemania). Tu contraseña se guarda cifrada y nadie puede verla. Si entras con Google, solo recibimos tu correo.</p><p>Solo tú puedes ver y cambiar tus datos. No los vendemos ni los compartimos con nadie, y no los usamos para publicidad.</p><p><b>Amigos:</b> si eliges un @usuario, los demás usuarios pueden ver tu nombre, tu @usuario y tu foto para poder encontrarte. Las rutas de tu agenda marcadas como Inscrito o Me interesa solo las ven los amigos cuya solicitud hayas aceptado (o que hayan aceptado la tuya). Puedes eliminar a un amigo en cualquier momento.</p>
       <p>La app no usa tu ubicación ni envía tus datos a las webs de eventos. Al pulsar «Ver web», WhatsApp o Telegram, se abre esa web o app fuera de aquí.</p>
       <p>Puedes borrar tu cuenta y todos sus datos cuando quieras desde Configuración › Borrar mi cuenta. Sin cuenta, si borras los datos del navegador o desinstalas la app se pierden: usa Configuración › Copia de seguridad.</p><p><b>Responsable y contacto:</b> para cualquier duda sobre tus datos, o para pedir que los consultemos, corrijamos o borremos, escribe a <a href="mailto:misrutasytrail@gmail.com">misrutasytrail@gmail.com</a>. También puedes reclamar ante la Agencia Española de Protección de Datos (aepd.es).</p></div>`, true);
   }
@@ -998,7 +1026,7 @@ a{color:var(--green)}
     };
     $('#ovl').classList.add('show');
   }
-  function close(){ $('#ovl').classList.remove('show'); $('#sheet').classList.remove('cfg'); }
+  function close(){ $('#ovl').classList.remove('show'); $('#sheet').classList.remove('cfg'); $('#sheet').dataset.vista = ''; }
   let ovlAt = 0;
   new MutationObserver(() => { if($('#ovl').classList.contains('show')) ovlAt = Date.now(); }).observe(document.getElementById('ovl'), {attributes:true, attributeFilter:['class']});
   $('#ovl').onclick = e => { if(e.target.id === 'ovl' && Date.now() - ovlAt > 600) close(); };
@@ -1022,7 +1050,7 @@ a{color:var(--green)}
     try { localStorage.setItem(USER_KEY, JSON.stringify({events: state.events, ocultas: state.ocultas, prefs: state.prefs})); return true; }
     catch(e){ toast('No hay espacio para guardar. Prueba con una foto de perfil más pequeña.'); return false; }
   }
-  async function save(){ render(); userSave(); if(typeof nubeGuardar === 'function') nubeGuardar(); }
+  async function save(){ render(); userSave(); if(typeof nubeGuardar === 'function'){ nubeGuardar(); perfilQuizaSubir(); } }
   async function cargarEventos(){
     try {
       const r = await fetch('eventos.json?t=' + Date.now(), {cache: 'no-store'});
@@ -1143,6 +1171,7 @@ a{color:var(--green)}
     guardarSesion(sesionDe(d));
     await nubeTraer(true);
     render(); toast('Sesión iniciada ✓');
+    await perfilAsegurar(); amigosCargar();
   }
   // Vuelta desde un enlace de correo o desde Google: los datos llegan en la dirección (#access_token=…)
   let vueltaRecuperar = false;
@@ -1165,6 +1194,7 @@ a{color:var(--green)}
       if(vueltaRecuperar){ nuevaClave(); return; }
       await nubeTraer(true); render();
       toast(q.get('type') === 'signup' ? '¡Cuenta confirmada! Ya has iniciado sesión ✓' : 'Sesión iniciada ✓');
+      await perfilAsegurar(); amigosCargar();
     }, 300);
   })();
 
@@ -1240,7 +1270,7 @@ a{color:var(--green)}
     try { await sbAuth('logout', {}); } catch(e){}
     guardarSesion(null); try { localStorage.removeItem(SYNC_KEY); } catch(e){}
     $('#sheet').classList.remove('cfg'); close();
-    aplicarDatos({events: [], ocultas: [], prefs: {}}); toast('Sesión cerrada');
+    amigosReset(); aplicarDatos({events: [], ocultas: [], prefs: {}}); toast('Sesión cerrada');
   }
   async function borrarCuenta(){
     if(!await confirmDlg('¿Borrar tu cuenta para siempre?', 'Se borrarán tu cuenta, tu agenda y tu perfil de la nube y de este móvil. No se puede deshacer.', 'Borrar cuenta')) return;
@@ -1248,7 +1278,7 @@ a{color:var(--green)}
     catch(e){ toast('No se pudo borrar la cuenta. Revisa tu conexión e inténtalo de nuevo.'); return; }
     guardarSesion(null); try { localStorage.removeItem(SYNC_KEY); } catch(e){}
     $('#sheet').classList.remove('cfg'); close();
-    aplicarDatos({events: [], ocultas: [], prefs: {}}); toast('Cuenta borrada');
+    amigosReset(); aplicarDatos({events: [], ocultas: [], prefs: {}}); toast('Cuenta borrada');
   }
   function cuentaBanner(){
     if(sesion) return '';
@@ -1275,6 +1305,215 @@ a{color:var(--green)}
   window.addEventListener('hashchange', () => { if(/access_token=|error_description=/.test(location.hash)) location.reload(); });
   window.addEventListener('online', () => { if(nubePendiente) nubeSubir(); });
   if(sesion && !location.hash.includes('access_token')) setTimeout(() => nubeTraer(false), 500);
+
+  // ---------- amigos ----------
+  var AMI = {cargado: false, filas: [], perfiles: new Map(), agendas: new Map(), porRuta: new Map(), yo: null, recibidas: 0};
+  var invitacion = null, pidiendoUsuario = false;
+  try { invitacion = localStorage.getItem('rutas-invitacion'); } catch(e){}
+  const USR_RE = /^[a-z0-9_.]{3,20}$/;
+  const enlaceInvitacion = u => APP_URL + '#amigo=' + encodeURIComponent(u);
+  const avatar = (p, size) => `<span class="av" style="width:${size}px;height:${size}px">${p && p.foto ? `<img src="${esc(p.foto)}" alt="">` : esc(((p && (p.nombre || p.usuario)) || '?').trim().charAt(0).toUpperCase())}</span>`;
+  const nombreDe = p => p ? (p.nombre || '@' + p.usuario) : 'Alguien';
+  // captar #amigo=usuario (enlace de invitación)
+  function leerInvitacion(){
+    const m = location.hash.match(/^#amigo=([^&]+)/);
+    if(!m) return false;
+    invitacion = decodeURIComponent(m[1]).toLowerCase();
+    try { localStorage.setItem('rutas-invitacion', invitacion); } catch(e){}
+    history.replaceState(null, '', location.pathname + location.search + '#perfil');
+    return true;
+  }
+  leerInvitacion();
+  window.addEventListener('hashchange', () => { if(leerInvitacion()){ showTab(); procesarInvitacion(); } });
+
+  function miniFoto(dataUrl){
+    return new Promise(res => {
+      if(!dataUrl) return res(null);
+      const img = new Image();
+      img.onload = () => { const S = 96, cv = document.createElement('canvas'); cv.width = cv.height = S; cv.getContext('2d').drawImage(img, 0, 0, S, S); res(cv.toDataURL('image/jpeg', 0.72)); };
+      img.onerror = () => res(null); img.src = dataUrl;
+    });
+  }
+  async function perfilSubir(usuario){
+    const foto = await miniFoto(state.prefs.foto);
+    const fila = {id: sesion.user.id, usuario, nombre: (state.prefs.nombre || '').slice(0, 60), foto, actualizado: new Date().toISOString()};
+    await sbRest('perfiles?on_conflict=id', {method: 'POST', headers: {'Prefer': 'resolution=merge-duplicates,return=minimal'}, body: JSON.stringify(fila)});
+    AMI.yo = fila; setSync({perfilFirma: firmaPerfil()});
+  }
+  const firmaPerfil = () => (state.prefs.nombre || '') + '|' + (state.prefs.foto ? state.prefs.foto.length + state.prefs.foto.slice(-24) : '');
+  // tras guardar: si cambió el nombre o la foto, actualizar el perfil público
+  function perfilQuizaSubir(){
+    if(!sesion || !AMI.yo || syncInfo().perfilFirma === firmaPerfil()) return;
+    clearTimeout(perfilQuizaSubir._t); perfilQuizaSubir._t = setTimeout(() => perfilSubir(AMI.yo.usuario).catch(() => {}), 1500);
+  }
+  async function perfilAsegurar(preguntar){
+    if(!sesion) return null;
+    try {
+      const r = await sbRest('perfiles?select=id,usuario,nombre,foto&id=eq.' + sesion.user.id);
+      AMI.yo = r && r[0] || null;
+    } catch(e){ return null; }
+    if(AMI.yo){ perfilQuizaSubir(); procesarInvitacion(); return AMI.yo; }
+    if(preguntar !== false) elegirUsuario();
+    return null;
+  }
+  function sugerirUsuario(){
+    const base = ((state.prefs.nombre || (sesion.user.email || '').split('@')[0] || 'usuario').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9_.]+/g, '').slice(0, 16));
+    return base.length >= 3 ? base : (base + 'trail').slice(0, 16);
+  }
+  function elegirUsuario(despues){
+    if(pidiendoUsuario) return; pidiendoUsuario = true;
+    const actual = AMI.yo ? AMI.yo.usuario : '';
+    $('#sheet').innerHTML = `<div class="cfghead"><button class="cfgx" id="ux" aria-label="Cerrar">✕</button><div class="cfgtitle">${actual ? 'Tu @usuario' : 'Elige tu @usuario'}</div><span style="width:44px"></span></div>
+      <div class="cfgbox"><div class="sub" style="margin-bottom:8px">Es como te encontrarán tus amigos. Solo letras minúsculas, números, punto o guion bajo (3 a 20).</div>
+      <form id="uf"><label>Nombre</label><input name="nombre" value="${esc(state.prefs.nombre || '')}" placeholder="Tu nombre" maxlength="60">
+      <label>@usuario</label><div class="atw"><span>@</span><input name="usuario" value="${esc(actual || sugerirUsuario())}" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="20"></div>
+      <div class="amsg" id="amsg"></div><div class="btns"><button class="btn pri" type="submit">Guardar</button></div></form></div>
+      <div class="sub" style="margin:12px 4px">Los demás usuarios pueden ver tu nombre, tu @usuario y tu foto. Tu agenda solo la ven los amigos que tú aceptes.</div>`;
+    $('#sheet').classList.add('cfg'); $('#ovl').classList.add('show');
+    $('#ux').onclick = () => { pidiendoUsuario = false; close(); };
+    const inp = $('#uf').usuario;
+    inp.oninput = () => { const v = inp.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''); if(v !== inp.value) inp.value = v; };
+    $('#uf').onsubmit = async ev => {
+      ev.preventDefault();
+      const u = inp.value.trim().toLowerCase(), nom = ev.target.nombre.value.trim();
+      if(!USR_RE.test(u)){ $('#amsg').textContent = 'Usa de 3 a 20 caracteres: letras minúsculas, números, punto o guion bajo.'; return; }
+      if(nom !== (state.prefs.nombre || '')){ state.prefs.nombre = nom; userSave(); nubeGuardar(); }
+      try { await perfilSubir(u); }
+      catch(e){ $('#amsg').textContent = /duplicate|unique|23505|409/i.test(e.message) ? 'Ese @usuario ya está cogido. Prueba con otro.' : 'No se pudo guardar. Revisa tu conexión.'; return; }
+      pidiendoUsuario = false; close(); render(); toast('Listo, eres @' + u);
+      if(despues) despues(); else procesarInvitacion();
+    };
+  }
+  async function amigosCargar(){
+    if(!sesion) return;
+    try {
+      const filas = await sbRest('amistades?select=id,de,para,estado,creado&order=creado.desc') || [];
+      const ids = [...new Set(filas.map(f => f.de === sesion.user.id ? f.para : f.de))];
+      const perfiles = ids.length ? await sbRest('perfiles?select=id,usuario,nombre,foto&id=in.(' + ids.join(',') + ')') || [] : [];
+      const agendas = filas.some(f => f.estado === 'aceptada') ? await sbRest('rpc/agendas_amigos', {method: 'POST', body: '{}'}) || [] : [];
+      AMI.filas = filas; AMI.perfiles = new Map(perfiles.map(p => [p.id, p]));
+      AMI.agendas = new Map(); AMI.porRuta = new Map();
+      agendas.forEach(({amigo, ruta}) => {
+        if(!AMI.agendas.has(amigo)) AMI.agendas.set(amigo, []);
+        AMI.agendas.get(amigo).push(ruta);
+        if(ruta.webId){ if(!AMI.porRuta.has(ruta.webId)) AMI.porRuta.set(ruta.webId, []); AMI.porRuta.get(ruta.webId).push({amigo, estado: ruta.estado}); }
+      });
+      AMI.agendas.forEach(l => l.sort((a, b) => (a.date || '').localeCompare(b.date || '')));
+      AMI.recibidas = filas.filter(f => f.estado === 'pendiente' && f.para === sesion.user.id).length;
+      AMI.cargado = true;
+    } catch(e){ return; }
+    marcarAvisos(); render();
+    if($('#sheet').dataset.vista === 'amigos') amigosPantalla();
+  }
+  function marcarAvisos(){
+    const t = document.querySelector('.tabbar a[data-tab="perfil"]');
+    if(t){ let d = t.querySelector('.dotn'); if(!d){ d = document.createElement('span'); d.className = 'dotn'; t.appendChild(d); } d.hidden = !AMI.recibidas; d.textContent = AMI.recibidas || ''; }
+  }
+  const amigosAceptados = () => AMI.filas.filter(f => f.estado === 'aceptada').map(f => ({fila: f, id: f.de === sesion.user.id ? f.para : f.de}));
+  const amigosCount = () => sesion ? amigosAceptados().length : 0;
+  function amigosLinea(webId){
+    const l = webId && AMI.porRuta.get(webId);
+    if(!l || !l.length) return '';
+    const ins = l.filter(x => x.estado === 'inscrito'), intr = l.filter(x => x.estado !== 'inscrito');
+    const nom = arr => { const n = arr.map(x => esc(nombreDe(AMI.perfiles.get(x.amigo)))); return n.length > 2 ? n.slice(0, 2).join(', ') + ' y ' + (n.length - 2) + ' más' : n.join(' y '); };
+    const partes = [];
+    if(ins.length) partes.push(`Inscritos: <b>${nom(ins)}</b>`);
+    if(intr.length) partes.push(`Les interesa: <b>${nom(intr)}</b>`);
+    return `<div class="fline">👥 ${partes.join(' · ')}</div>`;
+  }
+  async function procesarInvitacion(){
+    if(!invitacion) return;
+    if(!sesion){ toast('Crea una cuenta o inicia sesión para añadir a @' + invitacion); return; }
+    if(!AMI.yo) return; // se procesará tras elegir @usuario
+    const u = invitacion; invitacion = null; try { localStorage.removeItem('rutas-invitacion'); } catch(e){}
+    if(u === AMI.yo.usuario) return;
+    let p; try { p = (await sbRest('perfiles?select=id,usuario,nombre,foto&usuario=eq.' + encodeURIComponent(u)))[0]; } catch(e){}
+    if(!p){ toast('No existe el usuario @' + u); return; }
+    if(await confirmDlg(`¿Añadir a ${nombreDe(p)} como amigo?`, `@${p.usuario} te ha invitado. Le llegará una solicitud de amistad.`, 'Enviar solicitud')) solicitar(p.usuario);
+  }
+  async function solicitar(usuario){
+    try {
+      const r = await sbRest('rpc/solicitar_amistad', {method: 'POST', body: JSON.stringify({p_usuario: usuario})});
+      toast(r === 'aceptada' ? '¡Ya sois amigos! ✓' : r === 'enviada' ? 'Solicitud enviada ✓' : r === 'pendiente' ? 'Ya hay una solicitud pendiente' : 'Ya sois amigos');
+    } catch(e){ toast(/no encontrado/.test(e.message) ? 'No existe ese usuario' : 'No se pudo enviar. Revisa tu conexión.'); }
+    amigosCargar();
+  }
+  async function amistadAccion(fn, id, ok){
+    try { await sbRest('rpc/' + fn, {method: 'POST', body: JSON.stringify({p_id: id})}); if(ok) toast(ok); }
+    catch(e){ toast('No se pudo hacer. Revisa tu conexión.'); }
+    await amigosCargar();
+  }
+  async function invitar(){
+    if(!AMI.yo) return;
+    const url = enlaceInvitacion(AMI.yo.usuario), text = `Agrégame como amigo en Mis rutas y trails para ver a qué rutas vamos: @${AMI.yo.usuario}`;
+    if(navigator.share){ try { await navigator.share({title: 'Mis rutas y trails', text, url}); } catch(e){} }
+    else { try { await navigator.clipboard.writeText(text + ' ' + url); toast('Enlace copiado ✓'); } catch(e){ toast(url); } }
+  }
+  function filaPersona(p, derecha, abrir){
+    return `<div class="prow"${abrir ? ` data-open="${esc(p.id)}"` : ''}>${avatar(p, 42)}<div class="finfo"><b>${esc(nombreDe(p))}</b><span>@${esc(p.usuario || '')}</span></div><div class="pacts">${derecha || ''}</div></div>`;
+  }
+  async function amigosPantalla(){
+    if(!sesion){ cuentaPantalla('registro'); return; }
+    if(!AMI.yo){ const y = await perfilAsegurar(false); if(!y){ elegirUsuario(amigosPantalla); return; } }
+    const yo = sesion.user.id;
+    const recibidas = AMI.filas.filter(f => f.estado === 'pendiente' && f.para === yo);
+    const enviadas = AMI.filas.filter(f => f.estado === 'pendiente' && f.de === yo);
+    const amigos = amigosAceptados();
+    const P = id => AMI.perfiles.get(id) || {id, usuario: '…', nombre: ''};
+    cfgPage('Amigos', `
+      <div class="cfgbox"><div class="prow">${avatar({foto: AMI.yo.foto, nombre: AMI.yo.nombre, usuario: AMI.yo.usuario}, 42)}<div class="finfo"><b>Tú</b><span>@${esc(AMI.yo.usuario)}</span></div><div class="pacts"><button class="chip" id="aeditu">Cambiar</button></div></div>
+        <div class="btns"><button class="btn pri" id="ainv">Invitar amigos con un enlace</button></div></div>
+      <div class="cfglabel">Buscar</div>
+      <div class="cfgbox"><input id="aq" placeholder="Nombre o @usuario" autocapitalize="none" autocorrect="off" spellcheck="false"><div id="ares"></div></div>
+      ${recibidas.length ? `<div class="cfglabel">Solicitudes recibidas (${recibidas.length})</div><div class="cfgbox">${recibidas.map(f => filaPersona(P(f.de), `<button class="chip greenl" data-acc="${f.id}">Aceptar</button><button class="chip" data-del="${f.id}" data-msg="Solicitud rechazada">✕</button>`)).join('')}</div>` : ''}
+      <div class="cfglabel">Mis amigos (${amigos.length})</div>
+      <div class="cfgbox">${amigos.length ? amigos.map(a => { const n = (AMI.agendas.get(a.id) || []).length; return filaPersona(P(a.id), `<span class="sub">${n ? n + (n === 1 ? ' ruta' : ' rutas') : ''}</span>${CHEV}`, true); }).join('') : '<div class="sub">Todavía no tienes amigos. Invítalos con tu enlace o búscalos por su @usuario.</div>'}</div>
+      ${enviadas.length ? `<div class="cfglabel">Solicitudes enviadas</div><div class="cfgbox">${enviadas.map(f => filaPersona(P(f.para), `<button class="chip" data-del="${f.id}" data-msg="Solicitud cancelada">Cancelar</button>`)).join('')}</div>` : ''}`);
+    $('#sheet').dataset.vista = 'amigos';
+    $('#ainv').onclick = invitar;
+    $('#aeditu').onclick = () => elegirUsuario(amigosPantalla);
+    document.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => amistadAccion('aceptar_amistad', +b.dataset.acc, '¡Ya sois amigos! ✓'));
+    document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => amistadAccion('eliminar_amistad', +b.dataset.del, b.dataset.msg));
+    document.querySelectorAll('[data-open]').forEach(b => b.onclick = () => amigoPantalla(b.dataset.open));
+    let qt = null;
+    $('#aq').oninput = ev => {
+      clearTimeout(qt);
+      const q = ev.target.value.trim().replace(/^@/, '').replace(/[%*,()]/g, '');
+      if(q.length < 2){ $('#ares').innerHTML = ''; return; }
+      qt = setTimeout(async () => {
+        let r = [];
+        try { r = await sbRest('perfiles?select=id,usuario,nombre,foto&or=(usuario.ilike.*' + encodeURIComponent(q.toLowerCase()) + '*,nombre.ilike.*' + encodeURIComponent(q) + '*)&limit=15') || []; }
+        catch(e){ $('#ares').innerHTML = '<div class="sub">No se pudo buscar.</div>'; return; }
+        r = r.filter(p => p.id !== yo);
+        const rel = id => AMI.filas.find(f => f.de === id || f.para === id);
+        $('#ares').innerHTML = r.length ? r.map(p => { const f = rel(p.id); const btn = !f ? `<button class="chip greenl" data-sol="${esc(p.usuario)}">Añadir</button>` : f.estado === 'aceptada' ? '<span class="sub">Amigos ✓</span>' : f.para === yo ? `<button class="chip greenl" data-acc2="${f.id}">Aceptar</button>` : '<span class="sub">Pendiente</span>'; return filaPersona(p, btn); }).join('') : '<div class="sub" style="padding-top:8px">No hay nadie con ese nombre.</div>';
+        document.querySelectorAll('[data-sol]').forEach(b => b.onclick = () => solicitar(b.dataset.sol));
+        document.querySelectorAll('[data-acc2]').forEach(b => b.onclick = () => amistadAccion('aceptar_amistad', +b.dataset.acc2, '¡Ya sois amigos! ✓'));
+      }, 350);
+    };
+  }
+  function amigoPantalla(id){
+    const p = AMI.perfiles.get(id) || {id, usuario: '', nombre: ''};
+    const a = amigosAceptados().find(x => x.id === id);
+    const rutas = AMI.agendas.get(id) || [];
+    cfgPage(nombreDe(p), `
+      <div class="cfgbox" style="text-align:center">${avatar(p, 84)}<div style="font-weight:700;font-size:18px;margin-top:8px">${esc(nombreDe(p))}</div><div class="sub">@${esc(p.usuario)}</div></div>
+      <div class="cfglabel">Sus próximas rutas</div>
+      <div class="cfgbox">${rutas.length ? rutas.map(r => {
+        const d = r.date ? pd(r.date) : null, w = r.webId && state.web.find(x => x.id === r.webId), mine = r.webId && state.events.find(e => e.webId === r.webId);
+        return `<div class="frow"><div class="date t-${esc(tiposOf(r)[0])}">${d ? `<b>${d.getDate()}</b><span>${MESES[d.getMonth()]}</span>` : ''}</div>
+          <div class="finfo"><b>${esc(r.nombre || '')}</b><span>${r.estado === 'inscrito' ? '✓ Inscrito' : '★ Le interesa'}${r.lugar ? ' · ' + esc(r.lugar) : ''}</span>
+          ${w ? (mine ? `<span class="sub">En tu agenda (${mine.estado === 'inscrito' ? 'inscrito' : 'me interesa'})</span>` : `<span><button class="chip amber" data-addf="${esc(w.id)}">★ Me interesa</button></span>`) : ''}</div></div>`; }).join('')
+        : '<div class="sub">No tiene rutas próximas en su agenda.</div>'}</div>
+      ${a ? '<div class="cfgfoot"><button class="cfgdanger" id="adel">Eliminar amigo</button></div>' : ''}`, true);
+    $('#cfgx').onclick = amigosPantalla;
+    document.querySelectorAll('[data-addf]').forEach(b => b.onclick = () => { addFromWeb(b.dataset.addf, 'interesado'); amigoPantalla(id); });
+    const del = $('#adel'); if(del) del.onclick = async () => { if(await confirmDlg(`¿Eliminar a ${nombreDe(p)} de tus amigos?`, 'Dejaréis de ver vuestras rutas. Podéis volver a ser amigos más adelante.', 'Eliminar')){ await amistadAccion('eliminar_amistad', a.fila.id, 'Amigo eliminado'); amigosPantalla(); } };
+  }
+  function amigosReset(){ AMI = {cargado: false, filas: [], perfiles: new Map(), agendas: new Map(), porRuta: new Map(), yo: null, recibidas: 0}; marcarAvisos(); }
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && sesion) amigosCargar(); });
+  if(sesion && !location.hash.includes('access_token')) setTimeout(async () => { await perfilAsegurar(); amigosCargar(); }, 700);
+  else if(invitacion && !sesion) setTimeout(() => { toast('Crea tu cuenta para añadir a @' + invitacion); cuentaPantalla('registro'); }, 600);
 
   render(); showTab(); cargarEventos();
   document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && Date.now() - (window._evAt||0) > 3*3600e3){ window._evAt = Date.now(); cargarEventos(); } });
