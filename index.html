@@ -273,6 +273,10 @@ body{position:fixed;inset:0}
 .okc{color:var(--green) !important;font-weight:600}
 .evrow{cursor:pointer;border-bottom:0 !important;padding:12px 14px !important}
 textarea{resize:vertical;min-height:70px}
+.two>div{min-width:0}
+#ef input,#ef select,#ef textarea{width:100%;min-width:0;box-sizing:border-box}
+#ef input[type=date],#ef input[type=time]{display:block;-webkit-appearance:none;appearance:none;text-align:left}
+label.mini{font-size:12.5px !important;margin-top:4px !important;font-weight:500 !important}
 #kq{width:100%}
 /* hojas */
 .ovl{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
@@ -1598,12 +1602,19 @@ a{color:var(--green)}
   const esAdminDe = club => rolDe(club) === 'admin';
   const esSocioDe = club => ['admin', 'socio'].includes(rolDe(club));
   const ROL_TXT = {admin: 'Administrador', socio: 'Socio', pendiente: 'Solicitud enviada', invitado: 'Te han invitado'};
+  const precioBonito = p => !p ? '' : /^0([.,]0+)?$/.test(p.trim()) ? 'Gratis' : p.trim() + (/€|eur/i.test(p) ? '' : ' €');
+  function preciosTxt(e){
+    const s = e.precio || '', n = e.precio_no_socios || '';
+    if(s && n && s.trim() !== n.trim()) return 'Socios ' + precioBonito(s) + ' · No socios ' + precioBonito(n);
+    return precioBonito(s || n);
+  }
   function clubAWeb(e){
     const club = e.clubs && e.clubs.nombre || 'Club';
-    const mod = [e.hora ? 'Salida ' + e.hora : '', e.dificultad ? 'Dificultad ' + e.dificultad.toLowerCase() : '', e.plazas ? e.plazas + ' plazas' : ''].filter(Boolean).join(' · ');
+    const pr = (e.precio || '') && (e.precio_no_socios || '') && e.precio.trim() !== e.precio_no_socios.trim() ? preciosTxt(e) : '';
+    const mod = [e.hora ? 'Salida ' + e.hora : '', e.dificultad ? 'Dificultad ' + e.dificultad.toLowerCase() : '', e.plazas ? e.plazas + ' plazas' : '', pr].filter(Boolean).join(' · ');
     return {id: 'club-' + e.id, clubEv: e.id, club: e.club, publico: e.publico, fuente: club, nombre: e.titulo, tipo: e.tipo, tipos: [e.tipo], date: e.fecha,
       lugar: e.lugar || '', provincia: e.provincia || '', _p: e.provincia || '', km: e.km != null ? String(e.km) : '', desnivel: e.desnivel != null ? String(e.desnivel) : '',
-      precio: e.precio || '', modalidades: mod, url: e.url || '', limite: e.limite || '', verificado: true, dificultad: e.dificultad || '',
+      precio: pr ? '' : (e.precio || e.precio_no_socios || ''), modalidades: mod, url: e.url || '', limite: e.limite || '', verificado: true, dificultad: e.dificultad || '',
       estado: e.limite ? 'Inscripción hasta ' + pd(e.limite).getDate() + ' ' + MESES[pd(e.limite).getMonth()] : ''};
   }
   function mezclarClubEventos(){
@@ -1873,7 +1884,9 @@ a{color:var(--green)}
       <label>Punto de encuentro</label><input name="encuentro" maxlength="120" value="${esc(e.encuentro || '')}" placeholder="Ej. Plaza del Ayuntamiento">
       <div class="two"><div><label>Distancia (km)</label><input name="km" type="number" inputmode="decimal" min="0" step="0.1" value="${e.km != null ? esc(e.km) : ''}"></div><div><label>Desnivel (m)</label><input name="desnivel" type="number" inputmode="numeric" min="0" value="${e.desnivel != null ? esc(e.desnivel) : ''}"></div></div>
       <label>Dificultad</label><select name="dificultad"><option value="">Sin indicar</option>${DIFS.map(d => `<option ${e.dificultad === d ? 'selected' : ''}>${d}</option>`).join('')}</select>
-      <div class="two"><div><label>Precio de inscripción</label><input name="precio" maxlength="30" value="${esc(e.precio || '')}" placeholder="0 = gratis"></div><div><label>Plazas</label><input name="plazas" type="number" inputmode="numeric" min="1" value="${e.plazas != null ? esc(e.plazas) : ''}" placeholder="Sin límite"></div></div>
+      <label>Precio de inscripción</label>
+      <div class="two"><div><label class="mini">Socios</label><input name="precio" inputmode="decimal" maxlength="30" value="${esc(e.precio || '')}" placeholder="0 = gratis"></div><div><label class="mini">No socios</label><input name="precio_no_socios" inputmode="decimal" maxlength="30" value="${esc(e.precio_no_socios || '')}" placeholder="0 = gratis"></div></div>
+      <label>Plazas</label><input name="plazas" type="number" inputmode="numeric" min="1" value="${e.plazas != null ? esc(e.plazas) : ''}" placeholder="Sin límite">
       <label>Inscripción hasta</label><input name="limite" type="date" value="${esc(e.limite || '')}">
       <label>Descripción</label><textarea name="descripcion" rows="4" maxlength="1500" placeholder="Recorrido, material, avituallamiento…">${esc(e.descripcion || '')}</textarea>
       <label>Enlace de inscripción o más información (opcional)</label><input name="url" type="url" maxlength="300" value="${esc(e.url || '')}" placeholder="https://…">
@@ -1888,7 +1901,7 @@ a{color:var(--green)}
       ev.preventDefault();
       const f = ev.target, num = v => v === '' ? null : Number(v);
       const d = {titulo: f.titulo.value.trim(), tipo: f.tipo.value, fecha: f.fecha.value, hora: f.hora.value, lugar: f.lugar.value.trim(), provincia: f.provincia.value, encuentro: f.encuentro.value.trim(),
-        km: num(f.km.value), desnivel: f.desnivel.value === '' ? null : Math.round(+f.desnivel.value), dificultad: f.dificultad.value, precio: f.precio.value.trim(), plazas: f.plazas.value === '' ? null : Math.round(+f.plazas.value),
+        km: num(f.km.value), desnivel: f.desnivel.value === '' ? null : Math.round(+f.desnivel.value), dificultad: f.dificultad.value, precio: f.precio.value.trim(), precio_no_socios: f.precio_no_socios.value.trim(), plazas: f.plazas.value === '' ? null : Math.round(+f.plazas.value),
         limite: f.limite.value || null, descripcion: f.descripcion.value.trim(), url: f.url.value.trim(), publico};
       if(d.url && !/^https?:\/\//i.test(d.url)) d.url = 'https://' + d.url;
       if(!d.fecha){ $('#amsg').textContent = 'Indica la fecha.'; return; }
@@ -1921,7 +1934,7 @@ a{color:var(--green)}
     const grupo = est => asist.filter(x => x.estado === est).map(x => esc(nombreDe(perf.get(x.usuario)))).join(', ');
     const d = pd(e.fecha);
     const fila = (k, v) => v ? `<div class="drow"><span>${k}</span><b>${v}</b></div>` : '';
-    const precio = e.precio ? (/^0([.,]0+)?$/.test(e.precio.trim()) ? 'Gratis' : esc(e.precio) + (/€|eur/i.test(e.precio) ? '' : ' €')) : '';
+    const mismoPrecio = (e.precio || '').trim() === (e.precio_no_socios || '').trim();
     const voyN = asist.filter(x => x.estado === 'voy').length;
     cfgPage(e.titulo, `
       <div class="cfgbox"><div class="frow" style="border:0;padding:0"><div class="date t-${esc(e.tipo)}"><b>${d.getDate()}</b><span>${MESES[d.getMonth()]}</span></div><div class="finfo"><b style="white-space:normal">${esc(e.titulo)}</b><span>${esc(e.clubs ? e.clubs.nombre : '')} · ${e.publico ? 'Público' : '🔒 Solo socios e invitados'}</span></div></div>
@@ -1932,7 +1945,7 @@ a{color:var(--green)}
         ${fila('Distancia', e.km != null ? esc(e.km) + ' km' : '')}
         ${fila('Desnivel', e.desnivel != null ? esc(e.desnivel) + ' m D+' : '')}
         ${fila('Dificultad', esc(e.dificultad))}
-        ${fila('Precio', precio)}
+        ${mismoPrecio ? fila('Precio', esc(precioBonito(e.precio))) : fila('Precio socios', esc(precioBonito(e.precio)) || '—') + fila('Precio no socios', esc(precioBonito(e.precio_no_socios)) || '—')}
         ${fila('Plazas', e.plazas ? (socio ? voyN + ' apuntados de ' + esc(e.plazas) : esc(e.plazas)) : '')}
         ${fila('Inscripción hasta', e.limite ? pd(e.limite).toLocaleDateString('es-ES', {day: 'numeric', month: 'long'}) : '')}
         ${e.descripcion ? `<p style="margin:12px 0 0;font-size:14.5px;line-height:1.5;white-space:pre-line">${esc(e.descripcion)}</p>` : ''}
