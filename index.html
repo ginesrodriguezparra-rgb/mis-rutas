@@ -258,6 +258,10 @@ body{position:fixed;inset:0}
 .pcount button{position:relative}
 .pdot{position:absolute;top:6px;right:22%;width:9px;height:9px;border-radius:50%;background:var(--red)}
 .clubs{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.pclub{display:block;background:none;border:0;padding:2px 0;color:var(--muted);font:500 15px Inter,sans-serif;text-align:left;cursor:pointer}
+.pclub:active{color:var(--green)}
+.rhech{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.rhech:last-child{border-bottom:0}
 .club{display:inline-flex;align-items:center;gap:4px;background:var(--green2);color:var(--green);border-radius:999px;padding:6px 6px 6px 12px;font:600 14px Inter,sans-serif}
 .club button{border:0;background:none;color:var(--green);font-size:13px;cursor:pointer;padding:2px 5px;opacity:.75}
 .cadd{display:flex;gap:8px;margin-top:6px}.cadd input{flex:1}.cadd .btn{flex:0 0 auto}
@@ -638,12 +642,12 @@ a{color:var(--green)}
       <div class="phead">
         <div class="pphoto-col">
           <div class="pphoto" id="pphoto" title="Mantén pulsado para cambiar la foto">${p.foto ? `<img src="${p.foto}" alt="Foto de perfil">` : ICON.user}</div>
-          <div class="pnum" title="Rutas en tu agenda">${st.total}</div>
+          <div class="pnum" title="Rutas realizadas">${rutasRealizadas().length}</div>
         </div>
         <div class="pinfo">
           <button class="pedit" id="pedit">Edita</button>
           <div class="pname">${esc(nombre)}</div>
-          ${clubsDe(p).map(c => `<div class="psince">${esc(c)}</div>`).join('')}
+          ${misClubsPerfil().map(c => `<button class="pclub" data-pclub="${esc(c.id)}">${esc(c.nombre)}</button>`).join('')}
         </div>
       </div>
       <input type="file" id="pfile" accept="image/*" hidden>
@@ -652,11 +656,9 @@ a{color:var(--green)}
         <button data-goto="agenda"><b>${st.insc}</b><span>Inscrito</span></button>
         <button data-goto="agenda"><b>${st.int}</b><span>Me interesa</span></button>
       </div>
-      <div class="stats" style="margin-top:18px">
-        <div class="stat"><b>${st.pas}</b><span>Rutas pasadas</span></div>
-        <div class="stat"><b>${Math.round(st.km)} km</b><span>${st.des ? st.des.toLocaleString('es-ES') + ' m D+' : 'Recorridos'}</span></div>
-      </div>`;
+      ${realizadasHTML()}`;
     $('#perfil').innerHTML = cuentaBanner() + h; bindCuentaBanner();
+    document.querySelectorAll('[data-pclub]').forEach(b => b.onclick = () => clubPantalla(b.dataset.pclub));
     // foto: mantener pulsado (o tocar si aún no hay foto)
     const ph = $('#pphoto'), fi = $('#pfile'); let t0 = 0, moved = false;
     ph.addEventListener('pointerdown', () => { t0 = Date.now(); moved = false; ph.classList.add('press'); });
@@ -686,14 +688,13 @@ a{color:var(--green)}
     const p = state.prefs;
     $('#sheet').innerHTML = `<h2>Editar perfil</h2><form id="pf">
       <label>Nombre</label><input name="nombre" value="${esc(p.nombre||'')}" placeholder="Tu nombre">
-      <label>Club</label><div id="clubsEd"></div>
+
       <label>Foto de perfil</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pfoto">${p.foto ? 'Cambiar foto' : 'Añadir foto'}</button>${p.foto ? '<button type="button" class="btn del" id="pnofoto">Quitar foto</button>' : ''}</div>
       <div class="btns"><button type="button" class="btn" id="pcancel">Cancelar</button><button class="btn pri" type="submit">Guardar</button></div></form>`;
     $('#pcancel').onclick = close;
     $('#pfoto').onclick = () => { close(); $('#pfile').click(); };
     const nf = $('#pnofoto'); if(nf) nf.onclick = async () => { if(await confirmDlg('¿Quitar la foto de perfil?', '', 'Quitar')){ delete state.prefs.foto; close(); save(); } };
-    clubsMontar(p);
-    $('#pf').onsubmit = ev => { ev.preventDefault(); const fd = new FormData(ev.target); p.nombre = (fd.get('nombre')||'').toString().trim(); p.clubs = clubsRecoger(); close(); save(); };
+    $('#pf').onsubmit = ev => { ev.preventDefault(); const fd = new FormData(ev.target); p.nombre = (fd.get('nombre')||'').toString().trim();  close(); save(); };
     $('#ovl').classList.add('show');
   }
   function amigos(){
@@ -752,15 +753,14 @@ a{color:var(--green)}
     const p = state.prefs;
     cfgPage('Información personal', `<div class="cfgbox"><form id="pf2">
       <label>Nombre</label><input name="nombre" value="${esc(p.nombre||'')}" placeholder="Tu nombre">
-      <label>Club</label><div id="clubsEd"></div>
+
       ${sesion ? `<label>@usuario</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pusr">${AMI.yo ? '@' + esc(AMI.yo.usuario) + ' · Cambiar' : 'Elegir @usuario'}</button></div>` : ''}
       <label>Foto de perfil</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pfoto2">${p.foto ? 'Cambiar foto' : 'Añadir foto'}</button>${p.foto ? '<button type="button" class="btn del" id="pnofoto2">Quitar foto</button>' : ''}</div>
       <div class="btns"><button class="btn pri" type="submit">Guardar</button></div></form></div>`, true);
     const pu = $('#pusr'); if(pu) pu.onclick = () => elegirUsuario();
     $('#pfoto2').onclick = () => { $('#sheet').classList.remove('cfg'); close(); $('#pfile').click(); };
     const nf = $('#pnofoto2'); if(nf) nf.onclick = async () => { if(await confirmDlg('¿Quitar la foto de perfil?', '', 'Quitar')){ delete state.prefs.foto; $('#sheet').classList.remove('cfg'); close(); save(); } };
-    clubsMontar(p);
-    $('#pf2').onsubmit = ev => { ev.preventDefault(); const fd = new FormData(ev.target); p.nombre = (fd.get('nombre')||'').toString().trim(); p.clubs = clubsRecoger(); $('#sheet').classList.remove('cfg'); close(); save(); };
+    $('#pf2').onsubmit = ev => { ev.preventDefault(); const fd = new FormData(ev.target); p.nombre = (fd.get('nombre')||'').toString().trim();  $('#sheet').classList.remove('cfg'); close(); save(); };
   }
   function cfgCopia(){
     const n = state.events.length;
@@ -853,7 +853,7 @@ a{color:var(--green)}
     else { ctx.fillStyle = C.g2; ctx.fillRect(px, py, PS, PS); ctx.fillStyle = C.g; ctx.font = '700 120px "Barlow Condensed"'; ctx.textAlign = 'center'; ctx.fillText(((p.nombre||'⛰').charAt(0)).toUpperCase(), px+PS/2, py+PS/2+42); ctx.textAlign = 'left'; }
     ctx.restore();
     ctx.fillStyle = C.ink; ctx.font = '700 60px Inter'; ctx.fillText(p.nombre || 'Mis rutas', 380, 190);
-    ctx.fillStyle = C.muted; ctx.font = '400 34px Inter'; if(clubsDe(p).length) ctx.fillText(clubsDe(p).join(' · ').slice(0, 40), 380, 245);
+    ctx.fillStyle = C.muted; ctx.font = '400 34px Inter'; if(misClubsPerfil().length) ctx.fillText(misClubsPerfil().map(c => c.nombre).join(' · ').slice(0, 40), 380, 245);
     const cols = [[st.insc,'Inscrito'],[st.int,'Me interesa']];
     cols.forEach(([n,l],i) => { const x = 380 + i*200; ctx.fillStyle = C.ink; ctx.font = '600 56px Inter'; ctx.fillText(String(n), x, 345); ctx.fillStyle = C.muted; ctx.font = '400 28px Inter'; ctx.fillText(l, x, 385); });
     ctx.fillStyle = C.muted; ctx.font = '600 32px Inter'; ctx.fillText('⛰ Mis rutas y trails', 58, H-40);
@@ -1599,6 +1599,23 @@ a{color:var(--green)}
   }
   // si se guarda el formulario con texto escrito en "Otro club" sin pulsar Añadir, también se añade
   function clubsRecoger(){ const inp = $('#cnew'); if(inp && inp.value.trim()){ const v = inp.value.trim().replace(/\s+/g, ' '); if(!clubsTmp.some(c => c.toLowerCase() === v.toLowerCase())) clubsTmp.push(v); } return clubsTmp.slice(); }
+
+  // ----- clubs reales del perfil y rutas realizadas -----
+  function misClubsPerfil(){
+    if(typeof sesion === 'undefined' || !sesion || typeof CLUB === 'undefined') return [];
+    return CLUB.mis.filter(m => (m.rol === 'admin' || m.rol === 'socio') && m.clubs).map(m => ({id: m.club, nombre: m.clubs.nombre})).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  }
+  // realizadas: rutas en las que estabas inscrito y cuya fecha ya pasó
+  function rutasRealizadas(){
+    return state.events.filter(e => e.date && days(e.date) < 0 && (e.estado === 'inscrito' || e.done)).sort((a, b) => b.date.localeCompare(a.date));
+  }
+  function realizadasHTML(){
+    const l = rutasRealizadas(), anio = today().getFullYear();
+    return `<div class="cfglabel" style="margin-top:22px">Rutas realizadas</div><div class="cfgbox">${l.length ? l.map(e => {
+      const d = pd(e.date), extra = [e.lugar, e.km ? e.km + ' km' : '', e.desnivel ? e.desnivel + ' m D+' : ''].filter(Boolean).join(' · ');
+      return `<div class="rhech"><div class="date t-${esc(tiposOf(e)[0])}"><b>${d.getDate()}</b><span>${MESES[d.getMonth()]}${d.getFullYear() !== anio ? ' ' + String(d.getFullYear()).slice(2) : ''}</span></div><div class="finfo"><b style="white-space:normal">${esc(e.nombre || '')}</b>${extra ? `<span>${esc(extra)}</span>` : ''}</div></div>`;
+    }).join('') : '<div class="sub">Aquí aparecerán las rutas en las que te inscribas cuando pase su fecha.</div>'}</div>`;
+  }
 
   // ---------- clubs ----------
   var WEBBASE = [], CLUBWEB = [];
