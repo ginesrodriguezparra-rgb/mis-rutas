@@ -1442,11 +1442,19 @@ a{color:var(--green)}
       AMI.clubs = new Map(clubs.map(c => [c.amigo, Array.isArray(c.clubs) ? c.clubs : []]));
       AMI.filas = filas; AMI.perfiles = new Map(perfiles.map(p => [p.id, p]));
       AMI.agendas = new Map(); AMI.porRuta = new Map();
+      // cada amigo cuenta una sola vez por ruta, aunque la tenga repetida en su agenda
+      const visto = new Map();
       agendas.forEach(({amigo, ruta}) => {
+        const k = amigo + '|' + (ruta.webId || ((ruta.nombre || '') + '|' + (ruta.date || '')));
+        const prev = visto.get(k);
+        if(prev){ if(ruta.estado === 'inscrito' && prev.estado !== 'inscrito') prev.estado = 'inscrito'; return; }
+        const r = Object.assign({}, ruta); visto.set(k, r);
         if(!AMI.agendas.has(amigo)) AMI.agendas.set(amigo, []);
-        AMI.agendas.get(amigo).push(ruta);
-        if(ruta.webId){ if(!AMI.porRuta.has(ruta.webId)) AMI.porRuta.set(ruta.webId, []); AMI.porRuta.get(ruta.webId).push({amigo, estado: ruta.estado}); }
+        AMI.agendas.get(amigo).push(r);
       });
+      AMI.agendas.forEach((lista, amigo) => lista.forEach(r => {
+        if(r.webId){ if(!AMI.porRuta.has(r.webId)) AMI.porRuta.set(r.webId, []); AMI.porRuta.get(r.webId).push({amigo, estado: r.estado}); }
+      }));
       AMI.agendas.forEach(l => l.sort((a, b) => (a.date || '').localeCompare(b.date || '')));
       AMI.recibidas = filas.filter(f => f.estado === 'pendiente' && f.para === sesion.user.id).length;
       AMI.cargado = true;
