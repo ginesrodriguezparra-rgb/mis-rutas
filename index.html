@@ -261,6 +261,19 @@ body{position:fixed;inset:0}
 .club{display:inline-flex;align-items:center;gap:4px;background:var(--green2);color:var(--green);border-radius:999px;padding:6px 6px 6px 12px;font:600 14px Inter,sans-serif}
 .club button{border:0;background:none;color:var(--green);font-size:13px;cursor:pointer;padding:2px 5px;opacity:.75}
 .cadd{display:flex;gap:8px;margin-top:6px}.cadd input{flex:1}.cadd .btn{flex:0 0 auto}
+.tabbar{grid-template-columns:repeat(4,1fr) !important}
+.tabbar a{margin:0 3px !important}
+.rol{display:inline-block;background:var(--green2);color:var(--green);border-radius:999px;padding:3px 9px;font:600 12px Inter,sans-serif}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.drow{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+.drow span{color:var(--muted);flex:0 0 auto}.drow b{font-weight:500;text-align:right}
+.drow:last-of-type{border-bottom:0}
+.resp{display:flex;gap:8px;flex-wrap:wrap}
+.chip.act-no{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.okc{color:var(--green) !important;font-weight:600}
+.evrow{cursor:pointer;border-bottom:0 !important}
+textarea{resize:vertical;min-height:70px}
+#kq{width:100%}
 /* hojas */
 .ovl{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
 .ovl.show{display:flex}
@@ -297,6 +310,10 @@ a{color:var(--green)}
     <h1 class="ttl">Mi agenda</h1>
     <div id="agenda"></div>
   </section>
+  <section id="tab-club" class="tab" hidden>
+    <h1 class="ttl">Club</h1>
+    <div id="club"></div>
+  </section>
   <section id="tab-perfil" class="tab" hidden>
     <div id="perfil"></div>
   </section>
@@ -305,6 +322,7 @@ a{color:var(--green)}
 <nav class="tabbar" aria-label="Secciones">
   <a href="#rutas" data-tab="rutas"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg><span>Rutas</span></a>
   <a href="#agenda" data-tab="agenda"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M3.5 10h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="8.5" cy="14.5" r="1.4" fill="currentColor"/><circle cx="12" cy="14.5" r="1.4" fill="currentColor"/></svg><span>Agenda</span><i class="badge" id="agBadge" hidden></i></a>
+  <a href="#club" data-tab="club"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8.5" r="3.4" fill="currentColor"/><circle cx="16.5" cy="9.5" r="2.8" fill="currentColor" opacity=".7"/><path d="M1.8 20c.5-3.9 3.1-6.2 6.2-6.2s5.7 2.3 6.2 6.2z" fill="currentColor"/><path d="M15 20c-.2-2.2-1-4-2.2-5.2.9-.6 2-.9 3.7-.9 2.8 0 4.9 2 5.3 6.1z" fill="currentColor" opacity=".7"/></svg><span>Club</span></a>
   <a href="#perfil" data-tab="perfil"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4.2" fill="currentColor"/><path d="M3.8 21c.6-4.4 4-7 8.2-7s7.6 2.6 8.2 7z" fill="currentColor"/></svg><span>Perfil</span></a>
 </nav>
 <div class="ovl" id="ovl"><div class="sheet" id="sheet"></div></div>
@@ -505,6 +523,7 @@ a{color:var(--green)}
     if(w.precio) tags.push(`<span class="tag">${precioTxt(w.precio)}</span>`);
     if(w.estado) tags.push(`<span class="tag ${/abiert/i.test(w.estado)?'ok':/cerrad|cancel|agotad/i.test(w.estado)?'bad':'warn'}">${esc(w.estado)}</span>`);
     if(w.fuente) tags.push(`<span class="tag">${esc(w.fuente)}</span>`);
+    if(w.clubEv && !w.publico) tags.push('<span class="tag">🔒 Solo socios</span>');
     if(w.verificado === false) tags.push('<span class="tag warn" title="La ficha no detalla sus pruebas; puede tener más modalidades">Modalidades sin confirmar</span>');
     const mine = state.events.find(e => e.webId === w.id);
     const lugar = (w.lugar||'') + (w._p && !(w.lugar||'').includes(w._p) ? (w.lugar ? ' (' + w._p + ')' : w._p) : '');
@@ -520,6 +539,7 @@ a{color:var(--green)}
         <button class="chip ${mine&&mine.estado==='interesado'?'act-int':'amber'}" data-add="${esc(w.id)}" data-st="interesado">${mine&&mine.estado==='interesado'?'★ Me interesa ✕':'★ Me interesa'}</button>
         <button class="chip ${mine&&mine.estado==='inscrito'?'act-ins':'greenl'}" data-add="${esc(w.id)}" data-st="inscrito">${mine&&mine.estado==='inscrito'?'✓ Inscrito ✕':'✓ Inscrito'}</button>
         ${mine ? '' : `<button class="chip" data-hide="${esc(w.id)}">Descartar</button>`}
+        ${w.clubEv ? `<button class="chip" data-cev="${esc(w.clubEv)}">Ver evento</button>` : ''}
         ${w.url ? `<a class="chip" href="${esc(w.url)}" target="_blank" rel="noopener">Ver web ↗</a>` : ''}
       </div></div></div>`;
   }
@@ -543,6 +563,7 @@ a{color:var(--green)}
     const rf = $('#rmfecha'); if(rf) rf.onclick = () => { ffecha = {modo:'todas', desde:'', hasta:''}; saveFecha(); renderEventos(); };
     document.querySelectorAll('[data-rmp]').forEach(b => b.onclick = () => { fprovs.delete(b.dataset.rmp); saveLocalProvs(); renderEventos(); commitZona(); });
     document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => addFromWeb(b.dataset.add, b.dataset.st));
+    document.querySelectorAll('[data-cev]').forEach(b => b.onclick = () => eventoPantalla(b.dataset.cev));
     document.querySelectorAll('[data-hide]').forEach(b => b.onclick = async () => { const w = state.web.find(x => x.id === b.dataset.hide); if(await confirmDlg('¿Descartar este evento?', w ? `«${w.nombre}» dejará de aparecer en la lista.` : '', 'Descartar')){ state.ocultas.push(b.dataset.hide); save(); } });
     document.querySelectorAll('[data-share]').forEach(b => bindShare(b, () => state.web.find(x => x.id === b.dataset.share)));
   }
@@ -783,6 +804,7 @@ a{color:var(--green)}
       <p><b>Añadir a tu agenda</b><br>Pulsa <b>★ Me interesa</b> o <b>✓ Inscrito</b> en cualquier evento. Vuelve a pulsarlo para quitarlo.</p>
       <p><b>Compartir</b><br>Toca el icono de compartir de la tarjeta para enviarla por WhatsApp, Telegram… Mantenlo pulsado para compartirla como imagen.</p>
       <p><b>Amigos</b><br>Con una cuenta, entra en Perfil › Amigos para elegir tu @usuario, invitar a tus amigos con un enlace o buscarlos. Cuando aceptan, veis las rutas a las que vais y en cada evento aparece qué amigos están apuntados.</p>
+      <p><b>Clubs</b><br>En la pestaña Club puedes crear un club (serás su administrador), buscar clubs y unirte. Los administradores crean rutas y eventos, eligen si son públicos o solo para socios, invitan a usuarios y nombran a otros administradores. Si respondes «Voy» o «Me interesa» a un evento, se añade a tu agenda.</p>
       <p><b>Instalar la app</b><br>En Safari, pulsa Compartir › «Añadir a pantalla de inicio».</p>
       <p><b>Modalidades sin confirmar</b><br>La web del evento no detalla sus pruebas; puede tener más modalidades (por ejemplo, senderismo).</p>
       <p><b>¿Falta un evento?</b><br>La lista se actualiza cada mañana. Comprueba siempre los datos en la web oficial del evento antes de inscribirte.</p></div>`, true);
@@ -795,7 +817,7 @@ a{color:var(--green)}
   }
   function cfgPrivacidad(){
     cfgPage('Política de privacidad', `<div class="cfgbox help">
-      <p><b>Sin cuenta:</b> tus datos (agenda, nombre, clubes, foto y provincias) se guardan solo en tu móvil y no se envían a ningún servidor.</p><p><b>Con cuenta:</b> guardamos tu correo electrónico y esos mismos datos para que puedas usarlos en cualquier dispositivo. Se almacenan en servidores de Supabase situados en la Unión Europea (Frankfurt, Alemania). Tu contraseña se guarda cifrada y nadie puede verla. Si entras con Google, solo recibimos tu correo.</p><p>Solo tú puedes ver y cambiar tus datos. No los vendemos ni los compartimos con nadie, y no los usamos para publicidad.</p><p><b>Amigos:</b> si eliges un @usuario, los demás usuarios pueden ver tu nombre, tu @usuario y tu foto para poder encontrarte. Las rutas de tu agenda marcadas como Inscrito o Me interesa solo las ven los amigos cuya solicitud hayas aceptado (o que hayan aceptado la tuya). Tus clubs también los ven solo tus amigos aceptados. Puedes eliminar a un amigo en cualquier momento.</p>
+      <p><b>Sin cuenta:</b> tus datos (agenda, nombre, clubes, foto y provincias) se guardan solo en tu móvil y no se envían a ningún servidor.</p><p><b>Con cuenta:</b> guardamos tu correo electrónico y esos mismos datos para que puedas usarlos en cualquier dispositivo. Se almacenan en servidores de Supabase situados en la Unión Europea (Frankfurt, Alemania). Tu contraseña se guarda cifrada y nadie puede verla. Si entras con Google, solo recibimos tu correo.</p><p>Solo tú puedes ver y cambiar tus datos. No los vendemos ni los compartimos con nadie, y no los usamos para publicidad.</p><p><b>Amigos:</b> si eliges un @usuario, los demás usuarios pueden ver tu nombre, tu @usuario y tu foto para poder encontrarte. Las rutas de tu agenda marcadas como Inscrito o Me interesa solo las ven los amigos cuya solicitud hayas aceptado (o que hayan aceptado la tuya). Tus clubs del perfil también los ven solo tus amigos aceptados. <b>Clubs:</b> el nombre, la descripción y el lugar de los clubs los puede ver cualquier usuario; la lista de socios y quién va a cada evento solo la ven los socios de ese club. Los eventos públicos los ve cualquier usuario. Puedes eliminar a un amigo en cualquier momento.</p>
       <p>La app no usa tu ubicación ni envía tus datos a las webs de eventos. Al pulsar «Ver web», WhatsApp o Telegram, se abre esa web o app fuera de aquí.</p>
       <p>Puedes borrar tu cuenta y todos sus datos cuando quieras desde Configuración › Borrar mi cuenta. Sin cuenta, si borras los datos del navegador o desinstalas la app se pierden: usa Configuración › Copia de seguridad.</p><p><b>Responsable y contacto:</b> para cualquier duda sobre tus datos, o para pedir que los consultemos, corrijamos o borremos, escribe a <a href="mailto:misrutasytrail@gmail.com">misrutasytrail@gmail.com</a>. También puedes reclamar ante la Agencia Española de Protección de Datos (aepd.es).</p></div>`, true);
   }
@@ -1038,8 +1060,8 @@ a{color:var(--green)}
   $('#ovl').onclick = e => { if(e.target.id === 'ovl' && Date.now() - ovlAt > 600) close(); };
   $('#add').onclick = () => openForm(null);
 
-  function render(){ renderAgenda(); renderEventos(); renderPerfil(); }
-  const TABS = ['rutas','agenda','perfil'];
+  function render(){ renderAgenda(); renderEventos(); renderPerfil(); if(typeof renderClub === 'function') renderClub(); }
+  const TABS = ['rutas','agenda','club','perfil'];
   function showTab(){
     const t = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'rutas';
     TABS.forEach(k => { document.getElementById('tab-'+k).hidden = k !== t; });
@@ -1056,13 +1078,13 @@ a{color:var(--green)}
     try { localStorage.setItem(USER_KEY, JSON.stringify({events: state.events, ocultas: state.ocultas, prefs: state.prefs})); return true; }
     catch(e){ toast('No hay espacio para guardar. Prueba con una foto de perfil más pequeña.'); return false; }
   }
-  async function save(){ render(); userSave(); if(typeof nubeGuardar === 'function'){ nubeGuardar(); perfilQuizaSubir(); } }
+  async function save(){ render(); userSave(); if(typeof nubeGuardar === 'function'){ nubeGuardar(); perfilQuizaSubir(); clubSyncAgenda(); } }
   async function cargarEventos(){
     try {
       const r = await fetch('eventos.json?t=' + Date.now(), {cache: 'no-store'});
       if(!r.ok) throw new Error(r.status);
       const d = await r.json();
-      state.web = Array.isArray(d.web) ? d.web : [];
+      WEBBASE = Array.isArray(d.web) ? d.web : []; state.web = WEBBASE.concat(CLUBWEB);
       state.fuentes = Array.isArray(d.fuentes) ? d.fuentes : [];
       state.webActualizado = d.webActualizado || '';
       $('#sub').textContent = '';
@@ -1177,7 +1199,7 @@ a{color:var(--green)}
     guardarSesion(sesionDe(d));
     await nubeTraer(true);
     render(); toast('Sesión iniciada ✓');
-    await perfilAsegurar(); amigosCargar();
+    await perfilAsegurar(); amigosCargar(); clubCargar();
   }
   // Vuelta desde un enlace de correo o desde Google: los datos llegan en la dirección (#access_token=…)
   let vueltaRecuperar = false;
@@ -1200,7 +1222,7 @@ a{color:var(--green)}
       if(vueltaRecuperar){ nuevaClave(); return; }
       await nubeTraer(true); render();
       toast(q.get('type') === 'signup' ? '¡Cuenta confirmada! Ya has iniciado sesión ✓' : 'Sesión iniciada ✓');
-      await perfilAsegurar(); amigosCargar();
+      await perfilAsegurar(); amigosCargar(); clubCargar();
     }, 300);
   })();
 
@@ -1276,7 +1298,7 @@ a{color:var(--green)}
     try { await sbAuth('logout', {}); } catch(e){}
     guardarSesion(null); try { localStorage.removeItem(SYNC_KEY); } catch(e){}
     $('#sheet').classList.remove('cfg'); close();
-    amigosReset(); aplicarDatos({events: [], ocultas: [], prefs: {}}); toast('Sesión cerrada');
+    amigosReset(); clubReset(); aplicarDatos({events: [], ocultas: [], prefs: {}}); toast('Sesión cerrada');
   }
   async function borrarCuenta(){
     if(!await confirmDlg('¿Borrar tu cuenta para siempre?', 'Se borrarán tu cuenta, tu agenda y tu perfil de la nube y de este móvil. No se puede deshacer.', 'Borrar cuenta')) return;
@@ -1284,7 +1306,7 @@ a{color:var(--green)}
     catch(e){ toast('No se pudo borrar la cuenta. Revisa tu conexión e inténtalo de nuevo.'); return; }
     guardarSesion(null); try { localStorage.removeItem(SYNC_KEY); } catch(e){}
     $('#sheet').classList.remove('cfg'); close();
-    amigosReset(); aplicarDatos({events: [], ocultas: [], prefs: {}}); toast('Cuenta borrada');
+    amigosReset(); clubReset(); aplicarDatos({events: [], ocultas: [], prefs: {}}); toast('Cuenta borrada');
   }
   function cuentaBanner(){
     if(sesion) return '';
@@ -1549,6 +1571,368 @@ a{color:var(--green)}
   }
   // si se guarda el formulario con texto escrito en "Otro club" sin pulsar Añadir, también se añade
   function clubsRecoger(){ const inp = $('#cnew'); if(inp && inp.value.trim()){ const v = inp.value.trim().replace(/\s+/g, ' '); if(!clubsTmp.some(c => c.toLowerCase() === v.toLowerCase())) clubsTmp.push(v); } return clubsTmp.slice(); }
+
+  // ---------- clubs ----------
+  var WEBBASE = [], CLUBWEB = [];
+  var CLUB = {cargado: false, mis: [], eventos: [], resp: new Map(), pendientesAdmin: new Map(), syncT: null};
+  const DIFS = ['Fácil', 'Moderada', 'Difícil', 'Muy difícil'];
+  const TIPOS_EV = [['senderismo', 'Senderismo'], ['trail', 'Trail'], ['carrera', 'Carrera'], ['mtb', 'MTB'], ['otro', 'Otro']];
+  const hoyISO = () => iso(today());
+  const rolDe = club => { const m = CLUB.mis.find(x => x.club === club); return m ? m.rol : null; };
+  const esAdminDe = club => rolDe(club) === 'admin';
+  const esSocioDe = club => ['admin', 'socio'].includes(rolDe(club));
+  const ROL_TXT = {admin: 'Administrador', socio: 'Socio', pendiente: 'Solicitud enviada', invitado: 'Te han invitado'};
+  function clubAWeb(e){
+    const club = e.clubs && e.clubs.nombre || 'Club';
+    const mod = [e.hora ? 'Salida ' + e.hora : '', e.dificultad ? 'Dificultad ' + e.dificultad.toLowerCase() : '', e.plazas ? e.plazas + ' plazas' : ''].filter(Boolean).join(' · ');
+    return {id: 'club-' + e.id, clubEv: e.id, club: e.club, publico: e.publico, fuente: club, nombre: e.titulo, tipo: e.tipo, tipos: [e.tipo], date: e.fecha,
+      lugar: e.lugar || '', provincia: e.provincia || '', _p: e.provincia || '', km: e.km != null ? String(e.km) : '', desnivel: e.desnivel != null ? String(e.desnivel) : '',
+      precio: e.precio || '', modalidades: mod, url: e.url || '', limite: e.limite || '', verificado: true, dificultad: e.dificultad || '',
+      estado: e.limite ? 'Inscripción hasta ' + pd(e.limite).getDate() + ' ' + MESES[pd(e.limite).getMonth()] : ''};
+  }
+  function mezclarClubEventos(){
+    CLUBWEB = CLUB.eventos.map(clubAWeb);
+    state.web = WEBBASE.concat(CLUBWEB);
+  }
+  async function clubCargar(){
+    if(!sesion) return;
+    try {
+      const yo = sesion.user.id;
+      const mis = await sbRest('club_miembros?select=club,rol,clubs(id,nombre,descripcion,localidad,provincia,abierto)&usuario=eq.' + yo) || [];
+      const eventos = await sbRest('club_eventos?select=*,clubs(nombre)&fecha=gte.' + hoyISO() + '&order=fecha.asc,hora.asc&limit=300') || [];
+      const resp = await sbRest('evento_respuestas?select=evento,estado&usuario=eq.' + yo) || [];
+      const admins = mis.filter(m => m.rol === 'admin').map(m => m.club);
+      const pend = admins.length ? await sbRest('club_miembros?select=club&rol=eq.pendiente&club=in.(' + admins.join(',') + ')') || [] : [];
+      CLUB.mis = mis.filter(m => m.clubs); CLUB.eventos = eventos; CLUB.resp = new Map(resp.map(r => [r.evento, r.estado]));
+      CLUB.pendientesAdmin = new Map(); pend.forEach(p => CLUB.pendientesAdmin.set(p.club, (CLUB.pendientesAdmin.get(p.club) || 0) + 1));
+      CLUB.cargado = true;
+    } catch(e){ return; }
+    mezclarClubEventos(); marcarAvisosClub(); render();
+    const v = $('#sheet').dataset.vista || '';
+    if(v.startsWith('club:')) clubPantalla(v.slice(5));
+    else if(v.startsWith('ev:')) eventoPantalla(v.slice(3));
+  }
+  function clubReset(){ CLUB = {cargado: false, mis: [], eventos: [], resp: new Map(), pendientesAdmin: new Map(), syncT: null}; mezclarClubEventos(); marcarAvisosClub(); }
+  function avisosClub(){
+    let n = CLUB.mis.filter(m => m.rol === 'invitado').length;
+    CLUB.resp.forEach(est => { if(est === 'invitado') n++; });
+    CLUB.pendientesAdmin.forEach(c => n += c);
+    return sesion ? n : 0;
+  }
+  function marcarAvisosClub(){
+    const t = document.querySelector('.tabbar a[data-tab="club"]'); if(!t) return;
+    let d = t.querySelector('.dotn'); if(!d){ d = document.createElement('span'); d.className = 'dotn'; t.appendChild(d); }
+    const n = avisosClub(); d.hidden = !n; d.textContent = n || '';
+  }
+  // La agenda manda: lo que marques como Inscrito / Me interesa en un evento de club se envía como "Voy" / "Me interesa"
+  function clubSyncAgenda(){
+    if(!sesion || !CLUB.cargado) return;
+    clearTimeout(CLUB.syncT);
+    CLUB.syncT = setTimeout(async () => {
+      const quiero = new Map();
+      state.events.forEach(e => { if(e.webId && e.webId.startsWith('club-')) quiero.set(e.webId.slice(5), e.estado === 'inscrito' ? 'voy' : 'interesa'); });
+      const cambios = [];
+      quiero.forEach((est, id) => { if(CLUB.resp.get(id) !== est && CLUB.eventos.some(e => e.id === id)) cambios.push([id, est]); });
+      CLUB.resp.forEach((est, id) => { if((est === 'voy' || est === 'interesa') && !quiero.has(id)) cambios.push([id, 'borrar']); });
+      for(const [id, est] of cambios){
+        try { await sbRest('rpc/responder_evento', {method: 'POST', body: JSON.stringify({p_evento: id, p_estado: est})}); est === 'borrar' ? CLUB.resp.delete(id) : CLUB.resp.set(id, est); } catch(e){}
+      }
+      if(cambios.length){ marcarAvisosClub(); if(!$('#tab-club').hidden) renderClub(); }
+    }, 800);
+  }
+  async function clubRpc(fn, args, ok){
+    try { const r = await sbRest('rpc/' + fn, {method: 'POST', body: JSON.stringify(args || {})}); if(ok) toast(typeof ok === 'function' ? ok(r) : ok); await clubCargar(); return r === null ? true : r; }
+    catch(e){ toast(/ultimo admin/.test(e.message) ? 'Eres el único administrador: nombra a otro antes de salir.' : 'No se pudo hacer. Revisa tu conexión.'); return false; }
+  }
+  async function necesitaUsuario(siguiente){
+    if(!sesion){ cuentaPantalla('registro'); return false; }
+    if(AMI.yo) return true;
+    const y = await perfilAsegurar(false);
+    if(y) return true;
+    elegirUsuario(siguiente); return false;
+  }
+
+  // ----- pestaña Club -----
+  function filaClub(m, derecha){
+    const c = m.clubs || m;
+    return `<div class="prow" data-club="${esc(c.id)}">${avatar({nombre: c.nombre}, 44)}<div class="finfo"><b>${esc(c.nombre)}</b><span>${esc([c.localidad, c.provincia].filter(Boolean).join(', ') || (c.abierto ? 'Entrada libre' : 'Con aprobación'))}</span></div><div class="pacts">${derecha || CHEV}</div></div>`;
+  }
+  function renderClub(){
+    const el = $('#club'); if(!el) return;
+    if(!sesion){
+      el.innerHTML = `<div class="acard"><b>Únete a tu club</b><span>Crea tu cuenta para crear un club, unirte a otros y apuntarte a sus rutas y eventos.</span>
+        <div class="btns" style="margin-top:10px"><button class="btn pri" id="kcrear">Crear cuenta</button><button class="btn" id="kentrar">Iniciar sesión</button></div></div>`;
+      $('#kcrear').onclick = () => cuentaPantalla('registro'); $('#kentrar').onclick = () => cuentaPantalla('entrar');
+      return;
+    }
+    const invClubs = CLUB.mis.filter(m => m.rol === 'invitado');
+    const invEv = CLUB.eventos.filter(e => CLUB.resp.get(e.id) === 'invitado');
+    const mios = CLUB.mis.filter(m => m.rol === 'admin' || m.rol === 'socio');
+    const pend = CLUB.mis.filter(m => m.rol === 'pendiente');
+    const misIds = new Set(mios.map(m => m.club));
+    const proximos = CLUBWEB.filter(w => misIds.has(w.club) && days(w.date) >= 0);
+    let h = '';
+    if(invClubs.length || invEv.length){
+      h += `<div class="cfglabel">Invitaciones</div><div class="cfgbox">`;
+      h += invClubs.map(m => filaClub(m, `<button class="chip greenl" data-kjoin="${esc(m.club)}">Unirme</button><button class="chip" data-kleave="${esc(m.club)}">✕</button>`)).join('');
+      h += invEv.map(e => { const d = pd(e.fecha); return `<div class="frow" data-kev="${esc(e.id)}"><div class="date t-${esc(e.tipo)}"><b>${d.getDate()}</b><span>${MESES[d.getMonth()]}</span></div><div class="finfo"><b>${esc(e.titulo)}</b><span>${esc(e.clubs ? e.clubs.nombre : '')}${e.lugar ? ' · ' + esc(e.lugar) : ''}</span><span><button class="chip greenl" data-kresp="${esc(e.id)}" data-e="voy">✓ Voy</button> <button class="chip amber" data-kresp="${esc(e.id)}" data-e="interesa">★ Me interesa</button> <button class="chip" data-kresp="${esc(e.id)}" data-e="no">No voy</button></span></div></div>`; }).join('');
+      h += `</div>`;
+    }
+    h += `<div class="cfglabel">Mis clubs</div><div class="cfgbox">${mios.length ? mios.map(m => { const p = CLUB.pendientesAdmin.get(m.club); return filaClub(m, `${m.rol === 'admin' ? '<span class="rol">Admin</span>' : ''}${p ? `<span class="dotn" style="position:static">${p}</span>` : ''}${CHEV}`); }).join('') : '<div class="sub">Todavía no estás en ningún club. Busca el tuyo o crea uno.</div>'}
+      <div class="btns"><button class="btn pri" id="knuevo">＋ Crear un club</button></div></div>`;
+    if(pend.length) h += `<div class="cfglabel">Solicitudes enviadas</div><div class="cfgbox">${pend.map(m => filaClub(m, `<button class="chip" data-kleave="${esc(m.club)}">Cancelar</button>`)).join('')}</div>`;
+    h += `<div class="cfglabel">Buscar clubs</div><div class="cfgbox"><input id="kq" placeholder="Nombre, localidad o provincia" autocorrect="off"><div id="kres"></div></div>`;
+    h += `<div class="cfglabel">Próximos eventos de mis clubs</div>${proximos.length ? proximos.map(cardWeb).join('') : '<div class="cfgbox"><div class="sub">Aquí verás las rutas y eventos que organicen tus clubs.</div></div>'}`;
+    el.innerHTML = h;
+    el.querySelectorAll('[data-club]').forEach(b => b.onclick = ev => { if(ev.target.closest('button')) return; clubPantalla(b.dataset.club); });
+    el.querySelectorAll('[data-kjoin]').forEach(b => b.onclick = async () => { if(await necesitaUsuario(renderClub)) clubRpc('unirse_club', {p_club: b.dataset.kjoin}, '¡Ya eres socio! ✓'); });
+    el.querySelectorAll('[data-kleave]').forEach(b => b.onclick = () => clubRpc('salir_club', {p_club: b.dataset.kleave}, 'Hecho'));
+    el.querySelectorAll('[data-kev]').forEach(b => b.onclick = ev => { if(ev.target.closest('button')) return; eventoPantalla(b.dataset.kev); });
+    el.querySelectorAll('[data-kresp]').forEach(b => b.onclick = () => responderDesdeInvitacion(b.dataset.kresp, b.dataset.e));
+    $('#knuevo').onclick = async () => { if(await necesitaUsuario(() => clubForm())) clubForm(); };
+    let qt = null;
+    const buscar = async q => {
+      let r = [];
+      try { r = await sbRest('rpc/buscar_clubs', {method: 'POST', body: JSON.stringify({p_texto: q})}) || []; } catch(e){ $('#kres').innerHTML = '<div class="sub">No se pudo buscar.</div>'; return; }
+      $('#kres').innerHTML = r.length ? r.map(c => { const rol = rolDe(c.id); return filaClub(c, `<span class="sub">${c.socios} ${c.socios == 1 ? 'socio' : 'socios'}</span>${rol ? `<span class="rol">${esc(ROL_TXT[rol])}</span>` : ''}${CHEV}`); }).join('') : '<div class="sub" style="padding-top:8px">No hay clubs con ese nombre. ¿Por qué no lo creas tú?</div>';
+      $('#kres').querySelectorAll('[data-club]').forEach(b => b.onclick = () => clubPantalla(b.dataset.club, r.find(c => c.id === b.dataset.club)));
+    };
+    $('#kq').oninput = ev => { clearTimeout(qt); const q = ev.target.value.trim(); if(q.length < 2){ $('#kres').innerHTML = ''; return; } qt = setTimeout(() => buscar(q), 350); };
+    el.querySelectorAll('[data-add]').forEach(b => b.onclick = () => addFromWeb(b.dataset.add, b.dataset.st));
+    el.querySelectorAll('[data-cev]').forEach(b => b.onclick = () => eventoPantalla(b.dataset.cev));
+    el.querySelectorAll('[data-share]').forEach(b => bindShare(b, () => state.web.find(x => x.id === b.dataset.share)));
+  }
+  function responderDesdeInvitacion(id, est){
+    const wid = 'club-' + id;
+    if(est === 'no'){
+      state.events = state.events.filter(e => e.webId !== wid); userSave(); nubeGuardar();
+      clubRpc('responder_evento', {p_evento: id, p_estado: 'no'}, 'Respuesta enviada');
+      return;
+    }
+    const mine = state.events.find(e => e.webId === wid), quiero = est === 'voy' ? 'inscrito' : 'interesado';
+    if(mine){ if(mine.estado !== quiero){ mine.estado = quiero; save(); } else clubSyncAgenda(); }
+    else addFromWeb(wid, quiero);
+    toast(est === 'voy' ? 'Apuntado en tu agenda ✓' : 'Guardado como Me interesa ✓');
+  }
+
+  // ----- crear / editar club -----
+  function clubForm(c){
+    c = c || {};
+    const provOpts = ['<option value="">Provincia…</option>'].concat(PROVS.map(([n]) => n).sort((a, b) => a.localeCompare(b, 'es')).map(n => `<option ${c.provincia === n ? 'selected' : ''}>${esc(n)}</option>`)).join('');
+    cfgPage(c.id ? 'Editar club' : 'Crear club', `<div class="cfgbox"><form id="kf">
+      <label>Nombre del club</label><input name="nombre" required minlength="3" maxlength="60" value="${esc(c.nombre || '')}" placeholder="Ej. CD Trail Almanzora">
+      <label>Descripción</label><textarea name="descripcion" rows="3" maxlength="600" placeholder="Qué hacéis, cuándo salís…">${esc(c.descripcion || '')}</textarea>
+      <label>Localidad</label><input name="localidad" maxlength="60" value="${esc(c.localidad || '')}">
+      <label>Provincia</label><select name="provincia">${provOpts}</select>
+      <label>¿Cómo se entra en el club?</label>
+      <div class="cfgradio"><button type="button" data-ab="0" class="${c.abierto ? '' : 'on'}">Con aprobación de un administrador<span>${c.abierto ? '' : '✓'}</span></button><button type="button" data-ab="1" class="${c.abierto ? 'on' : ''}">Entrada libre<span>${c.abierto ? '✓' : ''}</span></button></div>
+      <div class="amsg" id="amsg"></div>
+      <div class="btns"><button class="btn pri" type="submit">${c.id ? 'Guardar' : 'Crear club'}</button></div></form></div>`, false);
+    $('#sheet').dataset.vista = c.id ? 'club:' + c.id : '';
+    if(c.id) $('#cfgx').onclick = () => clubPantalla(c.id);
+    let abierto = !!c.abierto;
+    document.querySelectorAll('[data-ab]').forEach(b => b.onclick = () => { abierto = b.dataset.ab === '1'; document.querySelectorAll('[data-ab]').forEach(x => { x.classList.toggle('on', x === b); x.querySelector('span').textContent = x === b ? '✓' : ''; }); });
+    $('#kf').onsubmit = async ev => {
+      ev.preventDefault();
+      const f = ev.target, d = {nombre: f.nombre.value.trim(), descripcion: f.descripcion.value.trim(), localidad: f.localidad.value.trim(), provincia: f.provincia.value, abierto};
+      if(d.nombre.length < 3){ $('#amsg').textContent = 'El nombre debe tener al menos 3 letras.'; return; }
+      try {
+        if(c.id){ await sbRest('clubs?id=eq.' + c.id, {method: 'PATCH', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify(d)}); toast('Club guardado ✓'); await clubCargar(); clubPantalla(c.id); }
+        else { const id = await sbRest('rpc/crear_club', {method: 'POST', body: JSON.stringify({p_nombre: d.nombre, p_descripcion: d.descripcion, p_localidad: d.localidad, p_provincia: d.provincia, p_abierto: abierto})}); toast('¡Club creado! Eres su administrador ✓'); await clubCargar(); clubPantalla(id); }
+      } catch(e){ $('#amsg').textContent = 'No se pudo guardar. Revisa tu conexión.'; }
+    };
+  }
+
+  // ----- página del club -----
+  async function clubPantalla(id, info){
+    const m = CLUB.mis.find(x => x.club === id);
+    let c = m && m.clubs || info;
+    if(!c){ try { c = (await sbRest('clubs?select=id,nombre,descripcion,localidad,provincia,abierto&id=eq.' + id))[0]; } catch(e){} }
+    if(!c){ toast('No se encontró el club'); return; }
+    const rol = rolDe(id), socio = esSocioDe(id), admin = esAdminDe(id);
+    let miembros = [], perf = new Map();
+    if(socio){
+      try {
+        miembros = await sbRest('club_miembros?select=usuario,rol&club=eq.' + id) || [];
+        const ids = miembros.map(x => x.usuario);
+        if(ids.length) (await sbRest('perfiles?select=id,usuario,nombre,foto&id=in.(' + ids.join(',') + ')') || []).forEach(p => perf.set(p.id, p));
+      } catch(e){}
+    }
+    const P = u => perf.get(u) || {id: u, usuario: '…', nombre: ''};
+    const socios = miembros.filter(x => x.rol === 'admin' || x.rol === 'socio').sort((a, b) => (a.rol === 'admin' ? 0 : 1) - (b.rol === 'admin' ? 0 : 1));
+    const solicitudes = miembros.filter(x => x.rol === 'pendiente'), invitados = miembros.filter(x => x.rol === 'invitado');
+    const evs = CLUBWEB.filter(w => w.club === id && days(w.date) >= 0);
+    let accion = '';
+    if(!rol) accion = `<button class="btn pri" id="kjoin">${c.abierto ? 'Unirme al club' : 'Solicitar unirme'}</button>`;
+    else if(rol === 'invitado') accion = `<button class="btn pri" id="kjoin">Aceptar invitación</button><button class="btn" id="kleave">Rechazar</button>`;
+    else if(rol === 'pendiente') accion = `<button class="btn" id="kleave">Cancelar solicitud</button>`;
+    cfgPage(c.nombre, `
+      <div class="cfgbox" style="text-align:center">${avatar({nombre: c.nombre}, 72)}<div style="font-weight:700;font-size:19px;margin-top:8px">${esc(c.nombre)}</div>
+        <div class="sub">${esc([c.localidad, c.provincia].filter(Boolean).join(', '))}${c.localidad || c.provincia ? ' · ' : ''}${c.abierto ? 'Entrada libre' : 'Con aprobación'}${socio ? ' · ' + socios.length + (socios.length === 1 ? ' socio' : ' socios') : ''}</div>
+        ${c.descripcion ? `<p style="margin:10px 0 0;font-size:14.5px;line-height:1.45;text-align:left;white-space:pre-line">${esc(c.descripcion)}</p>` : ''}
+        ${rol ? `<div style="margin-top:10px"><span class="rol">${esc(ROL_TXT[rol])}</span></div>` : ''}
+        ${accion ? `<div class="btns">${accion}</div>` : ''}</div>
+      ${admin ? `<div class="cfggroup" style="margin-top:14px"><button id="knev">＋ Crear ruta o evento${CHEV}</button><button id="kinv">Invitar usuarios al club${CHEV}</button><button id="kedit">Editar club${CHEV}</button></div>` : ''}
+      ${admin && solicitudes.length ? `<div class="cfglabel">Solicitudes para entrar (${solicitudes.length})</div><div class="cfgbox">${solicitudes.map(x => filaPersona(P(x.usuario), `<button class="chip greenl" data-kg="aceptar" data-u="${x.usuario}">Aceptar</button><button class="chip" data-kg="quitar" data-u="${x.usuario}">✕</button>`)).join('')}</div>` : ''}
+      <div class="cfglabel">Próximas rutas y eventos</div>
+      ${evs.length ? evs.map(w => { const d = pd(w.date), r = CLUB.resp.get(w.clubEv); return `<div class="cfgbox frow evrow" data-kev="${esc(w.clubEv)}" style="margin-bottom:8px"><div class="date t-${esc(w.tipo)}"><b>${d.getDate()}</b><span>${MESES[d.getMonth()]}</span></div><div class="finfo"><b>${esc(w.nombre)}</b><span>${esc([w.lugar, w.modalidades].filter(Boolean).join(' · '))}</span>${r === 'voy' ? '<span class="okc">✓ Vas</span>' : r === 'interesa' ? '<span class="okc">★ Te interesa</span>' : ''}${!w.publico ? '<span>🔒 Solo socios</span>' : ''}</div>${CHEV}</div>`; }).join('')
+        : `<div class="cfgbox"><div class="sub">${socio ? 'No hay eventos próximos.' : 'No hay eventos públicos próximos. Los socios pueden ver también los eventos privados.'}</div></div>`}
+      ${socio ? `<div class="cfglabel">Socios (${socios.length})</div><div class="cfgbox">${socios.map(x => filaPersona(P(x.usuario), `${x.rol === 'admin' ? '<span class="rol">Admin</span>' : ''}${admin && x.usuario !== sesion.user.id ? `<button class="chip" data-kmenu="${x.usuario}" data-rol="${x.rol}">···</button>` : ''}`)).join('')}</div>` : ''}
+      ${admin && invitados.length ? `<div class="cfglabel">Invitados (pendientes de aceptar)</div><div class="cfgbox">${invitados.map(x => filaPersona(P(x.usuario), `<button class="chip" data-kg="quitar" data-u="${x.usuario}">Cancelar</button>`)).join('')}</div>` : ''}
+      ${socio ? `<div class="cfgfoot"><button class="cfgdanger" id="kleave2">Salir del club</button>${admin ? '<button class="cfgdanger" id="kdel" style="margin-top:8px">Borrar club</button>' : ''}</div>` : ''}`, false);
+    $('#sheet').dataset.vista = 'club:' + id;
+    const j = $('#kjoin'); if(j) j.onclick = async () => { if(await necesitaUsuario(() => clubPantalla(id))) clubRpc('unirse_club', {p_club: id}, r => r === 'socio' ? '¡Ya eres socio! ✓' : 'Solicitud enviada. Un administrador la revisará.'); };
+    const l = $('#kleave'); if(l) l.onclick = () => clubRpc('salir_club', {p_club: id}, 'Hecho');
+    const l2 = $('#kleave2'); if(l2) l2.onclick = async () => { if(await confirmDlg('¿Salir del club?', `Dejarás de ser socio de ${c.nombre}.`, 'Salir')) { if(await clubRpc('salir_club', {p_club: id}, 'Has salido del club')) close(); } };
+    const del = $('#kdel'); if(del) del.onclick = async () => { if(await confirmDlg('¿Borrar el club?', 'Se borrarán el club, sus socios y todos sus eventos. No se puede deshacer.', 'Borrar club')){ try { await sbRest('clubs?id=eq.' + id, {method: 'DELETE', headers: {'Prefer': 'return=minimal'}}); toast('Club borrado'); close(); clubCargar(); } catch(e){ toast('No se pudo borrar.'); } } };
+    const ne = $('#knev'); if(ne) ne.onclick = () => eventoForm(id);
+    const ed = $('#kedit'); if(ed) ed.onclick = () => clubForm(c);
+    const iv = $('#kinv'); if(iv) iv.onclick = () => invitarUsuarios('Invitar al club', async ids => { for(const u of ids) await sbRest('rpc/gestionar_socio', {method: 'POST', body: JSON.stringify({p_club: id, p_usuario: u, p_accion: 'invitar'})}); return ids.length; }, () => clubPantalla(id), new Set(miembros.map(x => x.usuario)));
+    document.querySelectorAll('[data-kg]').forEach(b => b.onclick = () => clubRpc('gestionar_socio', {p_club: id, p_usuario: b.dataset.u, p_accion: b.dataset.kg}, b.dataset.kg === 'aceptar' ? 'Socio aceptado ✓' : 'Hecho'));
+    document.querySelectorAll('[data-kev]').forEach(b => b.onclick = () => eventoPantalla(b.dataset.kev));
+    document.querySelectorAll('[data-kmenu]').forEach(b => b.onclick = () => menuSocio(id, P(b.dataset.kmenu), b.dataset.rol));
+  }
+  function menuSocio(club, p, rol){
+    $('#cfmbox').innerHTML = `<h3>${esc(nombreDe(p))}</h3><p class="sub">@${esc(p.usuario)} · ${rol === 'admin' ? 'Administrador' : 'Socio'}</p>
+      <div class="btns" style="flex-direction:column">${rol === 'admin' ? '<button class="btn" data-m="quitar_admin">Quitar de administrador</button>' : '<button class="btn" data-m="hacer_admin">Nombrar administrador</button>'}
+      <button class="btn del" data-m="quitar">Quitar del club</button><button class="btn" data-m="">Cancelar</button></div>`;
+    $('#cfm').classList.add('show');
+    $('#cfmbox').querySelectorAll('[data-m]').forEach(b => b.onclick = async () => {
+      $('#cfm').classList.remove('show');
+      const a = b.dataset.m; if(!a) return;
+      if(a === 'quitar' && !await confirmDlg(`¿Quitar a ${nombreDe(p)} del club?`, '', 'Quitar')) return;
+      clubRpc('gestionar_socio', {p_club: club, p_usuario: p.id, p_accion: a}, a === 'hacer_admin' ? 'Nuevo administrador ✓' : 'Hecho');
+    });
+  }
+  // buscador de usuarios para invitar (al club o a un evento)
+  function invitarUsuarios(titulo, enviar, volver, excluir, extraHTML){
+    const elegidos = new Map();
+    cfgPage(titulo, `${extraHTML || ''}<div class="cfgbox"><input id="iq" placeholder="Buscar por nombre o @usuario" autocapitalize="none" autocorrect="off"><div id="ires"></div></div>
+      <div class="cfgbox" style="margin-top:10px"><div class="sub" id="isel">Nadie seleccionado</div><div class="btns"><button class="btn pri" id="isend" disabled>Enviar invitación</button></div></div>`, false);
+    $('#cfgx').onclick = volver;
+    const pintarSel = () => { $('#isel').innerHTML = elegidos.size ? 'Invitar a: ' + [...elegidos.values()].map(p => '<b>' + esc(nombreDe(p)) + '</b>').join(', ') : 'Nadie seleccionado'; $('#isend').disabled = !elegidos.size; };
+    let qt = null;
+    $('#iq').oninput = ev => {
+      clearTimeout(qt); const q = ev.target.value.trim().replace(/^@/, '').replace(/[%*,()]/g, '');
+      if(q.length < 2){ $('#ires').innerHTML = ''; return; }
+      qt = setTimeout(async () => {
+        let r = []; try { r = await sbRest('perfiles?select=id,usuario,nombre,foto&or=(usuario.ilike.*' + encodeURIComponent(q.toLowerCase()) + '*,nombre.ilike.*' + encodeURIComponent(q) + '*)&limit=15') || []; } catch(e){}
+        r = r.filter(p => p.id !== sesion.user.id && !(excluir && excluir.has(p.id)));
+        const pintar = () => { $('#ires').innerHTML = r.length ? r.map(p => filaPersona(p, `<button class="chip ${elegidos.has(p.id) ? 'act-ins' : 'greenl'}" data-isel="${p.id}">${elegidos.has(p.id) ? '✓ Elegido' : 'Elegir'}</button>`)).join('') : '<div class="sub" style="padding-top:8px">No hay nadie con ese nombre.</div>';
+          $('#ires').querySelectorAll('[data-isel]').forEach(b => b.onclick = () => { const p = r.find(x => x.id === b.dataset.isel); elegidos.has(p.id) ? elegidos.delete(p.id) : elegidos.set(p.id, p); pintar(); pintarSel(); }); };
+        pintar();
+      }, 350);
+    };
+    $('#isend').onclick = async () => {
+      $('#isend').disabled = true;
+      try { const n = await enviar([...elegidos.keys()]); toast(n ? `Invitación enviada a ${n} ${n === 1 ? 'persona' : 'personas'} ✓` : 'Ya estaban invitados'); volver(); }
+      catch(e){ toast('No se pudo enviar. Revisa tu conexión.'); $('#isend').disabled = false; }
+    };
+    return {elegidos};
+  }
+
+  // ----- eventos del club -----
+  function eventoForm(club, e){
+    e = e || {publico: true, tipo: 'senderismo'};
+    const provOpts = ['<option value="">Provincia…</option>'].concat(PROVS.map(([n]) => n).sort((a, b) => a.localeCompare(b, 'es')).map(n => `<option ${e.provincia === n ? 'selected' : ''}>${esc(n)}</option>`)).join('');
+    cfgPage(e.id ? 'Editar evento' : 'Nueva ruta o evento', `<div class="cfgbox"><form id="ef">
+      <label>Título</label><input name="titulo" required minlength="3" maxlength="90" value="${esc(e.titulo || '')}" placeholder="Ej. Ruta al Calar Alto">
+      <label>Tipo</label><select name="tipo">${TIPOS_EV.map(([k, l]) => `<option value="${k}" ${e.tipo === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <div class="two"><div><label>Fecha</label><input name="fecha" type="date" required value="${esc(e.fecha || '')}" min="${hoyISO()}"></div><div><label>Hora de salida</label><input name="hora" type="time" value="${esc(e.hora || '')}"></div></div>
+      <label>Lugar</label><input name="lugar" maxlength="80" value="${esc(e.lugar || '')}" placeholder="Localidad o paraje">
+      <label>Provincia</label><select name="provincia">${provOpts}</select>
+      <label>Punto de encuentro</label><input name="encuentro" maxlength="120" value="${esc(e.encuentro || '')}" placeholder="Ej. Plaza del Ayuntamiento">
+      <div class="two"><div><label>Distancia (km)</label><input name="km" type="number" inputmode="decimal" min="0" step="0.1" value="${e.km != null ? esc(e.km) : ''}"></div><div><label>Desnivel (m)</label><input name="desnivel" type="number" inputmode="numeric" min="0" value="${e.desnivel != null ? esc(e.desnivel) : ''}"></div></div>
+      <label>Dificultad</label><select name="dificultad"><option value="">Sin indicar</option>${DIFS.map(d => `<option ${e.dificultad === d ? 'selected' : ''}>${d}</option>`).join('')}</select>
+      <div class="two"><div><label>Precio de inscripción</label><input name="precio" maxlength="30" value="${esc(e.precio || '')}" placeholder="0 = gratis"></div><div><label>Plazas</label><input name="plazas" type="number" inputmode="numeric" min="1" value="${e.plazas != null ? esc(e.plazas) : ''}" placeholder="Sin límite"></div></div>
+      <label>Inscripción hasta</label><input name="limite" type="date" value="${esc(e.limite || '')}">
+      <label>Descripción</label><textarea name="descripcion" rows="4" maxlength="1500" placeholder="Recorrido, material, avituallamiento…">${esc(e.descripcion || '')}</textarea>
+      <label>Enlace de inscripción o más información (opcional)</label><input name="url" type="url" maxlength="300" value="${esc(e.url || '')}" placeholder="https://…">
+      <label>¿Quién puede verlo?</label>
+      <div class="cfgradio"><button type="button" data-pub="1" class="${e.publico ? 'on' : ''}">Público: sale en Rutas para todos<span>${e.publico ? '✓' : ''}</span></button><button type="button" data-pub="0" class="${e.publico ? '' : 'on'}">Solo socios e invitados<span>${e.publico ? '' : '✓'}</span></button></div>
+      <div class="amsg" id="amsg"></div>
+      <div class="btns"><button class="btn pri" type="submit">${e.id ? 'Guardar cambios' : 'Crear evento'}</button></div></form></div>`, false);
+    $('#cfgx').onclick = () => e.id ? eventoPantalla(e.id) : clubPantalla(club);
+    let publico = !!e.publico;
+    document.querySelectorAll('[data-pub]').forEach(b => b.onclick = () => { publico = b.dataset.pub === '1'; document.querySelectorAll('[data-pub]').forEach(x => { x.classList.toggle('on', x === b); x.querySelector('span').textContent = x === b ? '✓' : ''; }); });
+    $('#ef').onsubmit = async ev => {
+      ev.preventDefault();
+      const f = ev.target, num = v => v === '' ? null : Number(v);
+      const d = {titulo: f.titulo.value.trim(), tipo: f.tipo.value, fecha: f.fecha.value, hora: f.hora.value, lugar: f.lugar.value.trim(), provincia: f.provincia.value, encuentro: f.encuentro.value.trim(),
+        km: num(f.km.value), desnivel: f.desnivel.value === '' ? null : Math.round(+f.desnivel.value), dificultad: f.dificultad.value, precio: f.precio.value.trim(), plazas: f.plazas.value === '' ? null : Math.round(+f.plazas.value),
+        limite: f.limite.value || null, descripcion: f.descripcion.value.trim(), url: f.url.value.trim(), publico};
+      if(d.url && !/^https?:\/\//i.test(d.url)) d.url = 'https://' + d.url;
+      if(!d.fecha){ $('#amsg').textContent = 'Indica la fecha.'; return; }
+      try {
+        if(e.id){ await sbRest('club_eventos?id=eq.' + e.id, {method: 'PATCH', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify(d)}); toast('Evento guardado ✓'); await clubCargar(); eventoPantalla(e.id); }
+        else {
+          const r = await sbRest('club_eventos', {method: 'POST', headers: {'Prefer': 'return=representation'}, body: JSON.stringify(Object.assign(d, {club, creado_por: sesion.user.id}))});
+          toast('Evento creado ✓'); await clubCargar();
+          const nuevo = r && r[0];
+          if(nuevo && await confirmDlg('¿Invitar a los socios?', 'Les llegará una invitación al evento en su pestaña Club.', 'Invitar a todos')) await clubRpc('invitar_evento', {p_evento: nuevo.id, p_usuarios: [], p_todos: true}, n => `Invitación enviada a ${n} ${n === 1 ? 'socio' : 'socios'} ✓`);
+          if(nuevo) eventoPantalla(nuevo.id); else clubPantalla(club);
+        }
+      } catch(err){ $('#amsg').textContent = 'No se pudo guardar. Revisa los datos y tu conexión.'; }
+    };
+  }
+  async function eventoPantalla(id){
+    let e = CLUB.eventos.find(x => x.id === id);
+    if(!e){ try { e = (await sbRest('club_eventos?select=*,clubs(nombre)&id=eq.' + id))[0]; } catch(err){} }
+    if(!e){ toast('Este evento ya no está disponible'); return; }
+    const admin = esAdminDe(e.club), socio = esSocioDe(e.club), wid = 'club-' + e.id;
+    const mine = state.events.find(x => x.webId === wid), r = CLUB.resp.get(e.id);
+    let asist = [], perf = new Map();
+    if(socio){
+      try {
+        asist = await sbRest('evento_respuestas?select=usuario,estado&evento=eq.' + id) || [];
+        const ids = asist.map(x => x.usuario);
+        if(ids.length) (await sbRest('perfiles?select=id,usuario,nombre,foto&id=in.(' + ids.join(',') + ')') || []).forEach(p => perf.set(p.id, p));
+      } catch(err){}
+    }
+    const grupo = est => asist.filter(x => x.estado === est).map(x => esc(nombreDe(perf.get(x.usuario)))).join(', ');
+    const d = pd(e.fecha);
+    const fila = (k, v) => v ? `<div class="drow"><span>${k}</span><b>${v}</b></div>` : '';
+    const precio = e.precio ? (/^0([.,]0+)?$/.test(e.precio.trim()) ? 'Gratis' : esc(e.precio) + (/€|eur/i.test(e.precio) ? '' : ' €')) : '';
+    const voyN = asist.filter(x => x.estado === 'voy').length;
+    cfgPage(e.titulo, `
+      <div class="cfgbox"><div class="frow" style="border:0;padding:0"><div class="date t-${esc(e.tipo)}"><b>${d.getDate()}</b><span>${MESES[d.getMonth()]}</span></div><div class="finfo"><b style="white-space:normal">${esc(e.titulo)}</b><span>${esc(e.clubs ? e.clubs.nombre : '')} · ${e.publico ? 'Público' : '🔒 Solo socios e invitados'}</span></div></div>
+        ${fila('Fecha', d.toLocaleDateString('es-ES', {weekday: 'long', day: 'numeric', month: 'long'}) + (e.hora ? ' · ' + esc(e.hora) + ' h' : ''))}
+        ${fila('Tipo', esc((TIPOS_EV.find(t => t[0] === e.tipo) || ['', e.tipo])[1]))}
+        ${fila('Lugar', esc([e.lugar, e.provincia].filter(Boolean).join(', ')))}
+        ${fila('Punto de encuentro', esc(e.encuentro))}
+        ${fila('Distancia', e.km != null ? esc(e.km) + ' km' : '')}
+        ${fila('Desnivel', e.desnivel != null ? esc(e.desnivel) + ' m D+' : '')}
+        ${fila('Dificultad', esc(e.dificultad))}
+        ${fila('Precio', precio)}
+        ${fila('Plazas', e.plazas ? (socio ? voyN + ' apuntados de ' + esc(e.plazas) : esc(e.plazas)) : '')}
+        ${fila('Inscripción hasta', e.limite ? pd(e.limite).toLocaleDateString('es-ES', {day: 'numeric', month: 'long'}) : '')}
+        ${e.descripcion ? `<p style="margin:12px 0 0;font-size:14.5px;line-height:1.5;white-space:pre-line">${esc(e.descripcion)}</p>` : ''}
+        ${e.url ? `<div class="btns"><a class="btn" href="${esc(e.url)}" target="_blank" rel="noopener">Inscripción / más info ↗</a></div>` : ''}</div>
+      <div class="cfglabel">Tu respuesta</div>
+      <div class="cfgbox"><div class="resp"><button class="chip ${mine && mine.estado === 'inscrito' ? 'act-ins' : 'greenl'}" data-r="voy">✓ Voy</button><button class="chip ${mine && mine.estado === 'interesado' ? 'act-int' : 'amber'}" data-r="interesa">★ Me interesa</button><button class="chip ${!mine && r === 'no' ? 'act-no' : ''}" data-r="no">No voy</button></div>
+        <div class="sub" style="margin-top:8px">${mine ? 'Está en tu agenda.' : r === 'invitado' ? 'Te han invitado a este evento.' : 'Si respondes «Voy» o «Me interesa», se añade a tu agenda.'}</div></div>
+      ${socio ? `<div class="cfglabel">Asistentes</div><div class="cfgbox">${fila('✓ Van', grupo('voy') || '—')}${fila('★ Les interesa', grupo('interesa'))}${fila('No van', grupo('no'))}${admin ? fila('Invitados sin responder', grupo('invitado')) : ''}</div>` : ''}
+      ${admin ? `<div class="cfggroup" style="margin-top:14px"><button id="einvall">Invitar a todos los socios${CHEV}</button><button id="einv">Invitar a usuarios concretos${CHEV}</button><button id="eedit">Editar evento${CHEV}</button><button id="edel" class="cdel">Borrar evento${CHEV}</button></div>` : ''}
+      <div class="btns"><button class="btn" id="eshare">Compartir</button><button class="btn" id="eclub">Ver el club</button></div>`, false);
+    $('#sheet').dataset.vista = 'ev:' + id;
+    document.querySelectorAll('[data-r]').forEach(b => b.onclick = async () => {
+      const est = b.dataset.r;
+      if(!state.web.find(x => x.id === wid)){ CLUB.eventos.push(e); mezclarClubEventos(); }
+      if(est === 'no'){ state.events = state.events.filter(x => x.webId !== wid); userSave(); nubeGuardar(); await clubRpc('responder_evento', {p_evento: id, p_estado: 'no'}, 'Respuesta enviada'); }
+      else { const quiero = est === 'voy' ? 'inscrito' : 'interesado', m2 = state.events.find(x => x.webId === wid);
+        if(m2 && m2.estado === quiero){ if(!await removeMine(m2)) return; }
+        else if(m2){ m2.estado = quiero; save(); } else addFromWeb(wid, quiero); }
+      setTimeout(() => eventoPantalla(id), 1100);
+    });
+    const ia = $('#einvall'); if(ia) ia.onclick = () => clubRpc('invitar_evento', {p_evento: id, p_usuarios: [], p_todos: true}, n => n ? `Invitación enviada a ${n} ${n === 1 ? 'socio' : 'socios'} ✓` : 'Todos los socios estaban ya invitados');
+    const iu = $('#einv'); if(iu) iu.onclick = () => invitarUsuarios('Invitar al evento', async ids => sbRest('rpc/invitar_evento', {method: 'POST', body: JSON.stringify({p_evento: id, p_usuarios: ids, p_todos: false})}), () => eventoPantalla(id), new Set(asist.map(x => x.usuario)));
+    const ed = $('#eedit'); if(ed) ed.onclick = () => eventoForm(e.club, e);
+    const dl = $('#edel'); if(dl) dl.onclick = async () => { if(await confirmDlg('¿Borrar este evento?', 'Desaparecerá para todos los socios e invitados.', 'Borrar')){ try { await sbRest('club_eventos?id=eq.' + id, {method: 'DELETE', headers: {'Prefer': 'return=minimal'}}); toast('Evento borrado'); await clubCargar(); clubPantalla(e.club); } catch(err){ toast('No se pudo borrar.'); } } };
+    $('#eclub').onclick = () => clubPantalla(e.club);
+    $('#eshare').onclick = () => { const w = state.web.find(x => x.id === wid) || clubAWeb(e); quickShare(w); };
+  }
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && sesion) clubCargar(); });
+  if(sesion && !location.hash.includes('access_token')) setTimeout(clubCargar, 900);
 
   render(); showTab(); cargarEventos();
   document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && Date.now() - (window._evAt||0) > 3*3600e3){ window._evAt = Date.now(); cargarEventos(); } });
