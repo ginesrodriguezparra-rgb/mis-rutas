@@ -1453,6 +1453,7 @@ a{color:var(--green)}
     return `<div class="fline">👥 ${partes.join(' · ')}</div>`;
   }
   async function procesarInvitacion(){
+    if(typeof procesarInvClub === 'function') procesarInvClub();
     if(!invitacion) return;
     if(!sesion){ toast('Crea una cuenta o inicia sesión para añadir a @' + invitacion); return; }
     if(!AMI.yo) return; // se procesará tras elegir @usuario
@@ -1746,7 +1747,7 @@ a{color:var(--green)}
   }
 
   // ----- página del club -----
-  async function clubPantalla(id, info){
+  async function clubPantalla(id, info, codigoEnlace){
     const m = CLUB.mis.find(x => x.club === id);
     let c = m && m.clubs || info;
     if(!c){ try { c = (await sbRest('clubs?select=id,nombre,descripcion,localidad,provincia,abierto&id=eq.' + id))[0]; } catch(e){} }
@@ -1764,8 +1765,11 @@ a{color:var(--green)}
     const socios = miembros.filter(x => x.rol === 'admin' || x.rol === 'socio').sort((a, b) => (a.rol === 'admin' ? 0 : 1) - (b.rol === 'admin' ? 0 : 1));
     const solicitudes = miembros.filter(x => x.rol === 'pendiente'), invitados = miembros.filter(x => x.rol === 'invitado');
     const evs = CLUBWEB.filter(w => w.club === id && days(w.date) >= 0);
+    let codigoAdmin = '';
+    if(admin && !c.abierto){ try { codigoAdmin = await sbRest('rpc/codigo_invitacion', {method: 'POST', body: JSON.stringify({p_club: id, p_nuevo: false})}) || ''; } catch(e){} }
     let accion = '';
-    if(!rol) accion = `<button class="btn pri" id="kjoin">${c.abierto ? 'Unirme al club' : 'Solicitar unirme'}</button>`;
+    if(codigoEnlace && (!rol || rol === 'pendiente' || rol === 'invitado')) accion = `<button class="btn pri" id="kjoincod">Unirme al club</button>`;
+    else if(!rol) accion = `<button class="btn pri" id="kjoin">${c.abierto ? 'Unirme al club' : 'Solicitar unirme'}</button>`;
     else if(rol === 'invitado') accion = `<button class="btn pri" id="kjoin">Aceptar invitación</button><button class="btn" id="kleave">Rechazar</button>`;
     else if(rol === 'pendiente') accion = `<button class="btn" id="kleave">Cancelar solicitud</button>`;
     cfgPage(c.nombre, `
@@ -1774,7 +1778,8 @@ a{color:var(--green)}
         ${c.descripcion ? `<p style="margin:10px 0 0;font-size:14.5px;line-height:1.45;text-align:left;white-space:pre-line">${esc(c.descripcion)}</p>` : ''}
         ${rol ? `<div style="margin-top:10px"><span class="rol">${esc(ROL_TXT[rol])}</span></div>` : ''}
         ${accion ? `<div class="btns">${accion}</div>` : ''}</div>
-      ${admin ? `<div class="cfggroup" style="margin-top:14px"><button id="knev">＋ Crear ruta o evento${CHEV}</button><button id="kinv">Invitar usuarios al club${CHEV}</button><button id="kedit">Editar club${CHEV}</button></div>` : ''}
+      ${socio ? `<div class="cfgbox" style="margin-top:14px"><b style="font-size:15.5px">Invita a más gente</b><div class="sub" style="margin-top:4px">Comparte un enlace por WhatsApp, Telegram… Quien lo abra podrá crearse una cuenta en la app y ${c.abierto || codigoAdmin ? 'entrar directamente en el club' : 'pedir unirse (lo aprobará un administrador)'}.</div><div class="btns"><button class="btn pri" id="kshare">Invitar con un enlace</button></div>${codigoAdmin ? '<button class="alink" id="kreset" style="margin:4px 0 0">Cambiar enlace (los anteriores dejarán de funcionar)</button>' : ''}</div>` : ''}
+      ${admin ? `<div class="cfggroup" style="margin-top:14px"><button id="knev">＋ Crear ruta o evento${CHEV}</button><button id="kinv">Invitar usuarios de la app al club${CHEV}</button><button id="kedit">Editar club${CHEV}</button></div>` : ''}
       ${admin && solicitudes.length ? `<div class="cfglabel">Solicitudes para entrar (${solicitudes.length})</div><div class="cfgbox">${solicitudes.map(x => filaPersona(P(x.usuario), `<button class="chip greenl" data-kg="aceptar" data-u="${x.usuario}">Aceptar</button><button class="chip" data-kg="quitar" data-u="${x.usuario}">✕</button>`)).join('')}</div>` : ''}
       <div class="cfglabel">Próximas rutas y eventos</div>
       ${evs.length ? evs.map(w => { const d = pd(w.date), r = CLUB.resp.get(w.clubEv); return `<div class="cfgbox frow evrow" data-kev="${esc(w.clubEv)}" style="margin-bottom:8px"><div class="date t-${esc(w.tipo)}"><b>${d.getDate()}</b><span>${MESES[d.getMonth()]}</span></div><div class="finfo"><b>${esc(w.nombre)}</b><span>${esc([w.lugar, w.modalidades].filter(Boolean).join(' · '))}</span>${r === 'voy' ? '<span class="okc">✓ Vas</span>' : r === 'interesa' ? '<span class="okc">★ Te interesa</span>' : ''}${!w.publico ? '<span>🔒 Solo socios</span>' : ''}</div>${CHEV}</div>`; }).join('')
@@ -1783,6 +1788,9 @@ a{color:var(--green)}
       ${admin && invitados.length ? `<div class="cfglabel">Invitados (pendientes de aceptar)</div><div class="cfgbox">${invitados.map(x => filaPersona(P(x.usuario), `<button class="chip" data-kg="quitar" data-u="${x.usuario}">Cancelar</button>`)).join('')}</div>` : ''}
       ${socio ? `<div class="cfgfoot"><button class="cfgdanger" id="kleave2">Salir del club</button>${admin ? '<button class="cfgdanger" id="kdel" style="margin-top:8px">Borrar club</button>' : ''}</div>` : ''}`, false);
     $('#sheet').dataset.vista = 'club:' + id;
+    const jc = $('#kjoincod'); if(jc) jc.onclick = async () => { if(await necesitaUsuario(() => clubPantalla(id, null, codigoEnlace))){ const r = await clubRpc('unirse_con_codigo', {p_club: id, p_codigo: codigoEnlace}, r => r === 'pendiente' ? 'Solicitud enviada. Un administrador la revisará.' : '¡Bienvenido al club! ✓'); if(r) clubPantalla(id); } };
+    const sh = $('#kshare'); if(sh) sh.onclick = () => compartirClub(c, codigoAdmin);
+    const rs = $('#kreset'); if(rs) rs.onclick = async () => { if(await confirmDlg('¿Cambiar el enlace de invitación?', 'Los enlaces que ya hayas enviado dejarán de dejar entrar directamente.', 'Cambiar')){ try { await sbRest('rpc/codigo_invitacion', {method: 'POST', body: JSON.stringify({p_club: id, p_nuevo: true})}); toast('Enlace nuevo creado ✓'); clubPantalla(id); } catch(e){ toast('No se pudo cambiar.'); } } };
     const j = $('#kjoin'); if(j) j.onclick = async () => { if(await necesitaUsuario(() => clubPantalla(id))) clubRpc('unirse_club', {p_club: id}, r => r === 'socio' ? '¡Ya eres socio! ✓' : 'Solicitud enviada. Un administrador la revisará.'); };
     const l = $('#kleave'); if(l) l.onclick = () => clubRpc('salir_club', {p_club: id}, 'Hecho');
     const l2 = $('#kleave2'); if(l2) l2.onclick = async () => { if(await confirmDlg('¿Salir del club?', `Dejarás de ser socio de ${c.nombre}.`, 'Salir')) { if(await clubRpc('salir_club', {p_club: id}, 'Has salido del club')) close(); } };
@@ -1935,6 +1943,59 @@ a{color:var(--green)}
   }
   document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && sesion) clubCargar(); });
   if(sesion && !location.hash.includes('access_token')) setTimeout(clubCargar, 900);
+  // ----- enlaces de invitación al club (para invitar a gente de fuera de la app) -----
+  var invClub = null, invMostrada = false;
+  try { invClub = JSON.parse(localStorage.getItem('rutas-inv-club') || 'null'); } catch(e){}
+  function leerInvClub(){
+    const m = location.hash.match(/^#club=([0-9a-f-]{36})(?:&c=([a-z0-9]+))?/i);
+    if(!m) return false;
+    invClub = {id: m[1].toLowerCase(), c: m[2] || ''}; invMostrada = false;
+    try { localStorage.setItem('rutas-inv-club', JSON.stringify(invClub)); } catch(e){}
+    history.replaceState(null, '', location.pathname + location.search + '#club');
+    return true;
+  }
+  leerInvClub();
+  window.addEventListener('hashchange', () => { if(leerInvClub()){ showTab(); procesarInvClub(); } });
+  async function clubPublico(id){
+    try {
+      const h = {'apikey': SB_KEY, 'Content-Type': 'application/json'}, t = sesion ? await tokenValido() : null;
+      if(t) h.Authorization = 'Bearer ' + t;
+      const r = await fetch(SB_URL + '/rest/v1/rpc/club_publico', {method: 'POST', headers: h, body: JSON.stringify({p_club: id})});
+      if(!r.ok) return null; const d = await r.json(); return d && d[0] || null;
+    } catch(e){ return null; }
+  }
+  async function procesarInvClub(){
+    if(!invClub) return;
+    if(!sesion){
+      if(invMostrada) return; invMostrada = true;
+      bienvenidaClub(await clubPublico(invClub.id));
+      return;
+    }
+    if(!AMI.yo) return; // se hará después de elegir el @usuario
+    const {id, c} = invClub; invClub = null; try { localStorage.removeItem('rutas-inv-club'); } catch(e){}
+    if(!CLUB.cargado) await clubCargar();
+    if(location.hash !== '#club'){ history.replaceState(null, '', location.pathname + location.search + '#club'); showTab(); }
+    clubPantalla(id, null, c);
+  }
+  function bienvenidaClub(c){
+    const nombre = c ? c.nombre : 'un club';
+    $('#sheet').innerHTML = `<div class="cfghead"><button class="cfgx" id="bx" aria-label="Cerrar">✕</button><div class="cfgtitle">Invitación</div><span style="width:44px"></span></div>
+      <div class="cfgbox" style="text-align:center">${avatar({nombre: c ? c.nombre : '?'}, 72)}
+        <p style="font-size:18px;font-weight:700;margin:12px 0 4px">Te han invitado a ${esc(nombre)}</p>
+        ${c && (c.localidad || c.provincia) ? `<div class="sub">${esc([c.localidad, c.provincia].filter(Boolean).join(', '))}</div>` : ''}
+        <p class="sub" style="margin:12px 0 0">En <b>Mis rutas y trails</b> encontrarás rutas de senderismo, trail, carreras y MTB de toda España, y podrás apuntarte a las salidas de tu club.</p>
+        <div class="btns" style="flex-direction:column"><button class="btn pri" id="breg">Crear cuenta y unirme</button><button class="btn" id="bent">Ya tengo cuenta</button></div></div>
+      <div class="sub" style="margin:12px 4px">Es gratis. Después de crear tu cuenta y elegir tu @usuario, entrarás en el club.</div>`;
+    $('#sheet').classList.add('cfg'); $('#ovl').classList.add('show');
+    $('#bx').onclick = close; $('#breg').onclick = () => cuentaPantalla('registro'); $('#bent').onclick = () => cuentaPantalla('entrar');
+  }
+  function textoInvClub(c){ return `¡Únete a ${c.nombre} en Mis rutas y trails! Encuentra rutas de senderismo, trail, carreras y MTB de toda España y apúntate a las salidas del club.`; }
+  async function compartirClub(c, codigo){
+    const url = APP_URL + '#club=' + c.id + (codigo ? '&c=' + codigo : ''), text = textoInvClub(c);
+    if(navigator.share){ try { await navigator.share({title: c.nombre, text, url}); } catch(e){} }
+    else { try { await navigator.clipboard.writeText(text + ' ' + url); toast('Enlace copiado ✓'); } catch(e){ toast(url); } }
+  }
+  if(invClub && !sesion) setTimeout(procesarInvClub, 700);
 
   render(); showTab(); cargarEventos();
   document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && Date.now() - (window._evAt||0) > 3*3600e3){ window._evAt = Date.now(); cargarEventos(); } });
