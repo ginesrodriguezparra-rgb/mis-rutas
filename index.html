@@ -939,7 +939,7 @@ a{color:var(--green)}
     img:'<svg viewBox="0 0 32 32" width="30" height="30"><circle cx="16" cy="16" r="16" fill="#2f5d46"/><rect x="9" y="10" width="14" height="12" rx="2" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="13" cy="14" r="1.5" fill="#fff"/><path d="m10 21 4-4 3 3 2-2 4 3" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>'
   };
   function shareLinks(x){
-    const text = shareText(x), enc = encodeURIComponent(text);
+    const text = shareText(x) + (x.clubEv ? '\n' + APP_URL + '#evento=' + x.clubEv : ''), enc = encodeURIComponent(text);
     $('#sheet').innerHTML = `<div class="shtitle">Compartir</div><div class="shname">${esc(x.nombre)}</div>
       <div class="shapps">
         <a href="https://wa.me/?text=${enc}" target="_blank" rel="noopener" data-close>${APPICON.wa}<span>WhatsApp</span></a>
@@ -957,7 +957,7 @@ a{color:var(--green)}
   let sharing = false;
   function quickShare(x){
     if(navigator.share){
-      navigator.share({title: x.nombre, text: shareText(x)}).catch(err => { if(!err || err.name !== 'AbortError') shareLinks(x); });
+      navigator.share(x.clubEv ? {title: x.nombre, text: shareText(x), url: APP_URL + '#evento=' + x.clubEv} : {title: x.nombre, text: shareText(x)}).catch(err => { if(!err || err.name !== 'AbortError') shareLinks(x); });
     } else shareLinks(x);
   }
   async function imageShare(x){
@@ -1454,6 +1454,7 @@ a{color:var(--green)}
   }
   async function procesarInvitacion(){
     if(typeof procesarInvClub === 'function') procesarInvClub();
+    if(typeof procesarInvEvento === 'function') procesarInvEvento();
     if(!invitacion) return;
     if(!sesion){ toast('Crea una cuenta o inicia sesión para añadir a @' + invitacion); return; }
     if(!AMI.yo) return; // se procesará tras elegir @usuario
@@ -1940,6 +1941,7 @@ a{color:var(--green)}
     const dl = $('#edel'); if(dl) dl.onclick = async () => { if(await confirmDlg('¿Borrar este evento?', 'Desaparecerá para todos los socios e invitados.', 'Borrar')){ try { await sbRest('club_eventos?id=eq.' + id, {method: 'DELETE', headers: {'Prefer': 'return=minimal'}}); toast('Evento borrado'); await clubCargar(); clubPantalla(e.club); } catch(err){ toast('No se pudo borrar.'); } } };
     $('#eclub').onclick = () => clubPantalla(e.club);
     $('#eshare').onclick = () => { const w = state.web.find(x => x.id === wid) || clubAWeb(e); quickShare(w); };
+    const sub = $('#eshare').closest('.btns'); if(sub) sub.insertAdjacentHTML('beforebegin', `<div class="sub" style="margin:12px 4px 0">${e.publico ? 'Al compartir se envía un enlace al evento: cualquiera con cuenta podrá verlo y apuntarse.' : 'Al compartir se envía un enlace al evento: solo podrán abrirlo los socios del club y los invitados.'}</div>`);
   }
   document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && sesion) clubCargar(); });
   if(sesion && !location.hash.includes('access_token')) setTimeout(clubCargar, 900);
@@ -1996,6 +1998,58 @@ a{color:var(--green)}
     else { try { await navigator.clipboard.writeText(text + ' ' + url); toast('Enlace copiado ✓'); } catch(e){ toast(url); } }
   }
   if(invClub && !sesion) setTimeout(procesarInvClub, 700);
+  // ----- enlaces directos a un evento del club -----
+  var invEv = null, invEvMostrada = false;
+  try { invEv = localStorage.getItem('rutas-inv-evento'); } catch(e){}
+  function leerInvEv(){
+    const m = location.hash.match(/^#evento=([0-9a-f-]{36})/i);
+    if(!m) return false;
+    invEv = m[1].toLowerCase(); invEvMostrada = false;
+    try { localStorage.setItem('rutas-inv-evento', invEv); } catch(e){}
+    history.replaceState(null, '', location.pathname + location.search + '#club');
+    return true;
+  }
+  leerInvEv();
+  window.addEventListener('hashchange', () => { if(leerInvEv()){ showTab(); procesarInvEvento(); } });
+  const enlaceEvento = id => APP_URL + '#evento=' + id;
+  async function eventoPublico(id){
+    try {
+      const h = {'apikey': SB_KEY, 'Content-Type': 'application/json'}, t = sesion ? await tokenValido() : null;
+      if(t) h.Authorization = 'Bearer ' + t;
+      const r = await fetch(SB_URL + '/rest/v1/rpc/evento_publico', {method: 'POST', headers: h, body: JSON.stringify({p_evento: id})});
+      if(!r.ok) return null; const d = await r.json(); return d && d[0] || null;
+    } catch(e){ return null; }
+  }
+  async function procesarInvEvento(){
+    if(!invEv) return;
+    if(!sesion){
+      if(invEvMostrada) return; invEvMostrada = true;
+      bienvenidaEvento(await eventoPublico(invEv));
+      return;
+    }
+    if(!AMI.yo) return;
+    const id = invEv; invEv = null; try { localStorage.removeItem('rutas-inv-evento'); } catch(e){}
+    if(!CLUB.cargado) await clubCargar();
+    if(location.hash !== '#club'){ history.replaceState(null, '', location.pathname + location.search + '#club'); showTab(); }
+    let e = CLUB.eventos.find(x => x.id === id);
+    if(!e){ try { e = (await sbRest('club_eventos?select=*,clubs(nombre)&id=eq.' + id))[0]; } catch(err){} }
+    if(e){ eventoPantalla(id); return; }
+    // no tiene acceso: evento solo para socios (o ya no existe)
+    const info = await eventoPublico(id);
+    if(!info){ toast('Este evento ya no está disponible'); return; }
+    if(await confirmDlg('Evento solo para socios', `Este evento es solo para socios de ${info.club_nombre}. Únete al club para poder verlo y apuntarte.`, 'Ver el club')) clubPantalla(info.club);
+  }
+  function bienvenidaEvento(i){
+    const pub = i && i.publico, d = pub && i.fecha ? pd(i.fecha) : null;
+    $('#sheet').innerHTML = `<div class="cfghead"><button class="cfgx" id="bx" aria-label="Cerrar">✕</button><div class="cfgtitle">${pub ? 'Te han invitado' : 'Evento de club'}</div><span style="width:44px"></span></div>
+      <div class="cfgbox">${pub ? `<div class="frow" style="border:0;padding:0"><div class="date t-${esc(i.tipo || 'senderismo')}">${d ? `<b>${d.getDate()}</b><span>${MESES[d.getMonth()]}</span>` : ''}</div><div class="finfo"><b style="white-space:normal">${esc(i.titulo)}</b><span>${esc(i.club_nombre)}${i.lugar ? ' · ' + esc(i.lugar) : ''}</span></div></div>`
+        : `<p style="font-weight:700;font-size:17px;margin:0">${i ? 'Evento solo para socios de ' + esc(i.club_nombre) : 'Evento de un club'}</p><p class="sub">Para verlo tienes que ser socio del club.</p>`}
+        <p class="sub" style="margin:12px 0 0">Crea tu cuenta gratis en <b>Mis rutas y trails</b> para ver todos los detalles y apuntarte.</p>
+        <div class="btns" style="flex-direction:column"><button class="btn pri" id="breg">Crear cuenta</button><button class="btn" id="bent">Ya tengo cuenta</button></div></div>`;
+    $('#sheet').classList.add('cfg'); $('#ovl').classList.add('show');
+    $('#bx').onclick = close; $('#breg').onclick = () => cuentaPantalla('registro'); $('#bent').onclick = () => cuentaPantalla('entrar');
+  }
+  if(invEv && !sesion) setTimeout(procesarInvEvento, 750);
 
   render(); showTab(); cargarEventos();
   document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && Date.now() - (window._evAt||0) > 3*3600e3){ window._evAt = Date.now(); cargarEventos(); } });
