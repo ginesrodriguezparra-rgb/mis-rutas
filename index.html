@@ -337,7 +337,21 @@ a{color:var(--green)}
   let state;
   try { state = JSON.parse(document.getElementById('data').textContent); } catch(e){ state = {}; }
   const USER_KEY = 'rutas-usuario';
-  try { const u = JSON.parse(localStorage.getItem(USER_KEY) || 'null'); if(u){ state.events = u.events || []; state.ocultas = u.ocultas || []; state.prefs = u.prefs || {}; } } catch(e){}
+  // una misma ruta solo puede estar una vez en la agenda (se juntan las repetidas)
+  function sinDuplicados(list){
+    const out = [], pos = new Map();
+    (Array.isArray(list) ? list : []).forEach(e => {
+      if(!e) return;
+      const k = e.webId ? 'w:' + e.webId : 'm:' + (e.nombre || '').trim().toLowerCase() + '|' + (e.date || '');
+      if(!pos.has(k)){ pos.set(k, out.length); out.push(e); return; }
+      const p = out[pos.get(k)];
+      if(e.estado === 'inscrito' && p.estado !== 'inscrito') p.estado = 'inscrito';
+      if(!p.notas && e.notas) p.notas = e.notas;
+      if(e.done && !p.done) p.done = e.done;
+    });
+    return out;
+  }
+  try { const u = JSON.parse(localStorage.getItem(USER_KEY) || 'null'); if(u){ state.events = sinDuplicados(u.events); state.ocultas = u.ocultas || []; state.prefs = u.prefs || {}; if(state.events.length !== (u.events || []).length) localStorage.setItem(USER_KEY, JSON.stringify({events: state.events, ocultas: state.ocultas, prefs: state.prefs})); } } catch(e){}
   if(!state.prefs) state.prefs = {};
   if(!state.prefs.desde){ const n = new Date(); state.prefs.desde = n.toISOString().slice(0,10); }
   ['events','web','ocultas','fuentes'].forEach(k => { if(!Array.isArray(state[k])) state[k] = []; });
@@ -765,7 +779,7 @@ a{color:var(--green)}
       if(!d || d.app !== 'mis-rutas-y-trails' || !Array.isArray(d.events)){ $('#cmsg').textContent = 'Ese archivo no es una copia de Mis rutas y trails.'; return; }
       const fecha = d.fecha ? new Date(d.fecha).toLocaleDateString('es-ES') : '';
       if(!await confirmDlg('¿Recuperar esta copia?', `Copia${fecha ? ' del ' + fecha : ''} con ${d.events.length} rutas. Sustituirá tu agenda y tu perfil actuales.`, 'Recuperar')) return;
-      state.events = d.events; state.ocultas = Array.isArray(d.ocultas) ? d.ocultas : []; state.prefs = d.prefs || {};
+      state.events = sinDuplicados(d.events); state.ocultas = Array.isArray(d.ocultas) ? d.ocultas : []; state.prefs = d.prefs || {};
       fprovs = new Set(Array.isArray(d.provs) ? d.provs : (state.prefs.provs || [])); saveLocalProvs();
       $('#sheet').classList.remove('cfg'); close(); save(); toast('Copia recuperada ✓');
     };
@@ -1151,9 +1165,9 @@ a{color:var(--green)}
     if(!r.ok){ let d = {}; try { d = await r.json(); } catch(e){} throw new Error(d.message || ('Error ' + r.status)); }
     const txt = await r.text(); return txt ? JSON.parse(txt) : null;
   }
-  const datosLocales = () => ({events: state.events, ocultas: state.ocultas, prefs: Object.assign({}, state.prefs, {provs: [...fprovs]})});
+  const datosLocales = () => ({events: (state.events = sinDuplicados(state.events)), ocultas: state.ocultas, prefs: Object.assign({}, state.prefs, {provs: [...fprovs]})});
   function aplicarDatos(d){
-    state.events = Array.isArray(d.events) ? d.events : [];
+    state.events = sinDuplicados(d.events);
     state.ocultas = Array.isArray(d.ocultas) ? d.ocultas : [];
     state.prefs = d.prefs || {};
     fprovs = new Set(Array.isArray(state.prefs.provs) ? state.prefs.provs : []); saveLocalProvs();
@@ -1186,14 +1200,14 @@ a{color:var(--green)}
     if(alEntrar){
       // unir la agenda del móvil con la de la cuenta, sin perder nada
       const d = fila.datos || {}, ids = new Set((d.events||[]).map(e => e.id));
-      const extra = state.events.filter(e => !ids.has(e.id));
+      const extra = state.events.filter(e => !ids.has(e.id)); // sinDuplicados junta las que son la misma ruta
       const prefs = Object.assign({}, state.prefs, d.prefs || {});
       if(!d.prefs || !d.prefs.foto) { if(state.prefs.foto) prefs.foto = state.prefs.foto; }
       aplicarDatos({events: (d.events||[]).concat(extra), ocultas: [...new Set((d.ocultas||[]).concat(state.ocultas))], prefs});
       setSync({actualizado: fila.actualizado}); nubeGuardar(); return;
     }
     if(info.pendiente){ nubePendiente = true; nubeSubir(); return; }
-    if(!info.actualizado || fila.actualizado > info.actualizado){ aplicarDatos(fila.datos || {}); setSync({actualizado: fila.actualizado}); }
+    if(!info.actualizado || fila.actualizado > info.actualizado){ aplicarDatos(fila.datos || {}); setSync({actualizado: fila.actualizado}); if(state.events.length !== ((fila.datos || {}).events || []).length) nubeGuardar(); }
   }
   async function entrarCon(d){
     guardarSesion(sesionDe(d));
