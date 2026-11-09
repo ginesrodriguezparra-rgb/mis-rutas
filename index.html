@@ -257,6 +257,10 @@ body{position:fixed;inset:0}
 .dotn[hidden]{display:none}
 .pcount button{position:relative}
 .pdot{position:absolute;top:6px;right:22%;width:9px;height:9px;border-radius:50%;background:var(--red)}
+.clubs{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.club{display:inline-flex;align-items:center;gap:4px;background:var(--green2);color:var(--green);border-radius:999px;padding:6px 6px 6px 12px;font:600 14px Inter,sans-serif}
+.club button{border:0;background:none;color:var(--green);font-size:13px;cursor:pointer;padding:2px 5px;opacity:.75}
+.cadd{display:flex;gap:8px;margin-top:6px}.cadd input{flex:1}.cadd .btn{flex:0 0 auto}
 /* hojas */
 .ovl{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
 .ovl.show{display:flex}
@@ -600,7 +604,7 @@ a{color:var(--green)}
         <div class="pinfo">
           <button class="pedit" id="pedit">Edita</button>
           <div class="pname">${esc(nombre)}</div>
-          ${p.localidad ? `<div class="psince">${esc(p.localidad)}</div>` : ''}
+          ${clubsDe(p).map(c => `<div class="psince">${esc(c)}</div>`).join('')}
         </div>
       </div>
       <input type="file" id="pfile" accept="image/*" hidden>
@@ -643,13 +647,14 @@ a{color:var(--green)}
     const p = state.prefs;
     $('#sheet').innerHTML = `<h2>Editar perfil</h2><form id="pf">
       <label>Nombre</label><input name="nombre" value="${esc(p.nombre||'')}" placeholder="Tu nombre">
-      <label>Localidad</label><input name="localidad" value="${esc(p.localidad||'')}" placeholder="Ej. Huércal-Overa">
+      <label>Club</label><div id="clubsEd"></div>
       <label>Foto de perfil</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pfoto">${p.foto ? 'Cambiar foto' : 'Añadir foto'}</button>${p.foto ? '<button type="button" class="btn del" id="pnofoto">Quitar foto</button>' : ''}</div>
       <div class="btns"><button type="button" class="btn" id="pcancel">Cancelar</button><button class="btn pri" type="submit">Guardar</button></div></form>`;
     $('#pcancel').onclick = close;
     $('#pfoto').onclick = () => { close(); $('#pfile').click(); };
     const nf = $('#pnofoto'); if(nf) nf.onclick = async () => { if(await confirmDlg('¿Quitar la foto de perfil?', '', 'Quitar')){ delete state.prefs.foto; close(); save(); } };
-    $('#pf').onsubmit = ev => { ev.preventDefault(); const fd = new FormData(ev.target); p.nombre = (fd.get('nombre')||'').toString().trim(); p.localidad = (fd.get('localidad')||'').toString().trim(); close(); save(); };
+    clubsMontar(p);
+    $('#pf').onsubmit = ev => { ev.preventDefault(); const fd = new FormData(ev.target); p.nombre = (fd.get('nombre')||'').toString().trim(); p.clubs = clubsRecoger(); close(); save(); };
     $('#ovl').classList.add('show');
   }
   function amigos(){
@@ -708,14 +713,15 @@ a{color:var(--green)}
     const p = state.prefs;
     cfgPage('Información personal', `<div class="cfgbox"><form id="pf2">
       <label>Nombre</label><input name="nombre" value="${esc(p.nombre||'')}" placeholder="Tu nombre">
-      <label>Localidad</label><input name="localidad" value="${esc(p.localidad||'')}" placeholder="Ej. Huércal-Overa">
+      <label>Club</label><div id="clubsEd"></div>
       ${sesion ? `<label>@usuario</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pusr">${AMI.yo ? '@' + esc(AMI.yo.usuario) + ' · Cambiar' : 'Elegir @usuario'}</button></div>` : ''}
       <label>Foto de perfil</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pfoto2">${p.foto ? 'Cambiar foto' : 'Añadir foto'}</button>${p.foto ? '<button type="button" class="btn del" id="pnofoto2">Quitar foto</button>' : ''}</div>
       <div class="btns"><button class="btn pri" type="submit">Guardar</button></div></form></div>`, true);
     const pu = $('#pusr'); if(pu) pu.onclick = () => elegirUsuario();
     $('#pfoto2').onclick = () => { $('#sheet').classList.remove('cfg'); close(); $('#pfile').click(); };
     const nf = $('#pnofoto2'); if(nf) nf.onclick = async () => { if(await confirmDlg('¿Quitar la foto de perfil?', '', 'Quitar')){ delete state.prefs.foto; $('#sheet').classList.remove('cfg'); close(); save(); } };
-    $('#pf2').onsubmit = ev => { ev.preventDefault(); const fd = new FormData(ev.target); p.nombre = (fd.get('nombre')||'').toString().trim(); p.localidad = (fd.get('localidad')||'').toString().trim(); $('#sheet').classList.remove('cfg'); close(); save(); };
+    clubsMontar(p);
+    $('#pf2').onsubmit = ev => { ev.preventDefault(); const fd = new FormData(ev.target); p.nombre = (fd.get('nombre')||'').toString().trim(); p.clubs = clubsRecoger(); $('#sheet').classList.remove('cfg'); close(); save(); };
   }
   function cfgCopia(){
     const n = state.events.length;
@@ -789,7 +795,7 @@ a{color:var(--green)}
   }
   function cfgPrivacidad(){
     cfgPage('Política de privacidad', `<div class="cfgbox help">
-      <p><b>Sin cuenta:</b> tus datos (agenda, nombre, localidad, foto y provincias) se guardan solo en tu móvil y no se envían a ningún servidor.</p><p><b>Con cuenta:</b> guardamos tu correo electrónico y esos mismos datos para que puedas usarlos en cualquier dispositivo. Se almacenan en servidores de Supabase situados en la Unión Europea (Frankfurt, Alemania). Tu contraseña se guarda cifrada y nadie puede verla. Si entras con Google, solo recibimos tu correo.</p><p>Solo tú puedes ver y cambiar tus datos. No los vendemos ni los compartimos con nadie, y no los usamos para publicidad.</p><p><b>Amigos:</b> si eliges un @usuario, los demás usuarios pueden ver tu nombre, tu @usuario y tu foto para poder encontrarte. Las rutas de tu agenda marcadas como Inscrito o Me interesa solo las ven los amigos cuya solicitud hayas aceptado (o que hayan aceptado la tuya). Puedes eliminar a un amigo en cualquier momento.</p>
+      <p><b>Sin cuenta:</b> tus datos (agenda, nombre, clubes, foto y provincias) se guardan solo en tu móvil y no se envían a ningún servidor.</p><p><b>Con cuenta:</b> guardamos tu correo electrónico y esos mismos datos para que puedas usarlos en cualquier dispositivo. Se almacenan en servidores de Supabase situados en la Unión Europea (Frankfurt, Alemania). Tu contraseña se guarda cifrada y nadie puede verla. Si entras con Google, solo recibimos tu correo.</p><p>Solo tú puedes ver y cambiar tus datos. No los vendemos ni los compartimos con nadie, y no los usamos para publicidad.</p><p><b>Amigos:</b> si eliges un @usuario, los demás usuarios pueden ver tu nombre, tu @usuario y tu foto para poder encontrarte. Las rutas de tu agenda marcadas como Inscrito o Me interesa solo las ven los amigos cuya solicitud hayas aceptado (o que hayan aceptado la tuya). Puedes eliminar a un amigo en cualquier momento.</p>
       <p>La app no usa tu ubicación ni envía tus datos a las webs de eventos. Al pulsar «Ver web», WhatsApp o Telegram, se abre esa web o app fuera de aquí.</p>
       <p>Puedes borrar tu cuenta y todos sus datos cuando quieras desde Configuración › Borrar mi cuenta. Sin cuenta, si borras los datos del navegador o desinstalas la app se pierden: usa Configuración › Copia de seguridad.</p><p><b>Responsable y contacto:</b> para cualquier duda sobre tus datos, o para pedir que los consultemos, corrijamos o borremos, escribe a <a href="mailto:misrutasytrail@gmail.com">misrutasytrail@gmail.com</a>. También puedes reclamar ante la Agencia Española de Protección de Datos (aepd.es).</p></div>`, true);
   }
@@ -807,7 +813,7 @@ a{color:var(--green)}
     else { ctx.fillStyle = C.g2; ctx.fillRect(px, py, PS, PS); ctx.fillStyle = C.g; ctx.font = '700 120px "Barlow Condensed"'; ctx.textAlign = 'center'; ctx.fillText(((p.nombre||'⛰').charAt(0)).toUpperCase(), px+PS/2, py+PS/2+42); ctx.textAlign = 'left'; }
     ctx.restore();
     ctx.fillStyle = C.ink; ctx.font = '700 60px Inter'; ctx.fillText(p.nombre || 'Mis rutas', 380, 190);
-    ctx.fillStyle = C.muted; ctx.font = '400 34px Inter'; if(p.localidad) ctx.fillText(p.localidad, 380, 245);
+    ctx.fillStyle = C.muted; ctx.font = '400 34px Inter'; if(clubsDe(p).length) ctx.fillText(clubsDe(p).join(' · ').slice(0, 40), 380, 245);
     const cols = [[st.insc,'Inscrito'],[st.int,'Me interesa']];
     cols.forEach(([n,l],i) => { const x = 380 + i*200; ctx.fillStyle = C.ink; ctx.font = '600 56px Inter'; ctx.fillText(String(n), x, 345); ctx.fillStyle = C.muted; ctx.font = '400 28px Inter'; ctx.fillText(l, x, 385); });
     ctx.fillStyle = C.muted; ctx.font = '600 32px Inter'; ctx.fillText('⛰ Mis rutas y trails', 58, H-40);
@@ -1514,6 +1520,32 @@ a{color:var(--green)}
   document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && sesion) amigosCargar(); });
   if(sesion && !location.hash.includes('access_token')) setTimeout(async () => { await perfilAsegurar(); amigosCargar(); }, 700);
   else if(invitacion && !sesion) setTimeout(() => { toast('Crea tu cuenta para añadir a @' + invitacion); cuentaPantalla('registro'); }, 600);
+
+  // ---------- clubs del perfil ----------
+  var clubsTmp = [];
+  const clubsDe = p => Array.isArray(p.clubs) ? p.clubs : [];
+  function clubsMontar(p){
+    clubsTmp = clubsDe(p).slice();
+    let abierto = !clubsTmp.length;
+    const pintar = () => {
+      const el = $('#clubsEd'); if(!el) return;
+      el.innerHTML = `${clubsTmp.length ? `<div class="clubs">${clubsTmp.map((c, i) => `<span class="club">${esc(c)}<button type="button" data-cdel="${i}" aria-label="Quitar ${esc(c)}">✕</button></span>`).join('')}</div>` : ''}
+        ${abierto ? `<div class="cadd"><input id="cnew" placeholder="${clubsTmp.length ? 'Otro club' : 'Nombre de tu club'}" maxlength="50" enterkeyhint="done"><button type="button" class="btn" id="cok">Añadir</button></div>`
+                  : '<button type="button" class="alink" id="cmas" style="margin:6px 0 0">＋ Añadir otro club</button>'}`;
+      el.querySelectorAll('[data-cdel]').forEach(b => b.onclick = () => { clubsTmp.splice(+b.dataset.cdel, 1); if(!clubsTmp.length) abierto = true; pintar(); });
+      const mas = $('#cmas'); if(mas) mas.onclick = () => { abierto = true; pintar(); $('#cnew').focus(); };
+      const inp = $('#cnew');
+      const add = () => {
+        const v = inp.value.trim().replace(/\s+/g, ' ');
+        if(v && !clubsTmp.some(c => c.toLowerCase() === v.toLowerCase())) clubsTmp.push(v);
+        abierto = false; pintar();
+      };
+      if(inp){ $('#cok').onclick = add; inp.onkeydown = ev => { if(ev.key === 'Enter'){ ev.preventDefault(); add(); } }; }
+    };
+    pintar();
+  }
+  // si se guarda el formulario con texto escrito en "Otro club" sin pulsar Añadir, también se añade
+  function clubsRecoger(){ const inp = $('#cnew'); if(inp && inp.value.trim()){ const v = inp.value.trim().replace(/\s+/g, ' '); if(!clubsTmp.some(c => c.toLowerCase() === v.toLowerCase())) clubsTmp.push(v); } return clubsTmp.slice(); }
 
   render(); showTab(); cargarEventos();
   document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && Date.now() - (window._evAt||0) > 3*3600e3){ window._evAt = Date.now(); cargarEventos(); } });
