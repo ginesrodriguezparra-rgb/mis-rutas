@@ -494,7 +494,7 @@ a{color:var(--green)}
 
   // ---------- eventos descubiertos ----------
   function webVisible(){
-    return state.web.filter(w => w.date && days(w.date) >= 0 && !state.ocultas.includes(w.id))
+    return state.web.filter(w => !w.clubEv && w.date && days(w.date) >= 0 && !state.ocultas.includes(w.id)) // los eventos de club solo salen en la pestaña Club
       .map(w => { w._p = normProv(w.provincia); return w; })
       .sort((a,b)=> a.date.localeCompare(b.date));
   }
@@ -1874,7 +1874,7 @@ a{color:var(--green)}
       <label>Descripción</label><textarea name="descripcion" rows="4" maxlength="1500" placeholder="Recorrido, material, avituallamiento…">${esc(e.descripcion || '')}</textarea>
       <label>Enlace de inscripción o más información (opcional)</label><input name="url" type="url" maxlength="300" value="${esc(e.url || '')}" placeholder="https://…">
       <label>¿Quién puede verlo?</label>
-      <div class="cfgradio"><button type="button" data-pub="1" class="${e.publico ? 'on' : ''}">Público: sale en Rutas para todos<span>${e.publico ? '✓' : ''}</span></button><button type="button" data-pub="0" class="${e.publico ? '' : 'on'}">Solo socios e invitados<span>${e.publico ? '' : '✓'}</span></button></div>
+      <div class="cfgradio"><button type="button" data-pub="1" class="${e.publico ? 'on' : ''}">Público: cualquiera con el enlace puede verlo<span>${e.publico ? '✓' : ''}</span></button><button type="button" data-pub="0" class="${e.publico ? '' : 'on'}">Solo socios e invitados<span>${e.publico ? '' : '✓'}</span></button></div>
       <div class="amsg" id="amsg"></div>
       <div class="btns"><button class="btn pri" type="submit">${e.id ? 'Guardar cambios' : 'Crear evento'}</button></div></form></div>`, false);
     $('#cfgx').onclick = () => e.id ? eventoPantalla(e.id) : clubPantalla(club);
