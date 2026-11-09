@@ -795,7 +795,7 @@ a{color:var(--green)}
   }
   function cfgPrivacidad(){
     cfgPage('Política de privacidad', `<div class="cfgbox help">
-      <p><b>Sin cuenta:</b> tus datos (agenda, nombre, clubes, foto y provincias) se guardan solo en tu móvil y no se envían a ningún servidor.</p><p><b>Con cuenta:</b> guardamos tu correo electrónico y esos mismos datos para que puedas usarlos en cualquier dispositivo. Se almacenan en servidores de Supabase situados en la Unión Europea (Frankfurt, Alemania). Tu contraseña se guarda cifrada y nadie puede verla. Si entras con Google, solo recibimos tu correo.</p><p>Solo tú puedes ver y cambiar tus datos. No los vendemos ni los compartimos con nadie, y no los usamos para publicidad.</p><p><b>Amigos:</b> si eliges un @usuario, los demás usuarios pueden ver tu nombre, tu @usuario y tu foto para poder encontrarte. Las rutas de tu agenda marcadas como Inscrito o Me interesa solo las ven los amigos cuya solicitud hayas aceptado (o que hayan aceptado la tuya). Puedes eliminar a un amigo en cualquier momento.</p>
+      <p><b>Sin cuenta:</b> tus datos (agenda, nombre, clubes, foto y provincias) se guardan solo en tu móvil y no se envían a ningún servidor.</p><p><b>Con cuenta:</b> guardamos tu correo electrónico y esos mismos datos para que puedas usarlos en cualquier dispositivo. Se almacenan en servidores de Supabase situados en la Unión Europea (Frankfurt, Alemania). Tu contraseña se guarda cifrada y nadie puede verla. Si entras con Google, solo recibimos tu correo.</p><p>Solo tú puedes ver y cambiar tus datos. No los vendemos ni los compartimos con nadie, y no los usamos para publicidad.</p><p><b>Amigos:</b> si eliges un @usuario, los demás usuarios pueden ver tu nombre, tu @usuario y tu foto para poder encontrarte. Las rutas de tu agenda marcadas como Inscrito o Me interesa solo las ven los amigos cuya solicitud hayas aceptado (o que hayan aceptado la tuya). Tus clubs también los ven solo tus amigos aceptados. Puedes eliminar a un amigo en cualquier momento.</p>
       <p>La app no usa tu ubicación ni envía tus datos a las webs de eventos. Al pulsar «Ver web», WhatsApp o Telegram, se abre esa web o app fuera de aquí.</p>
       <p>Puedes borrar tu cuenta y todos sus datos cuando quieras desde Configuración › Borrar mi cuenta. Sin cuenta, si borras los datos del navegador o desinstalas la app se pierden: usa Configuración › Copia de seguridad.</p><p><b>Responsable y contacto:</b> para cualquier duda sobre tus datos, o para pedir que los consultemos, corrijamos o borremos, escribe a <a href="mailto:misrutasytrail@gmail.com">misrutasytrail@gmail.com</a>. También puedes reclamar ante la Agencia Española de Protección de Datos (aepd.es).</p></div>`, true);
   }
@@ -1313,7 +1313,7 @@ a{color:var(--green)}
   if(sesion && !location.hash.includes('access_token')) setTimeout(() => nubeTraer(false), 500);
 
   // ---------- amigos ----------
-  var AMI = {cargado: false, filas: [], perfiles: new Map(), agendas: new Map(), porRuta: new Map(), yo: null, recibidas: 0};
+  var AMI = {cargado: false, filas: [], perfiles: new Map(), agendas: new Map(), porRuta: new Map(), clubs: new Map(), yo: null, recibidas: 0};
   var invitacion = null, pidiendoUsuario = false;
   try { invitacion = localStorage.getItem('rutas-invitacion'); } catch(e){}
   const USR_RE = /^[a-z0-9_.]{3,20}$/;
@@ -1397,6 +1397,9 @@ a{color:var(--green)}
       const ids = [...new Set(filas.map(f => f.de === sesion.user.id ? f.para : f.de))];
       const perfiles = ids.length ? await sbRest('perfiles?select=id,usuario,nombre,foto&id=in.(' + ids.join(',') + ')') || [] : [];
       const agendas = filas.some(f => f.estado === 'aceptada') ? await sbRest('rpc/agendas_amigos', {method: 'POST', body: '{}'}) || [] : [];
+      let clubs = [];
+      if(filas.some(f => f.estado === 'aceptada')){ try { clubs = await sbRest('rpc/clubs_amigos', {method: 'POST', body: '{}'}) || []; } catch(e){} }
+      AMI.clubs = new Map(clubs.map(c => [c.amigo, Array.isArray(c.clubs) ? c.clubs : []]));
       AMI.filas = filas; AMI.perfiles = new Map(perfiles.map(p => [p.id, p]));
       AMI.agendas = new Map(); AMI.porRuta = new Map();
       agendas.forEach(({amigo, ruta}) => {
@@ -1503,7 +1506,7 @@ a{color:var(--green)}
     const a = amigosAceptados().find(x => x.id === id);
     const rutas = AMI.agendas.get(id) || [];
     cfgPage(nombreDe(p), `
-      <div class="cfgbox" style="text-align:center">${avatar(p, 84)}<div style="font-weight:700;font-size:18px;margin-top:8px">${esc(nombreDe(p))}</div><div class="sub">@${esc(p.usuario)}</div></div>
+      <div class="cfgbox" style="text-align:center">${avatar(p, 84)}<div style="font-weight:700;font-size:18px;margin-top:8px">${esc(nombreDe(p))}</div><div class="sub">@${esc(p.usuario)}</div>${(AMI.clubs.get(id) || []).length ? `<div class="clubs" style="justify-content:center;margin-top:10px">${AMI.clubs.get(id).map(c => `<span class="club" style="padding-right:12px">${esc(c)}</span>`).join('')}</div>` : ''}</div>
       <div class="cfglabel">Sus próximas rutas</div>
       <div class="cfgbox">${rutas.length ? rutas.map(r => {
         const d = r.date ? pd(r.date) : null, w = r.webId && state.web.find(x => x.id === r.webId), mine = r.webId && state.events.find(e => e.webId === r.webId);
@@ -1516,7 +1519,7 @@ a{color:var(--green)}
     document.querySelectorAll('[data-addf]').forEach(b => b.onclick = () => { addFromWeb(b.dataset.addf, 'interesado'); amigoPantalla(id); });
     const del = $('#adel'); if(del) del.onclick = async () => { if(await confirmDlg(`¿Eliminar a ${nombreDe(p)} de tus amigos?`, 'Dejaréis de ver vuestras rutas. Podéis volver a ser amigos más adelante.', 'Eliminar')){ await amistadAccion('eliminar_amistad', a.fila.id, 'Amigo eliminado'); amigosPantalla(); } };
   }
-  function amigosReset(){ AMI = {cargado: false, filas: [], perfiles: new Map(), agendas: new Map(), porRuta: new Map(), yo: null, recibidas: 0}; marcarAvisos(); }
+  function amigosReset(){ AMI = {cargado: false, filas: [], perfiles: new Map(), agendas: new Map(), porRuta: new Map(), clubs: new Map(), yo: null, recibidas: 0}; marcarAvisos(); }
   document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && sesion) amigosCargar(); });
   if(sesion && !location.hash.includes('access_token')) setTimeout(async () => { await perfilAsegurar(); amigosCargar(); }, 700);
   else if(invitacion && !sesion) setTimeout(() => { toast('Crea tu cuenta para añadir a @' + invitacion); cuentaPantalla('registro'); }, 600);
