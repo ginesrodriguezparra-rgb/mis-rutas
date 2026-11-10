@@ -279,6 +279,15 @@ body{position:fixed;inset:0}
 textarea{resize:vertical;min-height:70px}
 .cartelprev{background:var(--card);border-radius:18px;padding:10px;text-align:center}
 .cartelprev img{max-width:100%;max-height:60vh;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.18)}
+.sw{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--line);cursor:pointer;font-weight:400 !important;margin:0 !important}
+.sw:last-child{border-bottom:0}.sw b{font-size:15px;font-weight:600;color:var(--ink)}
+.sw>span{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}.sw .cfgsub{display:block;color:var(--muted);font-size:13px;font-weight:400;line-height:1.35}
+.sw input{position:absolute;opacity:0;width:0;height:0}
+.sw i{flex:0 0 auto;width:50px;height:30px;border-radius:15px;background:var(--line);position:relative;transition:background .2s}
+.sw i:after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.sw input:checked+i{background:var(--green)}.sw input:checked+i:after{transform:translateX(20px)}
+.fuente{display:flex;flex-direction:column;gap:2px;padding:9px 0;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink)}
+.fuente b{font-size:15px;color:var(--green)}.fuente span{font-size:13px;color:var(--muted)}
 .kimg{display:flex;align-items:center;gap:14px;margin-top:4px}
 .pernav{display:flex;align-items:center;justify-content:space-between;gap:8px}.pernav b{font-size:15.5px;text-align:center}
 .adm{font-size:11px;text-transform:none;letter-spacing:0;background:var(--green2);color:var(--green);border-radius:999px;padding:2px 8px;margin-left:6px}
@@ -731,7 +740,7 @@ a{color:var(--green)}
     cfgPage('Configuración', `${cuentaCfgHTML()}
       <div class="cfggroup">
         <button data-cfg="personal">Información personal${CHEV}</button>
-        <button data-cfg="prefs">Tus preferencias${CHEV}</button>
+        <button data-cfg="prefs">Tus preferencias y privacidad${CHEV}</button>
         <button data-cfg="notif">Preferencias de notificaciones${CHEV}</button>
       </div>
       <div class="cfggroup">
@@ -741,11 +750,12 @@ a{color:var(--green)}
         <button data-cfg="ayuda">Centro de ayuda${CHEV}</button>
         <button data-cfg="condiciones">Condiciones de uso${CHEV}</button>
         <button data-cfg="privacidad">Política de privacidad${CHEV}</button>
+        <button data-cfg="acerca">Acerca de${CHEV}</button>
       </div>
       <div class="cfgfoot"><b>¿Te gusta Mis rutas y trails?</b><span>Compártela con tus compañeros de ruta.</span>
         <button class="cfgdanger" id="cfgborrar">Borrar mis datos</button>
         <div class="cfgver">Versión 1.0</div></div>`);
-    const go = {personal: cfgPersonal, copia: cfgCopia, prefs: cfgPrefs, notif: cfgNotif, ayuda: cfgAyuda, condiciones: cfgCondiciones, privacidad: cfgPrivacidad};
+    const go = {personal: cfgPersonal, copia: cfgCopia, prefs: cfgPrefs, notif: cfgNotif, ayuda: cfgAyuda, condiciones: cfgCondiciones, privacidad: cfgPrivacidad, acerca: cfgAcerca};
     document.querySelectorAll('[data-cfg]').forEach(b => b.onclick = () => go[b.dataset.cfg]());
     bindCuentaCfg();
     $('#cfgborrar').onclick = async () => {
@@ -800,19 +810,53 @@ a{color:var(--green)}
       <p style="font-weight:600;margin:6px 0">Próximamente</p>
       <p class="sub">De momento todas las funciones de la app son gratuitas.</p></div>`, true);
   }
+  const PRIV_OPC = [
+    ['clubs', 'Mis clubs', 'Los clubs de los que eres socio o administrador'],
+    ['inscrito', 'Rutas en las que estoy inscrito', 'Tus próximas rutas marcadas como Inscrito'],
+    ['interesa', 'Rutas que me interesan', 'Tus próximas rutas marcadas como Me interesa'],
+    ['realizadas', 'Rutas realizadas', 'Las rutas pasadas en las que estuviste inscrito']
+  ];
+  const privDe = k => !(state.prefs.privacidad && state.prefs.privacidad[k] === false);
   function cfgPrefs(){
     const p = state.prefs;
-    cfgPage('Tus preferencias', `
-      <div class="cfglabel">Mi zona</div>
-      <div class="cfgbox"><div class="provlist" style="margin-top:0">${fprovs.size ? [...fprovs].map(x => `<span class="chip greenl">📍 ${esc(x)}</span>`).join('') : '<span class="sub">Toda España</span>'}</div>
-        <div class="btns"><button class="btn" id="azona">Cambiar provincias</button></div></div>
-      <div class="cfglabel">Actividad preferida al abrir Rutas</div>
-      <div class="cfgbox"><div class="bar" style="margin:0">${DCHIPS.map(([k,l]) => `<button class="chip ${(p.actividad||'todos')===k?'on':''}" data-act="${k}">${l}</button>`).join('')}</div></div>
-      <div class="cfglabel">Webs de eventos</div>
-      <div class="cfgbox plist">${state.fuentes.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.nombre)} ↗</a>`).join('') || '<span class="sub">—</span>'}
-        <div class="sub" style="margin-top:8px">Se revisan cada mañana${state.webActualizado ? ' · última actualización ' + esc(state.webActualizado) : ''}.</div></div>`, true);
+    cfgPage('Preferencias y privacidad', `
+      <div class="cfglabel">Preferencias</div>
+      <div class="cfgbox">
+        <b style="font-size:15px">Mi zona</b>
+        <div class="provlist" style="margin-top:8px">${fprovs.size ? [...fprovs].map(x => `<span class="chip greenl">📍 ${esc(x)}</span>`).join('') : '<span class="sub">Toda España</span>'}</div>
+        <div class="btns"><button class="btn" id="azona">Cambiar provincias</button></div>
+        <div style="border-top:1px solid var(--line);margin:14px 0 12px"></div>
+        <b style="font-size:15px">Actividad preferida al abrir Rutas</b>
+        <div class="bar" style="margin:8px 0 0">${DCHIPS.map(([k,l]) => `<button class="chip ${(p.actividad||'todos')===k?'on':''}" data-act="${k}">${l}</button>`).join('')}</div>
+      </div>
+      <div class="cfglabel">Privacidad · qué ven tus amigos</div>
+      <div class="cfgbox">
+        ${PRIV_OPC.map(([k, t, d]) => `<label class="sw"><span><b>${t}</b><span class="cfgsub">${d}</span></span><input type="checkbox" data-priv="${k}" ${privDe(k) ? 'checked' : ''}><i></i></label>`).join('')}
+      </div>
+      <div class="sub" style="margin:10px 4px 0;line-height:1.45">🔒 Quien no es tu amigo solo puede ver tu nombre, tu @usuario y tu foto en pequeño, para poder encontrarte. Nada de tu agenda ni de tus clubs.${sesion ? '' : '<br>Estas opciones se aplican cuando tienes una cuenta y amigos.'}</div>`, true);
     $('#azona').onclick = () => { $('#sheet').classList.remove('cfg'); openFiltros(); };
     document.querySelectorAll('[data-act]').forEach(b => b.onclick = () => { p.actividad = b.dataset.act; dfilter = p.actividad; saveUI(); renderEventos(); cfgPrefs(); clearTimeout(cfgPrefs._t); cfgPrefs._t = setTimeout(save, 1500); });
+    document.querySelectorAll('[data-priv]').forEach(inp => inp.onchange = () => {
+      p.privacidad = Object.assign({}, p.privacidad, {[inp.dataset.priv]: inp.checked});
+      clearTimeout(cfgPrefs._t); cfgPrefs._t = setTimeout(save, 600);
+      toast(inp.checked ? 'Tus amigos podrán verlo' : 'Tus amigos ya no lo verán');
+    });
+  }
+  function cfgAcerca(){
+    const n = (state.web || []).filter(w => !w.clubEv && w.date && days(w.date) >= 0).length;
+    cfgPage('Acerca de', `
+      <div class="cfgbox help">
+        <p><b>Mis rutas y trails</b><br>Una app para encontrar rutas de senderismo, trail, carreras y MTB de toda España, organizar tu agenda, ver a qué van tus amigos y apuntarte a las salidas de tu club.</p>
+        <p><b>¿De dónde salen las rutas del buscador?</b><br>Las rutas y carreras de la pestaña Rutas se recogen de las webs públicas de inscripción y cronometraje que ves más abajo. Cada mañana se revisan esas webs, se añaden los eventos nuevos, se corrigen los que han cambiado y se quitan los que ya han pasado. Además, se buscan webs nuevas por comunidades autónomas para ir cubriendo toda España.</p>
+        <p><b>Modalidades</b><br>Muchos eventos tienen varias pruebas (por ejemplo, trail y una ruta senderista). Para etiquetarlos bien se lee la ficha de cada evento. Si todavía no se ha podido comprobar, verás la etiqueta «Modalidades sin confirmar».</p>
+        <p><b>Filtros</b><br>En Rutas puedes buscar por nombre o pueblo, y en Filtros elegir actividad, fechas y provincias en el mapa. Tu zona y tu actividad preferida se guardan en Preferencias.</p>
+        <p><b>Eventos de clubs</b><br>Las rutas que organizan los clubs no salen en el buscador: las encontrarás en la pestaña Club.</p>
+        <p><b>Importante</b><br>Los datos de cada evento (fechas, precios, plazos, plazas) pueden cambiar. Comprueba siempre la información en la web oficial antes de inscribirte; la inscripción se hace siempre en la web del organizador.</p>
+      </div>
+      <div class="cfglabel">Webs de eventos que se revisan (${(state.fuentes || []).length})</div>
+      <div class="cfgbox">${(state.fuentes || []).map(f => `<a class="fuente" href="${esc(f.url)}" target="_blank" rel="noopener"><b>${esc(f.nombre)} ↗</b>${f.zona ? `<span>${esc(f.zona)}</span>` : ''}</a>`).join('') || '<span class="sub">—</span>'}
+        <div class="sub" style="margin-top:10px">${n} eventos próximos en el buscador${state.webActualizado ? ' · última actualización: ' + esc(state.webActualizado) : ''}.</div></div>
+      <div class="cfgfoot"><span>Versión 1.0</span><span>Contacto: <a href="mailto:misrutasytrail@gmail.com" style="color:var(--green)">misrutasytrail@gmail.com</a></span></div>`, true);
   }
   function cfgNotif(){
     const d = avisoDias(), opts = [[0,'No avisarme'],[3,'3 días antes'],[7,'7 días antes'],[10,'10 días antes'],[15,'15 días antes']];
@@ -842,7 +886,7 @@ a{color:var(--green)}
   }
   function cfgPrivacidad(){
     cfgPage('Política de privacidad', `<div class="cfgbox help">
-      <p><b>Sin cuenta:</b> tus datos (agenda, nombre, clubes, foto y provincias) se guardan solo en tu móvil y no se envían a ningún servidor.</p><p><b>Con cuenta:</b> guardamos tu correo electrónico y esos mismos datos para que puedas usarlos en cualquier dispositivo. Se almacenan en servidores de Supabase situados en la Unión Europea (Frankfurt, Alemania). Tu contraseña se guarda cifrada y nadie puede verla. Si entras con Google, solo recibimos tu correo.</p><p>Solo tú puedes ver y cambiar tus datos. No los vendemos ni los compartimos con nadie, y no los usamos para publicidad.</p><p><b>Amigos:</b> si eliges un @usuario, los demás usuarios pueden ver tu nombre, tu @usuario y tu foto para poder encontrarte. Las rutas de tu agenda marcadas como Inscrito o Me interesa solo las ven los amigos cuya solicitud hayas aceptado (o que hayan aceptado la tuya). Tus clubs del perfil también los ven solo tus amigos aceptados. <b>Clubs:</b> el nombre, la descripción y el lugar de los clubs los puede ver cualquier usuario; la lista de socios y quién va a cada evento solo la ven los socios de ese club. Los eventos públicos los ve cualquier usuario. Puedes eliminar a un amigo en cualquier momento.</p>
+      <p><b>Sin cuenta:</b> tus datos (agenda, nombre, clubes, foto y provincias) se guardan solo en tu móvil y no se envían a ningún servidor.</p><p><b>Con cuenta:</b> guardamos tu correo electrónico y esos mismos datos para que puedas usarlos en cualquier dispositivo. Se almacenan en servidores de Supabase situados en la Unión Europea (Frankfurt, Alemania). Tu contraseña se guarda cifrada y nadie puede verla. Si entras con Google, solo recibimos tu correo.</p><p>Solo tú puedes ver y cambiar tus datos. No los vendemos ni los compartimos con nadie, y no los usamos para publicidad.</p><p><b>Amigos:</b> si eliges un @usuario, los demás usuarios pueden ver tu nombre, tu @usuario y tu foto para poder encontrarte. Las rutas de tu agenda (inscrito, me interesa y realizadas) y tus clubs solo las ven los amigos cuya solicitud hayas aceptado (o que hayan aceptado la tuya), y puedes elegir qué ven en Configuración › Tus preferencias y privacidad. Tus clubs del perfil también los ven solo tus amigos aceptados. <b>Clubs:</b> el nombre, la descripción y el lugar de los clubs los puede ver cualquier usuario; la lista de socios y quién va a cada evento solo la ven los socios de ese club. Los eventos públicos los ve cualquier usuario. Puedes eliminar a un amigo en cualquier momento.</p>
       <p>La app no usa tu ubicación ni envía tus datos a las webs de eventos. Al pulsar «Ver web», WhatsApp o Telegram, se abre esa web o app fuera de aquí.</p>
       <p>Puedes borrar tu cuenta y todos sus datos cuando quieras desde Configuración › Borrar mi cuenta. Sin cuenta, si borras los datos del navegador o desinstalas la app se pierden: usa Configuración › Copia de seguridad.</p><p><b>Responsable y contacto:</b> para cualquier duda sobre tus datos, o para pedir que los consultemos, corrijamos o borremos, escribe a <a href="mailto:misrutasytrail@gmail.com">misrutasytrail@gmail.com</a>. También puedes reclamar ante la Agencia Española de Protección de Datos (aepd.es).</p></div>`, true);
   }
@@ -1461,6 +1505,7 @@ a{color:var(--green)}
         AMI.agendas.get(amigo).push(r);
       });
       AMI.agendas.forEach((lista, amigo) => lista.forEach(r => {
+        if(r.date && days(r.date) < 0) return; // las realizadas no cuentan para «quién va»
         if(r.webId){ if(!AMI.porRuta.has(r.webId)) AMI.porRuta.set(r.webId, []); AMI.porRuta.get(r.webId).push({amigo, estado: r.estado}); }
       }));
       AMI.agendas.forEach(l => l.sort((a, b) => (a.date || '').localeCompare(b.date || '')));
@@ -1562,7 +1607,9 @@ a{color:var(--green)}
   function amigoPantalla(id){
     const p = AMI.perfiles.get(id) || {id, usuario: '', nombre: ''};
     const a = amigosAceptados().find(x => x.id === id);
-    const rutas = AMI.agendas.get(id) || [];
+    const todas = AMI.agendas.get(id) || [];
+    const rutas = todas.filter(r => !r.date || days(r.date) >= 0);
+    const hechas = todas.filter(r => r.date && days(r.date) < 0).sort((x, y) => y.date.localeCompare(x.date));
     cfgPage(nombreDe(p), `
       <div class="cfgbox" style="text-align:center">${avatar(p, 84)}<div style="font-weight:700;font-size:18px;margin-top:8px">${esc(nombreDe(p))}</div><div class="sub">@${esc(p.usuario)}</div>${(AMI.clubs.get(id) || []).length ? `<div class="clubs" style="justify-content:center;margin-top:10px">${AMI.clubs.get(id).map(c => `<span class="club" style="padding-right:12px">${esc(c)}</span>`).join('')}</div>` : ''}</div>
       <div class="cfglabel">Sus próximas rutas</div>
@@ -1571,7 +1618,9 @@ a{color:var(--green)}
         return `<div class="frow"><div class="date t-${esc(tiposOf(r)[0])}">${d ? `<b>${d.getDate()}</b><span>${MESES[d.getMonth()]}</span>` : ''}</div>
           <div class="finfo"><b>${esc(r.nombre || '')}</b><span>${r.estado === 'inscrito' ? '✓ Inscrito' : '★ Le interesa'}${r.lugar ? ' · ' + esc(r.lugar) : ''}</span>
           ${w ? (mine ? `<span class="sub">En tu agenda (${mine.estado === 'inscrito' ? 'inscrito' : 'me interesa'})</span>` : `<span><button class="chip amber" data-addf="${esc(w.id)}">★ Me interesa</button></span>`) : ''}</div></div>`; }).join('')
-        : '<div class="sub">No tiene rutas próximas en su agenda.</div>'}</div>
+        : '<div class="sub">No hay rutas próximas para mostrar.</div>'}</div>
+      ${hechas.length ? `<div class="cfglabel">Rutas realizadas (${hechas.length})</div><div class="cfgbox">${hechas.map(r => { const d = pd(r.date), ex = [r.lugar, r.km ? r.km + ' km' : ''].filter(Boolean).join(' · ');
+        return `<div class="frow"><div class="date t-${esc(tiposOf(r)[0])}"><b>${d.getDate()}</b><span>${MESES[d.getMonth()]}${d.getFullYear() !== today().getFullYear() ? ' ' + String(d.getFullYear()).slice(2) : ''}</span></div><div class="finfo"><b style="white-space:normal">${esc(r.nombre || '')}</b>${ex ? `<span>${esc(ex)}</span>` : ''}</div></div>`; }).join('')}</div>` : ''}
       ${a ? '<div class="cfgfoot"><button class="cfgdanger" id="adel">Eliminar amigo</button></div>' : ''}`, true);
     $('#cfgx').onclick = amigosPantalla;
     document.querySelectorAll('[data-addf]').forEach(b => b.onclick = () => { addFromWeb(b.dataset.addf, 'interesado'); amigoPantalla(id); });
