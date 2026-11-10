@@ -3422,9 +3422,11 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       <div class="cfgbox"><div class="pernav"><button class="chip" id="cprev">‹</button><b>${esc(periodoTxt(c, ref))}</b><button class="chip" id="cnext">›</button></div>
         <div class="sub" style="text-align:center;margin-top:8px">${c.cuota ? esc(cuotaTxt(c)) + ' · ' : ''}${pag ? `<b>${n} de ${lista.length}</b> han pagado` : ''}</div></div>
       ${pag === null ? '<div class="cfgbox" style="margin-top:10px"><div class="sub">Para usar el control de cuotas, ejecuta antes el archivo cuotas.sql en Supabase.</div></div>'
-        : `<div class="cfgbox" style="margin-top:10px">${lista.length ? lista.map(u => filaPago(P(u), pag.has(u))).join('') : '<div class="sub">El club aún no tiene socios.</div>'}</div>`}
+        : `<div class="cfgbox" style="margin-top:10px">${lista.length ? lista.map(u => filaPago(P(u), pag.has(u))).join('') : '<div class="sub">El club aún no tiene socios.</div>'}</div>
+           <div class="btns"><button class="btn" id="cinforme">📄 Generar informe</button></div>`}
       <div class="sub" style="margin:12px 4px">🔒 Esta información solo la ven los administradores del club.</div>`, false);
     $('#cfgx').onclick = () => clubPantalla(c.id);
+    const ci = $('#cinforme'); if(ci) ci.onclick = () => informeCuotas(c, socios, perf, ref);
     $('#cprev').onclick = () => cuotasPantalla(c, socios, perf, desplaza - 1);
     $('#cnext').onclick = () => cuotasPantalla(c, socios, perf, desplaza + 1);
     document.querySelectorAll('[data-pago]').forEach(b => b.onclick = async () => {
@@ -3443,8 +3445,9 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     const P = u => perf.get(u) || {id: u, usuario: '…', nombre: ''};
     const pinta = () => {
       const n = van.filter(u => pag.has(u)).length;
-      box.innerHTML = van.length ? `<div class="sub" style="margin-bottom:4px">${preciosTxt(e) ? esc(preciosTxt(e)) + ' · ' : ''}<b>${n} de ${van.length}</b> han pagado</div>` + van.map(u => filaPago(P(u), pag.has(u))).join('')
+      box.innerHTML = van.length ? `<div class="sub" style="margin-bottom:4px">${preciosTxt(e) ? esc(preciosTxt(e)) + ' · ' : ''}<b>${n} de ${van.length}</b> han pagado</div>` + van.map(u => filaPago(P(u), pag.has(u))).join('') + '<div class="btns"><button class="btn" id="einforme">📄 Generar informe</button></div>'
         : '<div class="sub">Cuando alguien responda «Voy», podrás anotar aquí si ha pagado.</div>';
+      const ei = $('#einforme'); if(ei) ei.onclick = () => informeEvento(e, van, perf);
       box.querySelectorAll('[data-pago]').forEach(b => b.onclick = async () => {
         const u = b.dataset.pago, ya = pag.has(u); b.disabled = true;
         try { await marcarPago(e.club, u, 'evento', e.id, !ya); ya ? pag.delete(u) : pag.add(u); pinta(); }
@@ -3649,6 +3652,121 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     if(navigator.share){ try { await navigator.share({title: e.titulo, text: texto}); } catch(err){} }
     else { try { await navigator.clipboard.writeText(texto); toast('Enlace copiado ✓'); } catch(err){} }
     return true;
+  }
+  // ----- informes de pagos (PDF y hoja de cálculo) -----
+  // PDF mínimo hecho a mano (A4, letra Helvetica), sin librerías externas
+  function pdfTexto(s){
+    let o = '';
+    for(const ch of String(s)){
+      const c = ch.codePointAt(0);
+      let b = c === 0x20AC ? 0x80 : c === 0x2013 ? 0x96 : c === 0x2014 ? 0x97 : c === 0x2019 ? 0x92 : c === 0x201C ? 0x93 : c === 0x201D ? 0x94 : c === 0x2022 ? 0x95 : c === 0x2026 ? 0x85 : c < 256 ? c : 63;
+      if(b === 40 || b === 41 || b === 92) o += '\\';
+      o += String.fromCharCode(b);
+    }
+    return o;
+  }
+  function crearPdf(titulo, subtitulos, columnas, filas, resumen){
+    const PW = 595, PH = 842, M = 42, LH = 17, pags = [];
+    let cmd = [], y = 0;
+    const T = (x, yy, txt, size, bold, gris) => cmd.push(`${gris ? '0.42 0.44 0.41 rg' : '0.12 0.16 0.14 rg'} BT /${bold ? 'F2' : 'F1'} ${size} Tf ${x} ${yy} Td (${pdfTexto(txt)}) Tj ET`);
+    const R = (x, yy, w, h, c) => cmd.push(`${c} rg ${x} ${yy} ${w} ${h} re f`);
+    const recorta = (txt, maxc) => { txt = String(txt == null ? '' : txt); return txt.length > maxc ? txt.slice(0, maxc - 1) + '…' : txt; };
+    const cabTabla = () => { R(M, y - 5, PW - 2 * M, LH + 4, '0.89 0.93 0.90'); columnas.forEach(c => T(M + 6 + c.x, y, c.t, 9.5, true)); y -= LH + 6; };
+    const nuevaPag = primera => {
+      if(cmd.length) pags.push(cmd.join('\n'));
+      cmd = []; y = PH - M - 10;
+      if(primera){
+        T(M, y, titulo, 17, true); y -= 24;
+        subtitulos.forEach(s => { T(M, y, s, 10.5, false, true); y -= 15; });
+        y -= 8;
+        resumen.forEach(([k, v]) => { T(M, y, k, 10.5, false); T(M + 170, y, v, 10.5, true); y -= 16; });
+        y -= 12;
+      } else { T(M, y, titulo + ' (continuación)', 11, true); y -= 24; }
+      cabTabla();
+    };
+    nuevaPag(true);
+    filas.forEach((f, i) => {
+      if(y < M + 40) nuevaPag(false);
+      if(i % 2) R(M, y - 5, PW - 2 * M, LH + 2, '0.97 0.97 0.95');
+      columnas.forEach((c, k) => T(M + 6 + c.x, y, recorta(f[k], c.max || 40), 9.5, c.negrita && f[k] === c.negrita, false));
+      y -= LH + 2;
+    });
+    if(!filas.length){ T(M + 6, y, 'No hay personas en esta lista.', 10, false, true); }
+    pags.push(cmd.join('\n'));
+    // ensamblar el PDF
+    const obj = []; const n = pags.length;
+    obj[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+    obj[2] = `<< /Type /Pages /Kids [${pags.map((_, i) => (5 + i * 2) + ' 0 R').join(' ')}] /Count ${n} >>`;
+    obj[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+    obj[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+    pags.forEach((c, i) => {
+      const pie = `0.42 0.44 0.41 rg BT /F1 8.5 Tf ${M} 24 Td (${pdfTexto('Mis rutas y trails · ' + new Date().toLocaleDateString('es-ES') + ' · Página ' + (i + 1) + ' de ' + n)}) Tj ET`;
+      const cont = c + '\n' + pie;
+      obj[5 + i * 2] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${6 + i * 2} 0 R >>`;
+      obj[6 + i * 2] = `<< /Length ${cont.length} >>\nstream\n${cont}\nendstream`;
+    });
+    let out = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n'; const offs = [];
+    for(let i = 1; i < obj.length; i++){ offs[i] = out.length; out += `${i} 0 obj\n${obj[i]}\nendobj\n`; }
+    const xref = out.length;
+    out += `xref\n0 ${obj.length}\n0000000000 65535 f \n` + offs.slice(1).map(o => String(o).padStart(10, '0') + ' 00000 n \n').join('');
+    out += `trailer\n<< /Size ${obj.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+    const bytes = new Uint8Array(out.length); for(let i = 0; i < out.length; i++) bytes[i] = out.charCodeAt(i) & 255;
+    return new Blob([bytes], {type: 'application/pdf'});
+  }
+  function crearCsv(columnas, filas, cabecera){
+    const q = v => { v = String(v == null ? '' : v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    const lineas = (cabecera || []).map(l => l.map(q).join(';')).concat(cabecera && cabecera.length ? [''] : [], [columnas.map(c => q(c.t)).join(';')], filas.map(f => f.map(q).join(';')));
+    return new Blob(['﻿' + lineas.join('\r\n')], {type: 'text/csv;charset=utf-8'});
+  }
+  const numero = p => { const m = String(p || '').replace(',', '.').match(/\d+(\.\d+)?/); return m ? +m[0] : null; };
+  const euros = n => n.toLocaleString('es-ES', {minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2}) + ' €';
+  const fechaCorta = s => s ? new Date(s).toLocaleDateString('es-ES') : '';
+  const nombreArchivo = t => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
+  async function elegirFormatoInforme(generar){
+    $('#cfmbox').innerHTML = `<h3>Generar informe</h3><p class="sub">Elige el formato. Podrás guardarlo en Archivos o enviarlo por WhatsApp, correo…</p>
+      <div class="btns" style="flex-direction:column"><button class="btn pri" data-fmt="pdf">📄 PDF (para ver o imprimir)</button><button class="btn" data-fmt="csv">📊 Hoja de cálculo (Excel, Numbers…)</button><button class="btn" data-fmt="">Cancelar</button></div>`;
+    $('#cfm').classList.add('show');
+    $('#cfmbox').querySelectorAll('[data-fmt]').forEach(b => b.onclick = async () => {
+      $('#cfm').classList.remove('show'); const f = b.dataset.fmt; if(!f) return;
+      try { const {blob, nombre} = generar(f); await downloads.save({filename: nombre + (f === 'pdf' ? '.pdf' : '.csv'), data: blob}); }
+      catch(err){ if(!err || err.code !== 'declined') toast('No se pudo generar el informe.'); }
+    });
+  }
+  async function pagosDetalle(club, tipo, ref){
+    try { return new Map((await sbRest('club_pagos?select=usuario,creado&club=eq.' + club + '&tipo=eq.' + tipo + '&ref=eq.' + encodeURIComponent(ref)) || []).map(x => [x.usuario, x.creado])); }
+    catch(e){ return new Map(); }
+  }
+  async function informeCuotas(c, socios, perf, ref){
+    const pag = await pagosDetalle(c.id, 'cuota', ref);
+    const P = u => perf.get(u) || {usuario: '', nombre: ''};
+    const lista = socios.slice().sort((a, b) => nombreDe(P(a)).localeCompare(nombreDe(P(b)), 'es'));
+    const imp = numero(c.cuota), n = lista.filter(u => pag.has(u)).length;
+    const columnas = [{t: 'Nombre', x: 0, max: 30}, {t: 'Usuario', x: 190, max: 22}, {t: 'Estado', x: 330, negrita: 'Pagado'}, {t: 'Anotado el', x: 420}];
+    const filas = lista.map(u => [nombreDe(P(u)), '@' + (P(u).usuario || ''), pag.has(u) ? 'Pagado' : 'Pendiente', fechaCorta(pag.get(u))]);
+    const resumen = [['Socios', String(lista.length)], ['Han pagado', String(n)], ['Pendientes', String(lista.length - n)]];
+    if(imp != null){ resumen.push(['Cuota', euros(imp)], ['Recaudado', euros(imp * n)], ['Pendiente de cobro', euros(imp * (lista.length - n))]); }
+    const titulo = 'Cuotas de socios · ' + c.nombre, sub = [periodoTxt(c, ref), 'Generado el ' + new Date().toLocaleString('es-ES', {dateStyle: 'long', timeStyle: 'short'})];
+    elegirFormatoInforme(f => ({nombre: 'cuotas-' + nombreArchivo(c.nombre + '-' + ref),
+      blob: f === 'pdf' ? crearPdf(titulo, sub, columnas, filas, resumen) : crearCsv(columnas, filas, [[titulo], [sub[0]], ...resumen])}));
+  }
+  async function informeEvento(e, van, perf){
+    const pag = await pagosDetalle(e.club, 'evento', e.id);
+    let socios = new Set();
+    try { socios = new Set((await sbRest('club_miembros?select=usuario,rol&club=eq.' + e.club) || []).filter(m => m.rol === 'admin' || m.rol === 'socio').map(m => m.usuario)); } catch(err){}
+    const P = u => perf.get(u) || {usuario: '', nombre: ''};
+    const ps = numero(e.precio), pn = numero(e.precio_no_socios);
+    const precioDe = u => socios.has(u) ? (ps != null ? ps : pn) : (pn != null ? pn : ps);
+    const lista = van.slice().sort((a, b) => nombreDe(P(a)).localeCompare(nombreDe(P(b)), 'es'));
+    let recaudado = 0, pendiente = 0;
+    const filas = lista.map(u => { const pr = precioDe(u); if(pr != null){ if(pag.has(u)) recaudado += pr; else pendiente += pr; }
+      return [nombreDe(P(u)), '@' + (P(u).usuario || ''), socios.has(u) ? 'Socio' : 'No socio', pr != null ? euros(pr) : '', pag.has(u) ? 'Pagado' : 'Pendiente', fechaCorta(pag.get(u))]; });
+    const columnas = [{t: 'Nombre', x: 0, max: 24}, {t: 'Usuario', x: 150, max: 18}, {t: 'Tipo', x: 260}, {t: 'Precio', x: 320}, {t: 'Estado', x: 380, negrita: 'Pagado'}, {t: 'Anotado el', x: 450}];
+    const n = lista.filter(u => pag.has(u)).length, d = pd(e.fecha);
+    const resumen = [['Apuntados (Voy)', String(lista.length)], ['Han pagado', String(n)], ['Pendientes', String(lista.length - n)]];
+    if(ps != null || pn != null) resumen.push(['Precios', preciosTxt(e)], ['Recaudado', euros(recaudado)], ['Pendiente de cobro', euros(pendiente)]);
+    const titulo = 'Pagos · ' + e.titulo, sub = [(e.clubs ? e.clubs.nombre + ' · ' : '') + d.toLocaleDateString('es-ES', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'}) + (e.hora ? ' · ' + e.hora + ' h' : ''), 'Generado el ' + new Date().toLocaleString('es-ES', {dateStyle: 'long', timeStyle: 'short'})];
+    elegirFormatoInforme(f => ({nombre: 'pagos-' + nombreArchivo(e.titulo + '-' + e.fecha),
+      blob: f === 'pdf' ? crearPdf(titulo, sub, columnas, filas, resumen) : crearCsv(columnas, filas, [[titulo], [sub[0]], ...resumen])}));
   }
 
   render(); showTab(); cargarEventos();
