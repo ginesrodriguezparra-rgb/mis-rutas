@@ -980,6 +980,7 @@ a{color:var(--green)}
   }
   let sharing = false;
   function quickShare(x){
+    if(x.clubEv && typeof compartirEventoClub === 'function'){ compartirEventoClub(x.clubEv); return; }
     if(navigator.share){
       navigator.share(x.clubEv ? {title: x.nombre, text: shareText(x), url: APP_URL + '#evento=' + x.clubEv} : {title: x.nombre, text: shareText(x)}).catch(err => { if(!err || err.name !== 'AbortError') shareLinks(x); });
     } else shareLinks(x);
@@ -2939,7 +2940,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       CLUB.pendientesAdmin = new Map(); pend.forEach(p => CLUB.pendientesAdmin.set(p.club, (CLUB.pendientesAdmin.get(p.club) || 0) + 1));
       CLUB.cargado = true;
     } catch(e){ return; }
-    mezclarClubEventos(); marcarAvisosClub(); render();
+    mezclarClubEventos(); marcarAvisosClub(); render(); precalentarCarteles();
     const v = $('#sheet').dataset.vista || '';
     if(v.startsWith('club:')) clubPantalla(v.slice(5));
     else if(v.startsWith('ev:')) eventoPantalla(v.slice(3));
@@ -3288,8 +3289,9 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     $('#eclub').onclick = () => clubPantalla(e.club);
     const ec = $('#ecartel'); if(ec) ec.onclick = () => cartelPantalla(e);
     if(admin) pagosEvento(e, asist, perf);
-    $('#eshare').onclick = () => { const w = state.web.find(x => x.id === wid) || clubAWeb(e); quickShare(w); };
-    const sub = $('#eshare').closest('.btns'); if(sub) sub.insertAdjacentHTML('beforebegin', `<div class="sub" style="margin:12px 4px 0">${e.publico ? 'Al compartir se envía un enlace al evento: cualquiera con cuenta podrá verlo y apuntarse.' : 'Al compartir se envía un enlace al evento: solo podrán abrirlo los socios del club y los invitados.'}</div>`);
+    prepararCartel(e);
+    $('#eshare').onclick = () => { if(!CLUB.eventos.some(x => x.id === e.id)){ CLUB.eventos.push(e); mezclarClubEventos(); } compartirEventoClub(e.id); };
+    const sub = $('#eshare').closest('.btns'); if(sub) sub.insertAdjacentHTML('beforebegin', `<div class="sub" style="margin:12px 4px 0">${e.publico ? 'Al compartir se envía el cartel y un enlace al evento: cualquiera con cuenta podrá verlo y apuntarse.' : 'Al compartir se envía el cartel y un enlace al evento: solo podrán abrirlo los socios del club y los invitados.'}</div>`);
   }
   document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && sesion) clubCargar(); });
   if(sesion && !location.hash.includes('access_token')) setTimeout(clubCargar, 900);
@@ -3601,6 +3603,52 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       try { await downloads.save({filename: nombre, data: blob}); } catch(err){ if(!err || err.code !== 'declined') toast('No se pudo compartir el cartel.'); }
     };
     await pintar();
+  }
+  // ----- compartir un evento de club con su cartel -----
+  var CARTELES = new Map();
+  const firmaCartel = e => e.id + '|' + JSON.stringify([e.titulo, e.fecha, e.hora, e.lugar, e.provincia, e.encuentro, e.km, e.desnivel, e.dificultad, e.precio, e.precio_no_socios, e.plazas, e.limite, e.tipo, e.publico, e.clubs && e.clubs.nombre]);
+  async function cartelBlob(e){
+    const k = firmaCartel(e);
+    if(CARTELES.has(k)) return CARTELES.get(k);
+    const p = (async () => { const cv = await dibujarCartel(e, {formato: 'post', foto: null, qr: true}); return await new Promise(r => cv.toBlob(r, 'image/jpeg', .88)); })();
+    CARTELES.set(k, p);
+    try { return await p; } catch(err){ CARTELES.delete(k); return null; }
+  }
+  const cartelListo = e => { const p = CARTELES.get(firmaCartel(e)); return p && p.listo ? p.listo : null; };
+  async function prepararCartel(e){ const b = await cartelBlob(e); const p = CARTELES.get(firmaCartel(e)); if(p && b) p.listo = b; return b; }
+  // preparar en segundo plano los carteles de los próximos eventos, para poder compartir al momento
+  function precalentarCarteles(){
+    const lista = CLUB.eventos.filter(e => days(e.fecha) >= 0).slice(0, 12);
+    let i = 0;
+    const sig = () => { if(i >= lista.length) return; const e = lista[i++]; prepararCartel(e).finally(() => setTimeout(sig, 250)); };
+    setTimeout(sig, 1500);
+  }
+  function textoEvento(e){
+    const w = state.web.find(x => x.id === 'club-' + e.id) || clubAWeb(e);
+    return shareText(w) + '\n' + APP_URL + '#evento=' + e.id;
+  }
+  async function compartirEventoClub(id){
+    const e = CLUB.eventos.find(x => x.id === id); if(!e) return false;
+    const nombre = 'cartel-' + (e.titulo || 'evento').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').slice(0, 40) + '.jpg';
+    const texto = textoEvento(e);
+    const enviar = async blob => {
+      const file = new File([blob], nombre, {type: 'image/jpeg'});
+      if(!(navigator.canShare && navigator.canShare({files: [file]}))) return 'sin-archivos';
+      try { await navigator.share({files: [file], text: texto}); return 'ok'; }
+      catch(err){ return err && err.name === 'AbortError' ? 'ok' : (err && err.name === 'NotAllowedError' ? 'permiso' : 'error'); }
+    };
+    let blob = cartelListo(e), r;
+    if(blob) r = await enviar(blob);
+    else { blob = await prepararCartel(e); r = blob ? await enviar(blob) : 'error'; }
+    if(r === 'ok') return true;
+    if(r === 'permiso'){ // Safari pide un toque nuevo después de preparar la imagen
+      if(await confirmDlg('Cartel listo', 'Pulsa «Compartir» para enviarlo con la información del evento.', 'Compartir')) await enviar(blob);
+      return true;
+    }
+    // sin posibilidad de compartir imágenes: solo texto y enlace
+    if(navigator.share){ try { await navigator.share({title: e.titulo, text: texto}); } catch(err){} }
+    else { try { await navigator.clipboard.writeText(texto); toast('Enlace copiado ✓'); } catch(err){} }
+    return true;
   }
 
   render(); showTab(); cargarEventos();
