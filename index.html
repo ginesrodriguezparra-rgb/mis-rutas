@@ -279,6 +279,7 @@ body{position:fixed;inset:0}
 textarea{resize:vertical;min-height:70px}
 .cartelprev{background:var(--card);border-radius:18px;padding:10px;text-align:center}
 .cartelprev img{max-width:100%;max-height:60vh;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.18)}
+.kimg{display:flex;align-items:center;gap:14px;margin-top:4px}
 .pernav{display:flex;align-items:center;justify-content:space-between;gap:8px}.pernav b{font-size:15.5px;text-align:center}
 .adm{font-size:11px;text-transform:none;letter-spacing:0;background:var(--green2);color:var(--green);border-radius:999px;padding:2px 8px;margin-left:6px}
 .cfggroup .cfgsub{display:block}
@@ -2877,7 +2878,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   var WEBBASE = [], CLUBWEB = [];
   var CLUB = {cargado: false, mis: [], eventos: [], resp: new Map(), pendientesAdmin: new Map(), syncT: null};
   const DIFS = ['Fácil', 'Moderada', 'Difícil', 'Muy difícil'];
-  const CLUB_CAMPOS = 'id,nombre,descripcion,localidad,provincia,abierto,cuota,periodo,mes_inicio';
+  const CLUB_CAMPOS = 'id,nombre,descripcion,localidad,provincia,abierto,cuota,periodo,mes_inicio,imagen', CLUB_CAMPOS2 = 'id,nombre,descripcion,localidad,provincia,abierto,cuota,periodo,mes_inicio';
   const MESES_C = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   // periodo de cuota: '2026' (año natural) o '2026-27' (temporada que empieza en mes_inicio)
   function periodoActual(c, desplaza){
@@ -2891,6 +2892,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     const ini = +ref.slice(0, 4), mi = c.mes_inicio || 9, mf = mi === 1 ? 12 : mi - 1;
     return 'Temporada ' + MESES_C[mi - 1].slice(0, 3) + ' ' + ini + ' – ' + MESES_C[mf - 1].slice(0, 3) + ' ' + (mi === 1 ? ini : ini + 1);
   }
+  const periodoFrase = (c, ref) => c.periodo === 'temporada' ? 'de la ' + periodoTxt(c, ref).replace('Temporada', 'temporada') : 'del año ' + ref;
   function cuotaTxt(c){
     if(!c.cuota) return '';
     const imp = precioBonito(c.cuota);
@@ -2929,7 +2931,8 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       const yo = sesion.user.id;
       let mis;
       try { mis = await sbRest('club_miembros?select=club,rol,clubs(' + CLUB_CAMPOS + ')&usuario=eq.' + yo) || []; }
-      catch(e){ mis = await sbRest('club_miembros?select=club,rol,clubs(id,nombre,descripcion,localidad,provincia,abierto)&usuario=eq.' + yo) || []; }
+      catch(e){ try { mis = await sbRest('club_miembros?select=club,rol,clubs(' + CLUB_CAMPOS2 + ')&usuario=eq.' + yo) || []; }
+        catch(e2){ mis = await sbRest('club_miembros?select=club,rol,clubs(id,nombre,descripcion,localidad,provincia,abierto)&usuario=eq.' + yo) || []; } }
       // si una parte falla, el resto sigue funcionando
       const intenta = async (path, def) => { try { return await sbRest(path) || def; } catch(e){ console.warn('clubs:', path, e.message); return def; } };
       const eventos = await intenta('club_eventos?select=*,clubs(nombre)&fecha=gte.' + hoyISO() + '&order=fecha.asc,hora.asc&limit=300', []);
@@ -2988,7 +2991,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   // ----- pestaña Club -----
   function filaClub(m, derecha){
     const c = m.clubs || m;
-    return `<div class="prow" data-club="${esc(c.id)}">${avatar({nombre: c.nombre}, 44)}<div class="finfo"><b>${esc(c.nombre)}</b><span>${esc([c.localidad, c.provincia].filter(Boolean).join(', ') || (c.abierto ? 'Entrada libre' : 'Con aprobación'))}</span></div><div class="pacts">${derecha || CHEV}</div></div>`;
+    return `<div class="prow" data-club="${esc(c.id)}">${avatar({nombre: c.nombre, foto: c.imagen}, 44)}<div class="finfo"><b>${esc(c.nombre)}</b><span>${esc([c.localidad, c.provincia].filter(Boolean).join(', ') || (c.abierto ? 'Entrada libre' : 'Con aprobación'))}</span></div><div class="pacts">${derecha || CHEV}</div></div>`;
   }
   function renderClub(){
     const el = $('#club'); if(!el) return;
@@ -3059,6 +3062,9 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     c = c || {};
     const provOpts = ['<option value="">Provincia…</option>'].concat(PROVS.map(([n]) => n).sort((a, b) => a.localeCompare(b, 'es')).map(n => `<option ${c.provincia === n ? 'selected' : ''}>${esc(n)}</option>`)).join('');
     cfgPage(c.id ? 'Editar club' : 'Crear club', `<div class="cfgbox"><form id="kf">
+      <label>Imagen o logo del club</label>
+      <div class="kimg"><span id="kimgprev">${avatar({nombre: c.nombre || '?', foto: c.imagen}, 72)}</span><div class="btns" style="margin:0;flex:1"><button type="button" class="btn" id="kimgbtn">${c.imagen ? 'Cambiar imagen' : 'Elegir imagen'}</button><button type="button" class="btn del" id="kimgdel" ${c.imagen ? '' : 'hidden'}>Quitar</button></div></div>
+      <input type="file" id="kimgfile" accept="image/*" hidden>
       <label>Nombre del club</label><input name="nombre" required minlength="3" maxlength="60" value="${esc(c.nombre || '')}" placeholder="Ej. CD Trail Almanzora">
       <label>Descripción</label><textarea name="descripcion" rows="3" maxlength="600" placeholder="Qué hacéis, cuándo salís…">${esc(c.descripcion || '')}</textarea>
       <label>Localidad</label><input name="localidad" maxlength="60" value="${esc(c.localidad || '')}">
@@ -3073,6 +3079,17 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       <div class="btns"><button class="btn pri" type="submit">${c.id ? 'Guardar' : 'Crear club'}</button></div></form></div>`, false);
     $('#sheet').dataset.vista = c.id ? 'club:' + c.id : '';
     if(c.id) $('#cfgx').onclick = () => clubPantalla(c.id);
+    let imagen = c.imagen || null;
+    const pintaImg = () => { $('#kimgprev').innerHTML = avatar({nombre: $('#kf').nombre.value || c.nombre || '?', foto: imagen}, 72); $('#kimgdel').hidden = !imagen; $('#kimgbtn').textContent = imagen ? 'Cambiar imagen' : 'Elegir imagen'; };
+    $('#kimgbtn').onclick = () => $('#kimgfile').click();
+    $('#kimgdel').onclick = () => { imagen = null; pintaImg(); };
+    $('#kimgfile').onchange = ev => {
+      const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; if(!f) return;
+      const img = new Image();
+      img.onload = () => { const S = 320, cv = document.createElement('canvas'); cv.width = cv.height = S; const k = Math.max(S / img.width, S / img.height), w = img.width * k, h = img.height * k;
+        cv.getContext('2d').drawImage(img, (S - w) / 2, (S - h) / 2, w, h); imagen = cv.toDataURL('image/jpeg', .8); URL.revokeObjectURL(img.src); pintaImg(); };
+      img.onerror = () => toast('No se pudo abrir esa imagen'); img.src = URL.createObjectURL(f);
+    };
     let abierto = !!c.abierto, periodo = c.periodo === 'temporada' ? 'temporada' : 'anual';
     const pintaMes = () => { const mi = +$('#kf').mes_inicio.value, mf = mi === 1 ? 12 : mi - 1, y = today().getFullYear(); $('#kmestxt').textContent = 'Ejemplo: de ' + MESES_C[mi - 1] + ' de ' + y + ' a ' + MESES_C[mf - 1] + ' de ' + (mi === 1 ? y : y + 1) + '.'; };
     document.querySelectorAll('[data-per]').forEach(b => b.onclick = () => { periodo = b.dataset.per; document.querySelectorAll('[data-per]').forEach(x => { x.classList.toggle('on', x === b); x.querySelector('span').textContent = x === b ? '✓' : ''; }); $('#kmes').hidden = periodo !== 'temporada'; pintaMes(); });
@@ -3082,9 +3099,13 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       ev.preventDefault();
       const f = ev.target, d = {nombre: f.nombre.value.trim(), descripcion: f.descripcion.value.trim(), localidad: f.localidad.value.trim(), provincia: f.provincia.value, abierto};
       const dc = {cuota: f.cuota.value.trim(), periodo, mes_inicio: +f.mes_inicio.value};
+      const di = {imagen};
       if(d.nombre.length < 3){ $('#amsg').textContent = 'El nombre debe tener al menos 3 letras.'; return; }
       try {
-        const guardarCuota = async id => { try { await sbRest('clubs?id=eq.' + id, {method: 'PATCH', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify(dc)}); } catch(e){ toast('Guardado, pero la cuota no: falta ejecutar cuotas.sql en Supabase.'); } };
+        const guardarCuota = async id => {
+          try { await sbRest('clubs?id=eq.' + id, {method: 'PATCH', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify(dc)}); } catch(e){ toast('Guardado, pero la cuota no: falta ejecutar cuotas.sql en Supabase.'); }
+          if(di && (di.imagen || c.imagen)){ try { await sbRest('clubs?id=eq.' + id, {method: 'PATCH', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify(di)}); } catch(e){ toast('Guardado, pero la imagen no: falta ejecutar club_imagen.sql en Supabase.'); } }
+        };
         if(c.id){ await sbRest('clubs?id=eq.' + c.id, {method: 'PATCH', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify(d)}); await guardarCuota(c.id); toast('Club guardado ✓'); await clubCargar(); clubPantalla(c.id); }
         else { const id = await sbRest('rpc/crear_club', {method: 'POST', body: JSON.stringify({p_nombre: d.nombre, p_descripcion: d.descripcion, p_localidad: d.localidad, p_provincia: d.provincia, p_abierto: abierto})}); await guardarCuota(id); toast('¡Club creado! Eres su administrador ✓'); await clubCargar(); clubPantalla(id); }
       } catch(e){ $('#amsg').textContent = 'No se pudo guardar. Revisa tu conexión.'; }
@@ -3095,7 +3116,9 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   async function clubPantalla(id, info, codigoEnlace){
     const m = CLUB.mis.find(x => x.club === id);
     let c = m && m.clubs || info;
-    if(!c || c.cuota === undefined){ try { c = (await sbRest('clubs?select=' + CLUB_CAMPOS + '&id=eq.' + id))[0] || c; } catch(e){ try { c = c || (await sbRest('clubs?select=id,nombre,descripcion,localidad,provincia,abierto&id=eq.' + id))[0]; } catch(e2){} } }
+    if(!c || c.cuota === undefined || c.imagen === undefined){
+      for(const campos of [CLUB_CAMPOS, CLUB_CAMPOS2, 'id,nombre,descripcion,localidad,provincia,abierto']){ try { c = (await sbRest('clubs?select=' + campos + '&id=eq.' + id))[0] || c; break; } catch(e){} }
+    }
     if(!c){ toast('No se encontró el club'); return; }
     const rol = rolDe(id), socio = esSocioDe(id), admin = esAdminDe(id);
     let miembros = [], perf = new Map();
@@ -3116,14 +3139,14 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     else if(rol === 'invitado') accion = `<button class="btn pri" id="kjoin">Aceptar invitación</button><button class="btn" id="kleave">Rechazar</button>`;
     else if(rol === 'pendiente') accion = `<button class="btn" id="kleave">Cancelar solicitud</button>`;
     cfgPage(c.nombre, `
-      <div class="cfgbox" style="text-align:center">${avatar({nombre: c.nombre}, 72)}<div style="font-weight:700;font-size:19px;margin-top:8px">${esc(c.nombre)}</div>
+      <div class="cfgbox" style="text-align:center">${avatar({nombre: c.nombre, foto: c.imagen}, 84)}<div style="font-weight:700;font-size:19px;margin-top:8px">${esc(c.nombre)}</div>
         <div class="sub">${esc([c.localidad, c.provincia].filter(Boolean).join(', '))}${c.localidad || c.provincia ? ' · ' : ''}${c.abierto ? 'Entrada libre' : 'Con aprobación'}${socio ? ' · ' + socios.length + (socios.length === 1 ? ' socio' : ' socios') : ''}</div>
         ${c.descripcion ? `<p style="margin:10px 0 0;font-size:14.5px;line-height:1.45;text-align:left;white-space:pre-line">${esc(c.descripcion)}</p>` : ''}
         ${cuotaTxt(c) ? `<div class="sub" style="margin-top:8px;font-weight:600">💶 ${esc(cuotaTxt(c))}</div>` : ''}
         ${rol ? `<div style="margin-top:10px"><span class="rol">${esc(ROL_TXT[rol])}</span></div>` : ''}
         ${accion ? `<div class="btns">${accion}</div>` : ''}</div>
       ${socio ? `<div class="cfgbox" style="margin-top:14px"><b style="font-size:15.5px">Invita a más gente</b><div class="sub" style="margin-top:4px">Comparte un enlace por WhatsApp, Telegram… Quien lo abra podrá crearse una cuenta en la app y ${c.abierto ? 'entrar directamente en el club' : 'pedir unirse, y un administrador tendrá que aceptarle'}.</div><div class="btns"><button class="btn pri" id="kshare">Invitar con un enlace</button></div>${codigoAdmin ? '<button class="alink" id="kreset" style="margin:4px 0 0">Cambiar enlace (los anteriores dejarán de funcionar)</button>' : ''}</div>` : ''}
-      ${admin ? `<div class="cfggroup" style="margin-top:14px"><button id="knev">＋ Crear ruta o evento${CHEV}</button><button id="kinv">Invitar usuarios de la app al club${CHEV}</button><button id="kcuotas">Cuotas de socios<span class="cfgsub">Solo lo ven los administradores</span>${CHEV}</button><button id="kedit">Editar club${CHEV}</button></div>` : ''}
+      ${admin ? `<div class="cfggroup" style="margin-top:14px"><button id="knev">＋ Crear ruta o evento${CHEV}</button><button id="kinv">Invitar usuarios de la app al club${CHEV}</button><button id="kcuotas"><span>Cuotas de socios<span class="cfgsub">Solo lo ven los administradores</span></span>${CHEV}</button><button id="kedit">Editar club${CHEV}</button></div>` : ''}
       ${admin && solicitudes.length ? `<div class="cfglabel">Solicitudes para entrar (${solicitudes.length})</div><div class="cfgbox">${solicitudes.map(x => filaPersona(P(x.usuario), `<button class="chip greenl" data-kg="aceptar" data-u="${x.usuario}">Aceptar</button><button class="chip" data-kg="quitar" data-u="${x.usuario}">✕</button>`)).join('')}</div>` : ''}
       <div class="cfglabel">Próximas rutas y eventos</div>
       ${evs.length ? evs.map(w => { const d = pd(w.date), r = CLUB.resp.get(w.clubEv); return `<div class="cfgbox frow evrow" data-kev="${esc(w.clubEv)}" style="margin-bottom:8px"><div class="date t-${esc(w.tipo)}"><b>${d.getDate()}</b><span>${MESES[d.getMonth()]}</span></div><div class="finfo"><b>${esc(w.nombre)}</b><span>${esc([w.lugar, w.modalidades].filter(Boolean).join(' · '))}</span>${r === 'voy' ? '<span class="okc">✓ Vas</span>' : r === 'interesa' ? '<span class="okc">★ Te interesa</span>' : ''}${!w.publico ? '<span>🔒 Solo socios</span>' : ''}</div>${CHEV}</div>`; }).join('')
@@ -3332,7 +3355,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   function bienvenidaClub(c){
     const nombre = c ? c.nombre : 'un club';
     $('#sheet').innerHTML = `<div class="cfghead"><button class="cfgx" id="bx" aria-label="Cerrar">✕</button><div class="cfgtitle">Invitación</div><span style="width:44px"></span></div>
-      <div class="cfgbox" style="text-align:center">${avatar({nombre: c ? c.nombre : '?'}, 72)}
+      <div class="cfgbox" style="text-align:center">${avatar({nombre: c ? c.nombre : '?', foto: c && c.imagen}, 84)}
         <p style="font-size:18px;font-weight:700;margin:12px 0 4px">Te han invitado a ${esc(nombre)}</p>
         ${c && (c.localidad || c.provincia) ? `<div class="sub">${esc([c.localidad, c.provincia].filter(Boolean).join(', '))}</div>` : ''}
         <p class="sub" style="margin:12px 0 0">En <b>Mis rutas y trails</b> encontrarás rutas de senderismo, trail, carreras y MTB de toda España, y podrás apuntarte a las salidas de tu club.</p>
@@ -3430,7 +3453,8 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     $('#cprev').onclick = () => cuotasPantalla(c, socios, perf, desplaza - 1);
     $('#cnext').onclick = () => cuotasPantalla(c, socios, perf, desplaza + 1);
     document.querySelectorAll('[data-pago]').forEach(b => b.onclick = async () => {
-      const u = b.dataset.pago, ya = pag.has(u);
+      const u = b.dataset.pago, ya = pag.has(u), quien = nombreDe(P(u));
+      if(!await confirmDlg(ya ? '¿Quitar el pago?' : '¿Confirmar el pago?', ya ? `${quien} pasará a «Sin pagar» en la cuota ${periodoFrase(c, ref)}.` : `Se anotará que ${quien} ha pagado la cuota ${periodoFrase(c, ref)}${c.cuota ? ' (' + precioBonito(c.cuota) + ')' : ''}.`, ya ? 'Quitar pago' : 'Confirmar pago')) return;
       b.disabled = true;
       try { await marcarPago(c.id, u, 'cuota', ref, !ya); ya ? pag.delete(u) : pag.add(u); cuotasPantalla(c, socios, perf, desplaza); }
       catch(e){ toast('No se pudo guardar. Revisa tu conexión.'); b.disabled = false; }
@@ -3449,7 +3473,9 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
         : '<div class="sub">Cuando alguien responda «Voy», podrás anotar aquí si ha pagado.</div>';
       const ei = $('#einforme'); if(ei) ei.onclick = () => informeEvento(e, van, perf);
       box.querySelectorAll('[data-pago]').forEach(b => b.onclick = async () => {
-        const u = b.dataset.pago, ya = pag.has(u); b.disabled = true;
+        const u = b.dataset.pago, ya = pag.has(u), quien = nombreDe(P(u));
+        if(!await confirmDlg(ya ? '¿Quitar el pago?' : '¿Confirmar el pago?', ya ? `${quien} pasará a «Sin pagar» en ${e.titulo}.` : `Se anotará que ${quien} ha pagado ${e.titulo}.`, ya ? 'Quitar pago' : 'Confirmar pago')) return;
+        b.disabled = true;
         try { await marcarPago(e.club, u, 'evento', e.id, !ya); ya ? pag.delete(u) : pag.add(u); pinta(); }
         catch(err){ toast('No se pudo guardar. Revisa tu conexión.'); b.disabled = false; }
       });
@@ -3470,6 +3496,10 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     const W = 1080, H = opt.formato === 'historia' ? 1920 : 1350, P = 80, AN = W - 2 * P;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d'), col = CARTEL_COL[e.tipo] || CARTEL_COL.otro;
+    if(opt.logo === undefined){
+      const m = CLUB.mis.find(x => x.club === e.club), src = m && m.clubs && m.clubs.imagen;
+      opt.logo = src ? await new Promise(r => { const im = new Image(); im.onload = () => r(im); im.onerror = () => r(null); im.src = src; }) : null;
+    }
     const TIT = '"Barlow Condensed", "Arial Narrow", sans-serif', TXT = 'Inter, system-ui, sans-serif';
     // ---- fondo ----
     if(opt.foto){
@@ -3515,10 +3545,18 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     const hueco = Math.min(extra / 3, opt.formato === 'historia' ? 140 : 60);
     let y = P + 30 + hueco * .5;
     ctx.textBaseline = 'alphabetic';
+    let xt = P;
+    if(opt.logo){
+      const L = Math.round(90 * s);
+      ctx.save(); ctx.beginPath(); ctx.arc(P + L / 2, y + L / 2, L / 2, 0, Math.PI * 2); ctx.closePath(); ctx.fillStyle = '#fff'; ctx.fill(); ctx.clip();
+      ctx.drawImage(opt.logo, P, y, L, L); ctx.restore();
+      ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(P + L / 2, y + L / 2, L / 2, 0, Math.PI * 2); ctx.stroke();
+      xt = P + L + 24; y += Math.max(0, (L - 90 * s) / 2);
+    }
     ctx.font = `600 ${Math.round(34 * s)}px ${TXT}`; ctx.fillStyle = col[2];
-    ctx.fillText(recortar(ctx, (e.clubs ? e.clubs.nombre : 'Club').toUpperCase(), AN), P, y + 34 * s); y += 46 * s;
+    ctx.fillText(recortar(ctx, (e.clubs ? e.clubs.nombre : 'Club').toUpperCase(), W - P - xt), xt, y + 34 * s); y += 46 * s;
     ctx.font = `600 ${Math.round(28 * s)}px ${TXT}`; ctx.fillStyle = 'rgba(255,255,255,.85)';
-    ctx.fillText(tipoTxt + (e.dificultad ? '  ·  ' + e.dificultad.toUpperCase() : ''), P, y + 30 * s); y += 44 * s + 60 * s + hueco;
+    ctx.fillText(tipoTxt + (e.dificultad ? '  ·  ' + e.dificultad.toUpperCase() : ''), xt, y + 30 * s); y += 44 * s + 60 * s + hueco;
     ctx.font = `700 ${fs}px ${TIT}`; ctx.fillStyle = '#fff'; ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = opt.foto ? 18 : 0;
     lin.forEach((l, k) => { ctx.fillText(k === 3 && partirTexto(ctx, e.titulo.toUpperCase(), AN).length > 4 ? recortar(ctx, l + ' …', AN) : l, P, y + fs * .78); y += fs * .95; });
     ctx.shadowBlur = 0; y += 40 * s + hueco;
@@ -3609,7 +3647,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   }
   // ----- compartir un evento de club con su cartel -----
   var CARTELES = new Map();
-  const firmaCartel = e => e.id + '|' + JSON.stringify([e.titulo, e.fecha, e.hora, e.lugar, e.provincia, e.encuentro, e.km, e.desnivel, e.dificultad, e.precio, e.precio_no_socios, e.plazas, e.limite, e.tipo, e.publico, e.clubs && e.clubs.nombre]);
+  const firmaCartel = e => e.id + '|' + JSON.stringify([e.titulo, e.fecha, e.hora, e.lugar, e.provincia, e.encuentro, e.km, e.desnivel, e.dificultad, e.precio, e.precio_no_socios, e.plazas, e.limite, e.tipo, e.publico, e.clubs && e.clubs.nombre, ((CLUB.mis.find(x => x.club === e.club) || {}).clubs || {}).imagen ? 'logo' : '']);
   async function cartelBlob(e){
     const k = firmaCartel(e);
     if(CARTELES.has(k)) return CARTELES.get(k);
