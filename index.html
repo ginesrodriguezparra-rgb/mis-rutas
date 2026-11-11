@@ -247,7 +247,7 @@ body{position:fixed;inset:0}
 .finfo span{color:var(--muted);font-size:13.5px}
 .finfo .chip{margin-top:4px}
 .pacts{display:flex;align-items:center;gap:6px;color:var(--muted)}
-.frow .date{flex:0 0 auto}
+.frow .date{flex:0 0 auto;min-width:54px}
 .fline{font-size:13px;color:var(--green);margin-top:5px;line-height:1.35}
 .fline b{font-weight:600}
 .atw{display:flex;align-items:center;gap:4px}.atw span{font-weight:600;color:var(--muted)}.atw input{flex:1}
@@ -277,6 +277,19 @@ body{position:fixed;inset:0}
 .okc{color:var(--green) !important;font-weight:600}
 .evrow{cursor:pointer;border-bottom:0 !important;padding:12px 14px !important}
 textarea{resize:vertical;min-height:70px}
+.modcard{background:var(--bg);border-radius:14px;padding:12px;margin-bottom:10px}
+.modhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.modhead b{font-size:14.5px}
+.matrow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.matrow>span{font-size:14.5px;flex:1;min-width:0}
+.mseg{display:flex;gap:4px;flex:0 0 auto}
+.mseg button{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:999px;padding:6px 9px;font:600 12px Inter,sans-serif;cursor:pointer}
+.mseg button.on.ob{background:#c2410c;border-color:#c2410c;color:#fff}.mseg button.on.re{background:var(--green);border-color:var(--green);color:#fff}
+.mseg .mx{padding:6px 8px}
+.evsec{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}.evsec>b{display:block;font-size:15px;margin-bottom:6px}
+.evmod{font-size:14.5px;padding:4px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tipoico{font:600 11.5px Inter,sans-serif;background:var(--green2);color:var(--green);border-radius:999px;padding:2px 8px}
+.evmat{font-size:14.5px;padding:4px 0;line-height:1.5}
+.mtag{font:600 11.5px Inter,sans-serif;border-radius:999px;padding:2px 8px;margin-right:8px;color:#fff}.mtag.ob{background:#c2410c}.mtag.re{background:var(--green)}
 .seg3{display:grid;grid-template-columns:repeat(3,1fr);background:var(--card);border-radius:14px;padding:4px;gap:4px}
 .seg3 button{border:0;background:none;padding:10px 4px;border-radius:11px;font:600 13.5px Inter,sans-serif;color:var(--muted);cursor:pointer}
 .seg3 button.on{background:var(--green);color:#fff}
@@ -658,7 +671,7 @@ a{color:var(--green)}
     if(!p.desde){ const d = today(); p.desde = iso(new Date(d.getFullYear(), d.getMonth(), 1)); }
     if(!Array.isArray(p.amigos)) p.amigos = [];
     const st = perfilStats(), dd = pd(p.desde);
-    const nombre = p.nombre || 'Tu nombre';
+    const nombre = (typeof AMI !== 'undefined' && AMI.yo && AMI.yo.usuario) || p.nombre || 'Tu perfil';
     let h = `<div class="ptop"><div class="pill"><button id="pgear" aria-label="Ajustes">${ICON.gear}</button><button id="pshare" aria-label="Compartir perfil">${ICON.share}</button></div></div>
       <div class="phead">
         <div class="pphoto-col">
@@ -708,14 +721,14 @@ a{color:var(--green)}
   function editPerfil(){
     const p = state.prefs;
     $('#sheet').innerHTML = `<h2>Editar perfil</h2><form id="pf">
-      <label>Nombre</label><input name="nombre" value="${esc(p.nombre||'')}" placeholder="Tu nombre">
+      <label>Nombre y apellidos</label><input name="nombre" value="${esc(p.nombreCompleto||'')}" placeholder="Ej. Ginés Rodríguez Parra" maxlength="100" autocomplete="name"><div class="sub" style="margin-top:6px;line-height:1.4">🔒 Solo lo verán los administradores de los clubs a los que perteneces, y aparecerá en los listados de pagos que generen. El resto de usuarios solo ve tu nombre de usuario.</div>
 
       <label>Foto de perfil</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pfoto">${p.foto ? 'Cambiar foto' : 'Añadir foto'}</button>${p.foto ? '<button type="button" class="btn del" id="pnofoto">Quitar foto</button>' : ''}</div>
       <div class="btns"><button type="button" class="btn" id="pcancel">Cancelar</button><button class="btn pri" type="submit">Guardar</button></div></form>`;
     $('#pcancel').onclick = close;
     $('#pfoto').onclick = () => { close(); $('#pfile').click(); };
     const nf = $('#pnofoto'); if(nf) nf.onclick = async () => { if(await confirmDlg('¿Quitar la foto de perfil?', '', 'Quitar')){ delete state.prefs.foto; close(); save(); } };
-    $('#pf').onsubmit = ev => { ev.preventDefault(); const fd = new FormData(ev.target); p.nombre = (fd.get('nombre')||'').toString().trim();  close(); save(); };
+    $('#pf').onsubmit = ev => { ev.preventDefault(); const fd = new FormData(ev.target); p.nombreCompleto = (fd.get('nombre')||'').toString().trim(); if(typeof nombreRealSubir === 'function') nombreRealSubir();  close(); save(); };
     $('#ovl').classList.add('show');
   }
   function amigos(){
@@ -774,15 +787,15 @@ a{color:var(--green)}
   function cfgPersonal(){
     const p = state.prefs;
     cfgPage('Información personal', `<div class="cfgbox"><form id="pf2">
-      <label>Nombre</label><input name="nombre" value="${esc(p.nombre||'')}" placeholder="Tu nombre">
+      <label>Nombre y apellidos</label><input name="nombre" value="${esc(p.nombreCompleto||'')}" placeholder="Ej. Ginés Rodríguez Parra" maxlength="100" autocomplete="name"><div class="sub" style="margin-top:6px;line-height:1.4">🔒 Solo lo verán los administradores de los clubs a los que perteneces, y aparecerá en los listados de pagos que generen. El resto de usuarios solo ve tu nombre de usuario.</div>
 
-      ${sesion ? `<label>@usuario</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pusr">${AMI.yo ? '@' + esc(AMI.yo.usuario) + ' · Cambiar' : 'Elegir @usuario'}</button></div>` : ''}
+      ${sesion ? `<label>Nombre de usuario (lo que ven los demás)</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pusr">${AMI.yo ? esc(AMI.yo.usuario) + ' · Cambiar' : 'Elegir nombre de usuario'}</button></div>` : ''}
       <label>Foto de perfil</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pfoto2">${p.foto ? 'Cambiar foto' : 'Añadir foto'}</button>${p.foto ? '<button type="button" class="btn del" id="pnofoto2">Quitar foto</button>' : ''}</div>
       <div class="btns"><button class="btn pri" type="submit">Guardar</button></div></form></div>`, true);
     const pu = $('#pusr'); if(pu) pu.onclick = () => elegirUsuario();
     $('#pfoto2').onclick = () => { $('#sheet').classList.remove('cfg'); close(); $('#pfile').click(); };
     const nf = $('#pnofoto2'); if(nf) nf.onclick = async () => { if(await confirmDlg('¿Quitar la foto de perfil?', '', 'Quitar')){ delete state.prefs.foto; $('#sheet').classList.remove('cfg'); close(); save(); } };
-    $('#pf2').onsubmit = ev => { ev.preventDefault(); const fd = new FormData(ev.target); p.nombre = (fd.get('nombre')||'').toString().trim();  $('#sheet').classList.remove('cfg'); close(); save(); };
+    $('#pf2').onsubmit = ev => { ev.preventDefault(); const fd = new FormData(ev.target); p.nombreCompleto = (fd.get('nombre')||'').toString().trim(); if(typeof nombreRealSubir === 'function') nombreRealSubir();  $('#sheet').classList.remove('cfg'); close(); save(); };
   }
   function cfgCopia(){
     const n = state.events.length;
@@ -838,7 +851,7 @@ a{color:var(--green)}
       <div class="cfgbox">
         ${PRIV_OPC.map(([k, t, d]) => `<label class="sw"><span><b>${t}</b><span class="cfgsub">${d}</span></span><input type="checkbox" data-priv="${k}" ${privDe(k) ? 'checked' : ''}><i></i></label>`).join('')}
       </div>
-      <div class="sub" style="margin:10px 4px 0;line-height:1.45">🔒 Quien no es tu amigo solo puede ver tu nombre, tu @usuario y tu foto en pequeño, para poder encontrarte. Nada de tu agenda ni de tus clubs.${sesion ? '' : '<br>Estas opciones se aplican cuando tienes una cuenta y amigos.'}</div>`, true);
+      <div class="sub" style="margin:10px 4px 0;line-height:1.45">🔒 Quien no es tu amigo solo puede ver tu nombre de usuario y tu foto en pequeño, para poder encontrarte. Nada de tu agenda ni de tus clubs.${sesion ? '' : '<br>Estas opciones se aplican cuando tienes una cuenta y amigos.'}</div>`, true);
     $('#azona').onclick = () => { $('#sheet').classList.remove('cfg'); openFiltros(); };
     document.querySelectorAll('[data-act]').forEach(b => b.onclick = () => { p.actividad = b.dataset.act; dfilter = p.actividad; saveUI(); renderEventos(); cfgPrefs(); clearTimeout(cfgPrefs._t); cfgPrefs._t = setTimeout(save, 1500); });
     document.querySelectorAll('[data-priv]').forEach(inp => inp.onchange = () => {
@@ -877,7 +890,7 @@ a{color:var(--green)}
       <p><b>Buscar rutas</b><br>Escribe en «Encuentra rutas» (nombre, pueblo, provincia…) o usa <b>Filtros</b> para elegir actividad, fechas y provincias en el mapa.</p>
       <p><b>Añadir a tu agenda</b><br>Pulsa <b>★ Me interesa</b> o <b>✓ Inscrito</b> en cualquier evento. Vuelve a pulsarlo para quitarlo.</p>
       <p><b>Compartir</b><br>Toca el icono de compartir de la tarjeta para enviarla por WhatsApp, Telegram… Mantenlo pulsado para compartirla como imagen.</p>
-      <p><b>Amigos</b><br>Con una cuenta, entra en Perfil › Amigos para elegir tu @usuario, invitar a tus amigos con un enlace o buscarlos. Cuando aceptan, veis las rutas a las que vais y en cada evento aparece qué amigos están apuntados.</p>
+      <p><b>Amigos</b><br>Con una cuenta, entra en Perfil › Amigos para elegir tu nombre de usuario, invitar a tus amigos con un enlace o buscarlos. Cuando aceptan, veis las rutas a las que vais y en cada evento aparece qué amigos están apuntados.</p>
       <p><b>Clubs</b><br>En la pestaña Club puedes crear un club (serás su administrador), buscar clubs y unirte. Los administradores crean rutas y eventos, eligen si son públicos o solo para socios, invitan a usuarios y nombran a otros administradores. Si respondes «Voy» o «Me interesa» a un evento, se añade a tu agenda.</p>
       <p><b>Instalar la app</b><br>En Safari, pulsa Compartir › «Añadir a pantalla de inicio».</p>
       <p><b>Modalidades sin confirmar</b><br>La web del evento no detalla sus pruebas; puede tener más modalidades (por ejemplo, senderismo).</p>
@@ -891,7 +904,7 @@ a{color:var(--green)}
   }
   function cfgPrivacidad(){
     cfgPage('Política de privacidad', `<div class="cfgbox help">
-      <p><b>Sin cuenta:</b> tus datos (agenda, nombre, clubes, foto y provincias) se guardan solo en tu móvil y no se envían a ningún servidor.</p><p><b>Con cuenta:</b> guardamos tu correo electrónico y esos mismos datos para que puedas usarlos en cualquier dispositivo. Se almacenan en servidores de Supabase situados en la Unión Europea (Frankfurt, Alemania). Tu contraseña se guarda cifrada y nadie puede verla. Si entras con Google, solo recibimos tu correo.</p><p>Solo tú puedes ver y cambiar tus datos. No los vendemos ni los compartimos con nadie, y no los usamos para publicidad.</p><p><b>Amigos:</b> si eliges un @usuario, los demás usuarios pueden ver tu nombre, tu @usuario y tu foto para poder encontrarte. Las rutas de tu agenda (inscrito, me interesa y realizadas) y tus clubs solo las ven los amigos cuya solicitud hayas aceptado (o que hayan aceptado la tuya), y puedes elegir qué ven en Configuración › Tus preferencias y privacidad. Tus clubs del perfil también los ven solo tus amigos aceptados. <b>Clubs:</b> el nombre, la descripción y el lugar de los clubs los puede ver cualquier usuario; la lista de socios y quién va a cada evento solo la ven los socios de ese club. Los eventos públicos los ve cualquier usuario. Puedes eliminar a un amigo en cualquier momento.</p>
+      <p><b>Sin cuenta:</b> tus datos (agenda, nombre, clubes, foto y provincias) se guardan solo en tu móvil y no se envían a ningún servidor.</p><p><b>Con cuenta:</b> guardamos tu correo electrónico y esos mismos datos para que puedas usarlos en cualquier dispositivo. Se almacenan en servidores de Supabase situados en la Unión Europea (Frankfurt, Alemania). Tu contraseña se guarda cifrada y nadie puede verla. Si entras con Google, solo recibimos tu correo.</p><p>Solo tú puedes ver y cambiar tus datos. No los vendemos ni los compartimos con nadie, y no los usamos para publicidad.</p><p><b>Nombre de usuario y nombre real:</b> los demás usuarios solo ven tu nombre de usuario y tu foto, para poder encontrarte. Tu nombre y apellidos, si los indicas, solo los ven los administradores de los clubs a los que perteneces, y aparecen en los listados de pagos de cuotas y eventos que ellos generan. Puedes cambiarlos o borrarlos cuando quieras en Información personal.</p><p><b>Amigos:</b> Las rutas de tu agenda (inscrito, me interesa y realizadas) y tus clubs solo las ven los amigos cuya solicitud hayas aceptado (o que hayan aceptado la tuya), y puedes elegir qué ven en Configuración › Tus preferencias y privacidad. Tus clubs del perfil también los ven solo tus amigos aceptados. <b>Clubs:</b> el nombre, la descripción y el lugar de los clubs los puede ver cualquier usuario; la lista de socios y quién va a cada evento solo la ven los socios de ese club. Los eventos públicos los ve cualquier usuario. Puedes eliminar a un amigo en cualquier momento.</p>
       <p>La app no usa tu ubicación ni envía tus datos a las webs de eventos. Al pulsar «Ver web», WhatsApp o Telegram, se abre esa web o app fuera de aquí.</p>
       <p>Puedes borrar tu cuenta y todos sus datos cuando quieras desde Configuración › Borrar mi cuenta. Sin cuenta, si borras los datos del navegador o desinstalas la app se pierden: usa Configuración › Copia de seguridad.</p><p><b>Responsable y contacto:</b> para cualquier duda sobre tus datos, o para pedir que los consultemos, corrijamos o borremos, escribe a <a href="mailto:misrutasytrail@gmail.com">misrutasytrail@gmail.com</a>. También puedes reclamar ante la Agencia Española de Protección de Datos (aepd.es).</p></div>`, true);
   }
@@ -908,7 +921,7 @@ a{color:var(--green)}
     if(p.foto){ const im = new Image(); await new Promise(r => { im.onload = r; im.onerror = r; im.src = p.foto; }); ctx.drawImage(im, px, py, PS, PS); }
     else { ctx.fillStyle = C.g2; ctx.fillRect(px, py, PS, PS); ctx.fillStyle = C.g; ctx.font = '700 120px "Barlow Condensed"'; ctx.textAlign = 'center'; ctx.fillText(((p.nombre||'⛰').charAt(0)).toUpperCase(), px+PS/2, py+PS/2+42); ctx.textAlign = 'left'; }
     ctx.restore();
-    ctx.fillStyle = C.ink; ctx.font = '700 60px Inter'; ctx.fillText(p.nombre || 'Mis rutas', 380, 190);
+    ctx.fillStyle = C.ink; ctx.font = '700 60px Inter'; ctx.fillText((typeof AMI !== 'undefined' && AMI.yo && AMI.yo.usuario) || 'Mis rutas', 380, 190);
     ctx.fillStyle = C.muted; ctx.font = '400 34px Inter'; if(misClubsPerfil().length) ctx.fillText(misClubsPerfil().map(c => c.nombre).join(' · ').slice(0, 40), 380, 245);
     const cols = [[st.insc,'Inscrito'],[st.int,'Me interesa']];
     cols.forEach(([n,l],i) => { const x = 380 + i*200; ctx.fillStyle = C.ink; ctx.font = '600 56px Inter'; ctx.fillText(String(n), x, 345); ctx.fillStyle = C.muted; ctx.font = '400 28px Inter'; ctx.fillText(l, x, 385); });
@@ -1416,7 +1429,20 @@ a{color:var(--green)}
   const USR_RE = /^[a-z0-9_.]{3,20}$/;
   const enlaceInvitacion = u => APP_URL + '#amigo=' + encodeURIComponent(u);
   const avatar = (p, size) => `<span class="av" style="width:${size}px;height:${size}px">${p && p.foto ? `<img src="${esc(p.foto)}" alt="">` : esc(((p && (p.nombre || p.usuario)) || '?').trim().charAt(0).toUpperCase())}</span>`;
-  const nombreDe = p => p ? (p.nombre || '@' + p.usuario) : 'Alguien';
+  const nombreDe = p => p && p.usuario ? p.usuario : 'Alguien';
+  // nombre y apellidos: privado; solo lo ve el propio usuario y los administradores de sus clubs
+  var NOMBRES = new Map();
+  async function cargarNombres(ids){
+    ids = [...new Set(ids)].filter(Boolean); if(!ids.length || !sesion) return;
+    try { (await sbRest('nombres_reales?select=usuario,nombre_completo&usuario=in.(' + ids.join(',') + ')') || []).forEach(x => NOMBRES.set(x.usuario, x.nombre_completo)); } catch(e){}
+  }
+  const nombreReal = id => NOMBRES.get(id) || '';
+  async function nombreRealSubir(){
+    if(!sesion) return;
+    const n = (state.prefs.nombreCompleto || '').trim().slice(0, 100);
+    try { await sbRest('nombres_reales?on_conflict=usuario', {method: 'POST', headers: {'Prefer': 'resolution=merge-duplicates,return=minimal'}, body: JSON.stringify({usuario: sesion.user.id, nombre_completo: n, actualizado: new Date().toISOString()})}); setSync({nombreRealFirma: n}); }
+    catch(e){ toast('Tu nombre y apellidos se guardarán cuando se ejecute nombres_modalidades.sql en Supabase.'); }
+  }
   // captar #amigo=usuario (enlace de invitación)
   function leerInvitacion(){
     const m = location.hash.match(/^#amigo=([^&]+)/);
@@ -1439,11 +1465,11 @@ a{color:var(--green)}
   }
   async function perfilSubir(usuario){
     const foto = await miniFoto(state.prefs.foto);
-    const fila = {id: sesion.user.id, usuario, nombre: (state.prefs.nombre || '').slice(0, 60), foto, actualizado: new Date().toISOString()};
+    const fila = {id: sesion.user.id, usuario, nombre: '', foto, actualizado: new Date().toISOString()};
     await sbRest('perfiles?on_conflict=id', {method: 'POST', headers: {'Prefer': 'resolution=merge-duplicates,return=minimal'}, body: JSON.stringify(fila)});
     AMI.yo = fila; setSync({perfilFirma: firmaPerfil()});
   }
-  const firmaPerfil = () => (state.prefs.nombre || '') + '|' + (state.prefs.foto ? state.prefs.foto.length + state.prefs.foto.slice(-24) : '');
+  const firmaPerfil = () => 'v2|' + (state.prefs.foto ? state.prefs.foto.length + state.prefs.foto.slice(-24) : '');
   // tras guardar: si cambió el nombre o la foto, actualizar el perfil público
   function perfilQuizaSubir(){
     if(!sesion || !AMI.yo || syncInfo().perfilFirma === firmaPerfil()) return;
@@ -1455,35 +1481,33 @@ a{color:var(--green)}
       const r = await sbRest('perfiles?select=id,usuario,nombre,foto&id=eq.' + sesion.user.id);
       AMI.yo = r && r[0] || null;
     } catch(e){ return null; }
-    if(AMI.yo){ perfilQuizaSubir(); procesarInvitacion(); return AMI.yo; }
+    if(AMI.yo){ perfilQuizaSubir(); if((state.prefs.nombreCompleto || '') && syncInfo().nombreRealFirma !== (state.prefs.nombreCompleto || '').trim()) nombreRealSubir(); procesarInvitacion(); return AMI.yo; }
     if(preguntar !== false) elegirUsuario();
     return null;
   }
   function sugerirUsuario(){
-    const base = ((state.prefs.nombre || (sesion.user.email || '').split('@')[0] || 'usuario').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9_.]+/g, '').slice(0, 16));
+    const base = (((sesion.user.email || '').split('@')[0] || 'usuario').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9_.]+/g, '').slice(0, 16));
     return base.length >= 3 ? base : (base + 'trail').slice(0, 16);
   }
   function elegirUsuario(despues){
     if(pidiendoUsuario) return; pidiendoUsuario = true;
     const actual = AMI.yo ? AMI.yo.usuario : '';
-    $('#sheet').innerHTML = `<div class="cfghead"><button class="cfgx" id="ux" aria-label="Cerrar">✕</button><div class="cfgtitle">${actual ? 'Tu @usuario' : 'Elige tu @usuario'}</div><span style="width:44px"></span></div>
+    $('#sheet').innerHTML = `<div class="cfghead"><button class="cfgx" id="ux" aria-label="Cerrar">✕</button><div class="cfgtitle">${actual ? 'Tu nombre de usuario' : 'Elige tu nombre de usuario'}</div><span style="width:44px"></span></div>
       <div class="cfgbox"><div class="sub" style="margin-bottom:8px">Es como te encontrarán tus amigos. Solo letras minúsculas, números, punto o guion bajo (3 a 20).</div>
-      <form id="uf"><label>Nombre</label><input name="nombre" value="${esc(state.prefs.nombre || '')}" placeholder="Tu nombre" maxlength="60">
-      <label>@usuario</label><div class="atw"><span>@</span><input name="usuario" value="${esc(actual || sugerirUsuario())}" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="20"></div>
+      <form id="uf"><label>Nombre</label><input name="usuario" value="${esc(actual || sugerirUsuario())}" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="20">
       <div class="amsg" id="amsg"></div><div class="btns"><button class="btn pri" type="submit">Guardar</button></div></form></div>
-      <div class="sub" style="margin:12px 4px">Los demás usuarios pueden ver tu nombre, tu @usuario y tu foto. Tu agenda solo la ven los amigos que tú aceptes.</div>`;
+      <div class="sub" style="margin:12px 4px">Los demás usuarios solo ven tu nombre de usuario y tu foto. Tu agenda solo la ven los amigos que tú aceptes.</div>`;
     $('#sheet').classList.add('cfg'); $('#ovl').classList.add('show');
     $('#ux').onclick = () => { pidiendoUsuario = false; close(); };
     const inp = $('#uf').usuario;
     inp.oninput = () => { const v = inp.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''); if(v !== inp.value) inp.value = v; };
     $('#uf').onsubmit = async ev => {
       ev.preventDefault();
-      const u = inp.value.trim().toLowerCase(), nom = ev.target.nombre.value.trim();
+      const u = inp.value.trim().toLowerCase();
       if(!USR_RE.test(u)){ $('#amsg').textContent = 'Usa de 3 a 20 caracteres: letras minúsculas, números, punto o guion bajo.'; return; }
-      if(nom !== (state.prefs.nombre || '')){ state.prefs.nombre = nom; userSave(); nubeGuardar(); }
       try { await perfilSubir(u); }
-      catch(e){ $('#amsg').textContent = /duplicate|unique|23505|409/i.test(e.message) ? 'Ese @usuario ya está cogido. Prueba con otro.' : 'No se pudo guardar. Revisa tu conexión.'; return; }
-      pidiendoUsuario = false; close(); render(); toast('Listo, eres @' + u);
+      catch(e){ $('#amsg').textContent = /duplicate|unique|23505|409/i.test(e.message) ? 'Ese nombre de usuario ya está cogido. Prueba con otro.' : 'No se pudo guardar. Revisa tu conexión.'; return; }
+      pidiendoUsuario = false; close(); render(); toast('Listo, tu nombre de usuario es ' + u);
       if(despues) despues(); else procesarInvitacion();
     };
   }
@@ -1546,7 +1570,7 @@ a{color:var(--green)}
     if(u === AMI.yo.usuario) return;
     let p; try { p = (await sbRest('perfiles?select=id,usuario,nombre,foto&usuario=eq.' + encodeURIComponent(u)))[0]; } catch(e){}
     if(!p){ toast('No existe el usuario @' + u); return; }
-    if(await confirmDlg(`¿Añadir a ${nombreDe(p)} como amigo?`, `@${p.usuario} te ha invitado. Le llegará una solicitud de amistad.`, 'Enviar solicitud')) solicitar(p.usuario);
+    if(await confirmDlg(`¿Añadir a ${nombreDe(p)} como amigo?`, `${p.usuario} te ha invitado. Le llegará una solicitud de amistad.`, 'Enviar solicitud')) solicitar(p.usuario);
   }
   async function solicitar(usuario){
     try {
@@ -1562,12 +1586,12 @@ a{color:var(--green)}
   }
   async function invitar(){
     if(!AMI.yo) return;
-    const url = enlaceInvitacion(AMI.yo.usuario), text = `Agrégame como amigo en Mis rutas y trails para ver a qué rutas vamos: @${AMI.yo.usuario}`;
+    const url = enlaceInvitacion(AMI.yo.usuario), text = `Agrégame como amigo en Mis rutas y trails para ver a qué rutas vamos. Mi usuario es ${AMI.yo.usuario}`;
     if(navigator.share){ try { await navigator.share({title: 'Mis rutas y trails', text, url}); } catch(e){} }
     else { try { await navigator.clipboard.writeText(text + ' ' + url); toast('Enlace copiado ✓'); } catch(e){ toast(url); } }
   }
   function filaPersona(p, derecha, abrir){
-    return `<div class="prow"${abrir ? ` data-open="${esc(p.id)}"` : ''}>${avatar(p, 42)}<div class="finfo"><b>${esc(nombreDe(p))}</b><span>@${esc(p.usuario || '')}</span></div><div class="pacts">${derecha || ''}</div></div>`;
+    return `<div class="prow"${abrir ? ` data-open="${esc(p.id)}"` : ''}>${avatar(p, 42)}<div class="finfo"><b>${esc(nombreDe(p))}</b>${nombreReal(p.id) ? `<span>${esc(nombreReal(p.id))}</span>` : ''}</div><div class="pacts">${derecha || ''}</div></div>`;
   }
   async function amigosPantalla(){
     if(!sesion){ cuentaPantalla('registro'); return; }
@@ -1578,13 +1602,13 @@ a{color:var(--green)}
     const amigos = amigosAceptados();
     const P = id => AMI.perfiles.get(id) || {id, usuario: '…', nombre: ''};
     cfgPage('Amigos', `
-      <div class="cfgbox"><div class="prow">${avatar({foto: AMI.yo.foto, nombre: AMI.yo.nombre, usuario: AMI.yo.usuario}, 42)}<div class="finfo"><b>Tú</b><span>@${esc(AMI.yo.usuario)}</span></div><div class="pacts"><button class="chip" id="aeditu">Cambiar</button></div></div>
+      <div class="cfgbox"><div class="prow">${avatar({foto: AMI.yo.foto, nombre: AMI.yo.nombre, usuario: AMI.yo.usuario}, 42)}<div class="finfo"><b>${esc(AMI.yo.usuario)}</b><span>Tú</span></div><div class="pacts"><button class="chip" id="aeditu">Cambiar</button></div></div>
         <div class="btns"><button class="btn pri" id="ainv">Invitar amigos con un enlace</button></div></div>
       <div class="cfglabel">Buscar</div>
-      <div class="cfgbox"><input id="aq" placeholder="Nombre o @usuario" autocapitalize="none" autocorrect="off" spellcheck="false"><div id="ares"></div></div>
+      <div class="cfgbox"><input id="aq" placeholder="Buscar por nombre de usuario" autocapitalize="none" autocorrect="off" spellcheck="false"><div id="ares"></div></div>
       ${recibidas.length ? `<div class="cfglabel">Solicitudes recibidas (${recibidas.length})</div><div class="cfgbox">${recibidas.map(f => filaPersona(P(f.de), `<button class="chip greenl" data-acc="${f.id}">Aceptar</button><button class="chip" data-del="${f.id}" data-msg="Solicitud rechazada">✕</button>`)).join('')}</div>` : ''}
       <div class="cfglabel">Mis amigos (${amigos.length})</div>
-      <div class="cfgbox">${amigos.length ? amigos.map(a => { const n = (AMI.agendas.get(a.id) || []).length; return filaPersona(P(a.id), `<span class="sub">${n ? n + (n === 1 ? ' ruta' : ' rutas') : ''}</span>${CHEV}`, true); }).join('') : '<div class="sub">Todavía no tienes amigos. Invítalos con tu enlace o búscalos por su @usuario.</div>'}</div>
+      <div class="cfgbox">${amigos.length ? amigos.map(a => { const n = (AMI.agendas.get(a.id) || []).length; return filaPersona(P(a.id), `<span class="sub">${n ? n + (n === 1 ? ' ruta' : ' rutas') : ''}</span>${CHEV}`, true); }).join('') : '<div class="sub">Todavía no tienes amigos. Invítalos con tu enlace o búscalos por su nombre de usuario.</div>'}</div>
       ${enviadas.length ? `<div class="cfglabel">Solicitudes enviadas</div><div class="cfgbox">${enviadas.map(f => filaPersona(P(f.para), `<button class="chip" data-del="${f.id}" data-msg="Solicitud cancelada">Cancelar</button>`)).join('')}</div>` : ''}`);
     $('#sheet').dataset.vista = 'amigos';
     $('#ainv').onclick = invitar;
@@ -1599,7 +1623,7 @@ a{color:var(--green)}
       if(q.length < 2){ $('#ares').innerHTML = ''; return; }
       qt = setTimeout(async () => {
         let r = [];
-        try { r = await sbRest('perfiles?select=id,usuario,nombre,foto&or=(usuario.ilike.*' + encodeURIComponent(q.toLowerCase()) + '*,nombre.ilike.*' + encodeURIComponent(q) + '*)&limit=15') || []; }
+        try { r = await sbRest('perfiles?select=id,usuario,nombre,foto&usuario=ilike.*' + encodeURIComponent(q.toLowerCase()) + '*&limit=15') || []; }
         catch(e){ $('#ares').innerHTML = '<div class="sub">No se pudo buscar.</div>'; return; }
         r = r.filter(p => p.id !== yo);
         const rel = id => AMI.filas.find(f => f.de === id || f.para === id);
@@ -1616,7 +1640,7 @@ a{color:var(--green)}
     const rutas = todas.filter(r => !r.date || days(r.date) >= 0);
     const hechas = todas.filter(r => r.date && days(r.date) < 0).sort((x, y) => y.date.localeCompare(x.date));
     cfgPage(nombreDe(p), `
-      <div class="cfgbox" style="text-align:center">${avatar(p, 84)}<div style="font-weight:700;font-size:18px;margin-top:8px">${esc(nombreDe(p))}</div><div class="sub">@${esc(p.usuario)}</div>${(AMI.clubs.get(id) || []).length ? `<div class="clubs" style="justify-content:center;margin-top:10px">${AMI.clubs.get(id).map(c => `<span class="club" style="padding-right:12px">${esc(c)}</span>`).join('')}</div>` : ''}</div>
+      <div class="cfgbox" style="text-align:center">${avatar(p, 84)}<div style="font-weight:700;font-size:18px;margin-top:8px">${esc(nombreDe(p))}</div>${(AMI.clubs.get(id) || []).length ? `<div class="clubs" style="justify-content:center;margin-top:10px">${AMI.clubs.get(id).map(c => `<span class="club" style="padding-right:12px">${esc(c)}</span>`).join('')}</div>` : ''}</div>
       <div class="cfglabel">Sus próximas rutas</div>
       <div class="cfgbox">${rutas.length ? rutas.map(r => {
         const d = r.date ? pd(r.date) : null, w = r.webId && state.web.find(x => x.id === r.webId), mine = r.webId && state.events.find(e => e.webId === r.webId);
@@ -2932,6 +2956,12 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   var WEBBASE = [], CLUBWEB = [];
   var CLUB = {cargado: false, mis: [], eventos: [], resp: new Map(), pendientesAdmin: new Map(), syncT: null};
   const DIFS = ['Fácil', 'Moderada', 'Difícil', 'Muy difícil'];
+  const MATERIAL_BASE = ['Linterna o frontal', 'Manta térmica', 'Cortavientos', 'Palos telescópicos', 'Envase para bebidas', 'Agua', 'Snacks'];
+  const modsDe = e => Array.isArray(e.modalidades) ? e.modalidades.filter(m => m && (m.nombre || m.km)) : [];
+  const matDe = e => Array.isArray(e.material) ? e.material.filter(m => m && m.n && (m.t === 'obligatorio' || m.t === 'recomendable')) : [];
+  const modTxt = m => [m.nombre || (TIPOS_EV.find(t => t[0] === m.tipo) || ['', ''])[1], m.km ? m.km + ' km' : '', m.desnivel ? m.desnivel + ' m D+' : '', m.hora ? m.hora + ' h' : ''].filter(Boolean).join(' · ');
+  const modCorto = m => (m.nombre || (TIPOS_EV.find(t => t[0] === m.tipo) || ['', 'Ruta'])[1]) + (m.km ? ' ' + String(m.km).replace('.', ',') + 'K' : '');
+  const matTxt = (e, t) => matDe(e).filter(m => m.t === t).map(m => m.n);
   const CLUB_CAMPOS = 'id,nombre,descripcion,localidad,provincia,abierto,cuota,periodo,mes_inicio,imagen', CLUB_CAMPOS2 = 'id,nombre,descripcion,localidad,provincia,abierto,cuota,periodo,mes_inicio';
   const MESES_C = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   // periodo de cuota: '2026' (año natural) o '2026-27' (temporada que empieza en mes_inicio)
@@ -2969,8 +2999,9 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   function clubAWeb(e){
     const club = e.clubs && e.clubs.nombre || 'Club';
     const pr = (e.precio || '') && (e.precio_no_socios || '') && e.precio.trim() !== e.precio_no_socios.trim() ? preciosTxt(e) : '';
-    const mod = [e.hora ? 'Salida ' + e.hora : '', e.dificultad ? 'Dificultad ' + e.dificultad.toLowerCase() : '', e.plazas ? e.plazas + ' plazas' : '', pr].filter(Boolean).join(' · ');
-    return {id: 'club-' + e.id, clubEv: e.id, club: e.club, publico: e.publico, fuente: club, nombre: e.titulo, tipo: e.tipo, tipos: [e.tipo], date: e.fecha,
+    const mods = modsDe(e);
+    const mod = [mods.length ? mods.map(modCorto).join(' · ') : '', e.hora ? 'Salida ' + e.hora : '', e.dificultad ? 'Dificultad ' + e.dificultad.toLowerCase() : '', e.plazas ? e.plazas + ' plazas' : '', pr].filter(Boolean).join(' · ');
+    return {id: 'club-' + e.id, clubEv: e.id, club: e.club, publico: e.publico, fuente: club, nombre: e.titulo, tipo: e.tipo, tipos: [...new Set([e.tipo].concat(modsDe(e).map(m => m.tipo).filter(Boolean)))], date: e.fecha,
       lugar: e.lugar || '', provincia: e.provincia || '', _p: e.provincia || '', km: e.km != null ? String(e.km) : '', desnivel: e.desnivel != null ? String(e.desnivel) : '',
       precio: pr ? '' : (e.precio || e.precio_no_socios || ''), modalidades: mod, url: e.url || '', limite: e.limite || '', verificado: true, dificultad: e.dificultad || '',
       estado: e.limite ? 'Inscripción hasta ' + pd(e.limite).getDate() + ' ' + MESES[pd(e.limite).getMonth()] : ''};
@@ -3183,6 +3214,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
         if(ids.length) (await sbRest('perfiles?select=id,usuario,nombre,foto&id=in.(' + ids.join(',') + ')') || []).forEach(p => perf.set(p.id, p));
       } catch(e){}
     }
+    if(admin) await cargarNombres(miembros.map(x => x.usuario));
     const P = u => perf.get(u) || {id: u, usuario: '…', nombre: ''};
     const socios = miembros.filter(x => x.rol === 'admin' || x.rol === 'socio').sort((a, b) => (a.rol === 'admin' ? 0 : 1) - (b.rol === 'admin' ? 0 : 1));
     const solicitudes = miembros.filter(x => x.rol === 'pendiente'), invitados = miembros.filter(x => x.rol === 'invitado');
@@ -3225,7 +3257,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     document.querySelectorAll('[data-kmenu]').forEach(b => b.onclick = () => menuSocio(id, P(b.dataset.kmenu), b.dataset.rol));
   }
   function menuSocio(club, p, rol){
-    $('#cfmbox').innerHTML = `<h3>${esc(nombreDe(p))}</h3><p class="sub">@${esc(p.usuario)} · ${rol === 'admin' ? 'Administrador' : 'Socio'}</p>
+    $('#cfmbox').innerHTML = `<h3>${esc(nombreDe(p))}</h3><p class="sub">${nombreReal(p.id) ? esc(nombreReal(p.id)) + ' · ' : ''}${rol === 'admin' ? 'Administrador' : 'Socio'}</p>
       <div class="btns" style="flex-direction:column">${rol === 'admin' ? '<button class="btn" data-m="quitar_admin">Quitar de administrador</button>' : '<button class="btn" data-m="hacer_admin">Nombrar administrador</button>'}
       <button class="btn del" data-m="quitar">Quitar del club</button><button class="btn" data-m="">Cancelar</button></div>`;
     $('#cfm').classList.add('show');
@@ -3239,7 +3271,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   // buscador de usuarios para invitar (al club o a un evento)
   function invitarUsuarios(titulo, enviar, volver, excluir, extraHTML){
     const elegidos = new Map();
-    cfgPage(titulo, `${extraHTML || ''}<div class="cfgbox"><input id="iq" placeholder="Buscar por nombre o @usuario" autocapitalize="none" autocorrect="off"><div id="ires"></div></div>
+    cfgPage(titulo, `${extraHTML || ''}<div class="cfgbox"><input id="iq" placeholder="Buscar por nombre de usuario" autocapitalize="none" autocorrect="off"><div id="ires"></div></div>
       <div class="cfgbox" style="margin-top:10px"><div class="sub" id="isel">Nadie seleccionado</div><div class="btns"><button class="btn pri" id="isend" disabled>Enviar invitación</button></div></div>`, false);
     $('#cfgx').onclick = volver;
     const pintarSel = () => { $('#isel').innerHTML = elegidos.size ? 'Invitar a: ' + [...elegidos.values()].map(p => '<b>' + esc(nombreDe(p)) + '</b>').join(', ') : 'Nadie seleccionado'; $('#isend').disabled = !elegidos.size; };
@@ -3248,7 +3280,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       clearTimeout(qt); const q = ev.target.value.trim().replace(/^@/, '').replace(/[%*,()]/g, '');
       if(q.length < 2){ $('#ires').innerHTML = ''; return; }
       qt = setTimeout(async () => {
-        let r = []; try { r = await sbRest('perfiles?select=id,usuario,nombre,foto&or=(usuario.ilike.*' + encodeURIComponent(q.toLowerCase()) + '*,nombre.ilike.*' + encodeURIComponent(q) + '*)&limit=15') || []; } catch(e){}
+        let r = []; try { r = await sbRest('perfiles?select=id,usuario,nombre,foto&usuario=ilike.*' + encodeURIComponent(q.toLowerCase()) + '*&limit=15') || []; } catch(e){}
         r = r.filter(p => p.id !== sesion.user.id && !(excluir && excluir.has(p.id)));
         const pintar = () => { $('#ires').innerHTML = r.length ? r.map(p => filaPersona(p, `<button class="chip ${elegidos.has(p.id) ? 'act-ins' : 'greenl'}" data-isel="${p.id}">${elegidos.has(p.id) ? '✓ Elegido' : 'Elegir'}</button>`)).join('') : '<div class="sub" style="padding-top:8px">No hay nadie con ese nombre.</div>';
           $('#ires').querySelectorAll('[data-isel]').forEach(b => b.onclick = () => { const p = r.find(x => x.id === b.dataset.isel); elegidos.has(p.id) ? elegidos.delete(p.id) : elegidos.set(p.id, p); pintar(); pintarSel(); }); };
@@ -3281,6 +3313,14 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       <label>Plazas</label><input name="plazas" type="number" inputmode="numeric" min="1" value="${e.plazas != null ? esc(e.plazas) : ''}" placeholder="Sin límite">
       <label>Inscripción hasta</label><input name="limite" type="date" value="${esc(e.limite || '')}">
       <label>Descripción</label><textarea name="descripcion" rows="4" maxlength="1500" placeholder="Recorrido, material, avituallamiento…">${esc(e.descripcion || '')}</textarea>
+      <label>Modalidades</label>
+      <div class="sub" style="margin-bottom:6px">Si la ruta tiene varias pruebas (por ejemplo, trail largo, trail corto y ruta senderista), añádelas aquí.</div>
+      <div id="modlist"></div>
+      <button type="button" class="btn" id="modadd" style="width:100%;margin-top:6px">＋ Añadir modalidad</button>
+      <label>Material</label>
+      <div class="sub" style="margin-bottom:6px">Marca qué hay que llevar: obligatorio o recomendable.</div>
+      <div id="matlist"></div>
+      <div class="cadd" style="margin-top:8px"><input id="matnew" placeholder="Añadir otro material…" maxlength="40" enterkeyhint="done"><button type="button" class="btn" id="matok">Añadir</button></div>
       <label>Enlace de inscripción o más información (opcional)</label><input name="url" type="url" maxlength="300" value="${esc(e.url || '')}" placeholder="https://…">
       <label>¿Quién puede verlo?</label>
       <div class="cfgradio"><button type="button" data-pub="1" class="${e.publico ? 'on' : ''}">Público: cualquiera con el enlace puede verlo<span>${e.publico ? '✓' : ''}</span></button><button type="button" data-pub="0" class="${e.publico ? '' : 'on'}">Solo socios e invitados<span>${e.publico ? '' : '✓'}</span></button></div>
@@ -3288,19 +3328,52 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       <div class="btns"><button class="btn pri" type="submit">${e.id ? 'Guardar cambios' : 'Crear evento'}</button></div></form></div>`, false);
     $('#cfgx').onclick = () => e.id ? eventoPantalla(e.id) : clubPantalla(club);
     let publico = !!e.publico;
+    // modalidades
+    let mods = modsDe(e).map(m => Object.assign({}, m));
+    const pintaMods = () => {
+      const tipOpts = sel => TIPOS_EV.map(([k, l]) => `<option value="${k}" ${sel === k ? 'selected' : ''}>${l}</option>`).join('');
+      $('#modlist').innerHTML = mods.map((m, i) => `<div class="modcard" data-mi="${i}">
+        <div class="modhead"><b>Modalidad ${i + 1}</b><button type="button" class="chip" data-mdel="${i}">✕ Quitar</button></div>
+        <input data-mf="nombre" maxlength="40" value="${esc(m.nombre || '')}" placeholder="Nombre (ej. Trail largo, Ruta senderista)">
+        <div class="two" style="margin-top:8px"><div><label class="mini">Tipo</label><select data-mf="tipo">${tipOpts(m.tipo || e.tipo || 'senderismo')}</select></div><div><label class="mini">Hora de salida</label><input data-mf="hora" type="time" value="${esc(m.hora || '')}"></div></div>
+        <div class="two"><div><label class="mini">Distancia (km)</label><input data-mf="km" type="number" inputmode="decimal" min="0" step="0.1" value="${m.km != null ? esc(m.km) : ''}"></div><div><label class="mini">Desnivel (m)</label><input data-mf="desnivel" type="number" inputmode="numeric" min="0" value="${m.desnivel != null ? esc(m.desnivel) : ''}"></div></div>
+      </div>`).join('');
+      $('#modlist').querySelectorAll('[data-mf]').forEach(inp => inp.oninput = inp.onchange = () => { const i = +inp.closest('[data-mi]').dataset.mi, k = inp.dataset.mf; mods[i][k] = (k === 'km' || k === 'desnivel') ? (inp.value === '' ? null : +inp.value) : inp.value; });
+      $('#modlist').querySelectorAll('[data-mdel]').forEach(b => b.onclick = () => { mods.splice(+b.dataset.mdel, 1); pintaMods(); });
+    };
+    $('#modadd').onclick = () => { mods.push({nombre: '', tipo: $('#ef').tipo.value, km: null, desnivel: null, hora: ''}); pintaMods(); const ult = $('#modlist').lastElementChild; if(ult) ult.querySelector('input').focus(); };
+    pintaMods();
+    // material
+    const matIni = matDe(e);
+    let mat = MATERIAL_BASE.map(n => ({n, t: (matIni.find(x => x.n === n) || {}).t || '', base: true})).concat(matIni.filter(x => !MATERIAL_BASE.includes(x.n)).map(x => ({n: x.n, t: x.t})));
+    const pintaMat = () => {
+      $('#matlist').innerHTML = mat.map((m, i) => `<div class="matrow"><span>${esc(m.n)}</span><div class="mseg">
+        <button type="button" data-mt="${i}" data-v="obligatorio" class="${m.t === 'obligatorio' ? 'on ob' : ''}">Obligatorio</button><button type="button" data-mt="${i}" data-v="recomendable" class="${m.t === 'recomendable' ? 'on re' : ''}">Recomendable</button>${m.base ? '' : `<button type="button" data-mx="${i}" class="mx" aria-label="Quitar">✕</button>`}</div></div>`).join('');
+      $('#matlist').querySelectorAll('[data-mt]').forEach(b => b.onclick = () => { const m = mat[+b.dataset.mt]; m.t = m.t === b.dataset.v ? '' : b.dataset.v; pintaMat(); });
+      $('#matlist').querySelectorAll('[data-mx]').forEach(b => b.onclick = () => { mat.splice(+b.dataset.mx, 1); pintaMat(); });
+    };
+    const addMat = () => { const v = $('#matnew').value.trim().replace(/\s+/g, ' '); if(!v) return; if(!mat.some(m => m.n.toLowerCase() === v.toLowerCase())) mat.push({n: v, t: 'obligatorio'}); $('#matnew').value = ''; pintaMat(); };
+    $('#matok').onclick = addMat; $('#matnew').onkeydown = ev => { if(ev.key === 'Enter'){ ev.preventDefault(); addMat(); } };
+    pintaMat();
     document.querySelectorAll('[data-pub]').forEach(b => b.onclick = () => { publico = b.dataset.pub === '1'; document.querySelectorAll('[data-pub]').forEach(x => { x.classList.toggle('on', x === b); x.querySelector('span').textContent = x === b ? '✓' : ''; }); });
     $('#ef').onsubmit = async ev => {
       ev.preventDefault();
       const f = ev.target, num = v => v === '' ? null : Number(v);
       const d = {titulo: f.titulo.value.trim(), tipo: f.tipo.value, fecha: f.fecha.value, hora: f.hora.value, lugar: f.lugar.value.trim(), provincia: f.provincia.value, encuentro: f.encuentro.value.trim(),
         km: num(f.km.value), desnivel: f.desnivel.value === '' ? null : Math.round(+f.desnivel.value), dificultad: f.dificultad.value, precio: f.precio.value.trim(), precio_no_socios: f.precio_no_socios.value.trim(), plazas: f.plazas.value === '' ? null : Math.round(+f.plazas.value),
-        limite: f.limite.value || null, descripcion: f.descripcion.value.trim(), url: f.url.value.trim(), publico};
+        limite: f.limite.value || null, descripcion: f.descripcion.value.trim(), url: f.url.value.trim(), publico,
+        modalidades: mods.filter(m => (m.nombre || '').trim() || m.km).map(m => ({nombre: (m.nombre || '').trim(), tipo: m.tipo, km: m.km, desnivel: m.desnivel != null ? Math.round(m.desnivel) : null, hora: m.hora || ''})),
+        material: mat.filter(m => m.t).map(m => ({n: m.n, t: m.t}))};
+      if($('#matnew').value.trim()){ const v = $('#matnew').value.trim(); if(!d.material.some(m => m.n === v)) d.material.push({n: v, t: 'obligatorio'}); }
       if(d.url && !/^https?:\/\//i.test(d.url)) d.url = 'https://' + d.url;
       if(!d.fecha){ $('#amsg').textContent = 'Indica la fecha.'; return; }
       try {
-        if(e.id){ await sbRest('club_eventos?id=eq.' + e.id, {method: 'PATCH', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify(d)}); toast('Evento guardado ✓'); await clubCargar(); eventoPantalla(e.id); }
+        const sinExtras = o => { const x = Object.assign({}, o); delete x.modalidades; delete x.material; return x; };
+        const intenta = async fn => { try { return await fn(d); } catch(err){ if(/modalidades|material|column/i.test(err.message)){ toast('Guardado sin modalidades ni material: falta ejecutar nombres_modalidades.sql en Supabase.'); return await fn(sinExtras(d)); } throw err; } };
+        if(e.id){ await intenta(x => sbRest('club_eventos?id=eq.' + e.id, {method: 'PATCH', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify(x)})); toast('Evento guardado ✓'); await clubCargar(); eventoPantalla(e.id); }
         else {
-          const r = await sbRest('club_eventos', {method: 'POST', headers: {'Prefer': 'return=representation'}, body: JSON.stringify(Object.assign(d, {club, creado_por: sesion.user.id}))});
+          Object.assign(d, {club, creado_por: sesion.user.id});
+          const r = await intenta(x => sbRest('club_eventos', {method: 'POST', headers: {'Prefer': 'return=representation'}, body: JSON.stringify(x)}));
           toast('Evento creado ✓'); await clubCargar();
           const nuevo = r && r[0];
           if(nuevo && await confirmDlg('¿Invitar a los socios?', 'Les llegará una invitación al evento en su pestaña Club.', 'Invitar a todos')) await clubRpc('invitar_evento', {p_evento: nuevo.id, p_usuarios: [], p_todos: true}, n => `Invitación enviada a ${n} ${n === 1 ? 'socio' : 'socios'} ✓`);
@@ -3341,6 +3414,8 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
         ${fila('Plazas', e.plazas ? (socio ? voyN + ' apuntados de ' + esc(e.plazas) : esc(e.plazas)) : '')}
         ${fila('Inscripción hasta', e.limite ? pd(e.limite).toLocaleDateString('es-ES', {day: 'numeric', month: 'long'}) : '')}
         ${e.descripcion ? `<p style="margin:12px 0 0;font-size:14.5px;line-height:1.5;white-space:pre-line">${esc(e.descripcion)}</p>` : ''}
+        ${modsDe(e).length ? `<div class="evsec"><b>Modalidades</b>${modsDe(e).map(m => `<div class="evmod"><span class="tipoico">${esc((TIPOS_EV.find(t => t[0] === m.tipo) || ['', ''])[1])}</span>${esc(modTxt(m))}</div>`).join('')}</div>` : ''}
+        ${matDe(e).length ? `<div class="evsec"><b>Material</b>${matTxt(e, 'obligatorio').length ? `<div class="evmat"><span class="mtag ob">Obligatorio</span>${matTxt(e, 'obligatorio').map(esc).join(', ')}</div>` : ''}${matTxt(e, 'recomendable').length ? `<div class="evmat"><span class="mtag re">Recomendable</span>${matTxt(e, 'recomendable').map(esc).join(', ')}</div>` : ''}</div>` : ''}
         ${e.url ? `<div class="btns"><a class="btn" href="${esc(e.url)}" target="_blank" rel="noopener">Inscripción / más info ↗</a></div>` : ''}
         ${e.cartel_estilo === 'propio' && e.cartel_url ? (esPdf(e.cartel_url) ? `<div class="btns"><a class="btn" href="${esc(e.cartel_url)}" target="_blank" rel="noopener">📄 Ver cartel (PDF)</a></div>` : `<a href="${esc(e.cartel_url)}" target="_blank" rel="noopener"><img class="evcartel" src="${esc(e.cartel_url)}" alt="Cartel del evento"></a>`) : ''}</div>
       <div class="cfglabel">Tu respuesta</div>
@@ -3415,7 +3490,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
         ${c && (c.localidad || c.provincia) ? `<div class="sub">${esc([c.localidad, c.provincia].filter(Boolean).join(', '))}</div>` : ''}
         <p class="sub" style="margin:12px 0 0">En <b>Mis rutas y trails</b> encontrarás rutas de senderismo, trail, carreras y MTB de toda España, y podrás apuntarte a las salidas de tu club.</p>
         <div class="btns" style="flex-direction:column"><button class="btn pri" id="breg">Crear cuenta y unirme</button><button class="btn" id="bent">Ya tengo cuenta</button></div></div>
-      <div class="sub" style="margin:12px 4px">Es gratis. Después de crear tu cuenta y elegir tu @usuario, entrarás en el club.</div>`;
+      <div class="sub" style="margin:12px 4px">Es gratis. Después de crear tu cuenta y elegir tu nombre de usuario, entrarás en el club.</div>`;
     $('#sheet').classList.add('cfg'); $('#ovl').classList.add('show');
     $('#bx').onclick = close; $('#breg').onclick = () => cuentaPantalla('registro'); $('#bent').onclick = () => cuentaPantalla('entrar');
   }
@@ -3493,6 +3568,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   }
   async function cuotasPantalla(c, socios, perf, desplaza){
     const ref = periodoActual(c, desplaza), pag = await pagosDe(c.id, 'cuota', ref);
+    await cargarNombres(socios);
     const P = u => perf.get(u) || {id: u, usuario: '…', nombre: ''};
     const lista = socios.slice().sort((a, b) => nombreDe(P(a)).localeCompare(nombreDe(P(b)), 'es'));
     const n = pag ? lista.filter(u => pag.has(u)).length : 0;
@@ -3518,6 +3594,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   async function pagosEvento(e, asist, perf){
     const box = $('#epagos'); if(!box) return;
     const pag = await pagosDe(e.club, 'evento', e.id);
+    await cargarNombres(asist.map(x => x.usuario));
     if(!document.body.contains(box)) return;
     if(pag === null){ box.innerHTML = '<div class="sub">Para anotar pagos, ejecuta antes el archivo cuotas.sql en Supabase.</div>'; return; }
     const van = asist.filter(x => x.estado === 'voy').map(x => x.usuario);
@@ -3578,6 +3655,8 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       ['📍', [e.lugar, e.provincia].filter(Boolean).join(', ')],
       ['🚩', e.encuentro ? 'Encuentro: ' + e.encuentro : ''],
       ['🥾', [e.km != null ? e.km + ' km' : '', e.desnivel != null ? e.desnivel + ' m D+' : ''].filter(Boolean).join('  ·  ')],
+      ['🏁', modsDe(e).map(modCorto).join('  ·  ')],
+      ['🎒', matTxt(e, 'obligatorio').length ? 'Obligatorio: ' + matTxt(e, 'obligatorio').join(', ').toLowerCase() : ''],
       ['👥', e.plazas ? e.plazas + ' plazas' : ''],
       ['⏳', e.limite ? 'Inscripción hasta el ' + pd(e.limite).getDate() + ' de ' + MESES_C[pd(e.limite).getMonth()] : '']
     ].filter(x => x[1]);
@@ -3756,7 +3835,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   }
   // ----- compartir un evento de club con su cartel -----
   var CARTELES = new Map();
-  const firmaCartel = e => e.id + '|' + (e.cartel_estilo || 'serio') + '|' + (e.cartel_url || '') + '|' + JSON.stringify([e.titulo, e.fecha, e.hora, e.lugar, e.provincia, e.encuentro, e.km, e.desnivel, e.dificultad, e.precio, e.precio_no_socios, e.plazas, e.limite, e.tipo, e.publico, e.clubs && e.clubs.nombre, ((CLUB.mis.find(x => x.club === e.club) || {}).clubs || {}).imagen ? 'logo' : '']);
+  const firmaCartel = e => e.id + '|' + (e.cartel_estilo || 'serio') + '|' + (e.cartel_url || '') + '|' + JSON.stringify([e.titulo, e.fecha, e.hora, e.lugar, e.provincia, e.encuentro, e.km, e.desnivel, e.dificultad, e.precio, e.precio_no_socios, e.plazas, e.limite, e.tipo, e.publico, e.clubs && e.clubs.nombre, JSON.stringify(e.modalidades || []), JSON.stringify(e.material || []), ((CLUB.mis.find(x => x.club === e.club) || {}).clubs || {}).imagen ? 'logo' : '']);
   async function cartelBlob(e){
     const k = firmaCartel(e);
     if(CARTELES.has(k)) return CARTELES.get(k);
@@ -3892,10 +3971,11 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   async function informeCuotas(c, socios, perf, ref){
     const pag = await pagosDetalle(c.id, 'cuota', ref);
     const P = u => perf.get(u) || {usuario: '', nombre: ''};
-    const lista = socios.slice().sort((a, b) => nombreDe(P(a)).localeCompare(nombreDe(P(b)), 'es'));
+    const lista = socios.slice().sort((a, b) => (nombreReal(a) || nombreDe(P(a))).localeCompare(nombreReal(b) || nombreDe(P(b)), 'es'));
     const imp = numero(c.cuota), n = lista.filter(u => pag.has(u)).length;
-    const columnas = [{t: 'Nombre', x: 0, max: 30}, {t: 'Usuario', x: 190, max: 22}, {t: 'Estado', x: 330, negrita: 'Pagado'}, {t: 'Anotado el', x: 420}];
-    const filas = lista.map(u => [nombreDe(P(u)), '@' + (P(u).usuario || ''), pag.has(u) ? 'Pagado' : 'Pendiente', fechaCorta(pag.get(u))]);
+    await cargarNombres(lista);
+    const columnas = [{t: 'Nombre y apellidos', x: 0, max: 30}, {t: 'Usuario', x: 190, max: 22}, {t: 'Estado', x: 330, negrita: 'Pagado'}, {t: 'Anotado el', x: 420}];
+    const filas = lista.map(u => [nombreReal(u) || '(sin indicar)', P(u).usuario || '', pag.has(u) ? 'Pagado' : 'Pendiente', fechaCorta(pag.get(u))]);
     const resumen = [['Socios', String(lista.length)], ['Han pagado', String(n)], ['Pendientes', String(lista.length - n)]];
     if(imp != null){ resumen.push(['Cuota', euros(imp)], ['Recaudado', euros(imp * n)], ['Pendiente de cobro', euros(imp * (lista.length - n))]); }
     const titulo = 'Cuotas de socios · ' + c.nombre, sub = [periodoTxt(c, ref), 'Generado el ' + new Date().toLocaleString('es-ES', {dateStyle: 'long', timeStyle: 'short'})];
@@ -3909,11 +3989,12 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     const P = u => perf.get(u) || {usuario: '', nombre: ''};
     const ps = numero(e.precio), pn = numero(e.precio_no_socios);
     const precioDe = u => socios.has(u) ? (ps != null ? ps : pn) : (pn != null ? pn : ps);
-    const lista = van.slice().sort((a, b) => nombreDe(P(a)).localeCompare(nombreDe(P(b)), 'es'));
+    await cargarNombres(van);
+    const lista = van.slice().sort((a, b) => (nombreReal(a) || nombreDe(P(a))).localeCompare(nombreReal(b) || nombreDe(P(b)), 'es'));
     let recaudado = 0, pendiente = 0;
     const filas = lista.map(u => { const pr = precioDe(u); if(pr != null){ if(pag.has(u)) recaudado += pr; else pendiente += pr; }
-      return [nombreDe(P(u)), '@' + (P(u).usuario || ''), socios.has(u) ? 'Socio' : 'No socio', pr != null ? euros(pr) : '', pag.has(u) ? 'Pagado' : 'Pendiente', fechaCorta(pag.get(u))]; });
-    const columnas = [{t: 'Nombre', x: 0, max: 24}, {t: 'Usuario', x: 150, max: 18}, {t: 'Tipo', x: 260}, {t: 'Precio', x: 320}, {t: 'Estado', x: 380, negrita: 'Pagado'}, {t: 'Anotado el', x: 450}];
+      return [nombreReal(u) || '(sin indicar)', P(u).usuario || '', socios.has(u) ? 'Socio' : 'No socio', pr != null ? euros(pr) : '', pag.has(u) ? 'Pagado' : 'Pendiente', fechaCorta(pag.get(u))]; });
+    const columnas = [{t: 'Nombre y apellidos', x: 0, max: 24}, {t: 'Usuario', x: 150, max: 18}, {t: 'Tipo', x: 260}, {t: 'Precio', x: 320}, {t: 'Estado', x: 380, negrita: 'Pagado'}, {t: 'Anotado el', x: 450}];
     const n = lista.filter(u => pag.has(u)).length, d = pd(e.fecha);
     const resumen = [['Apuntados (Voy)', String(lista.length)], ['Han pagado', String(n)], ['Pendientes', String(lista.length - n)]];
     if(ps != null || pn != null) resumen.push(['Precios', preciosTxt(e)], ['Recaudado', euros(recaudado)], ['Pendiente de cobro', euros(pendiente)]);
@@ -3976,6 +4057,8 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       ['🚩', e.encuentro ? 'Quedamos en ' + e.encuentro : ''],
       ['🥾', [e.km != null ? e.km + ' km' : '', e.desnivel != null ? e.desnivel + ' m de subida' : ''].filter(Boolean).join(' · ')],
       ['💪', e.dificultad ? 'Dificultad ' + e.dificultad.toLowerCase() : ''],
+      ['🏁', modsDe(e).map(modCorto).join(' · ')],
+      ['🎒', matTxt(e, 'obligatorio').length ? 'Trae: ' + matTxt(e, 'obligatorio').join(', ').toLowerCase() : ''],
       ['🎟️', [e.plazas ? e.plazas + ' plazas' : '', e.limite ? 'apúntate antes del ' + pd(e.limite).getDate() + ' de ' + MESES_C[pd(e.limite).getMonth()] : ''].filter(Boolean).join(' · ')]
     ].filter(x => x[1]);
     const ps = e.precio || '', pn = e.precio_no_socios || '';
