@@ -212,6 +212,13 @@ input,select,textarea{font-size:16px}
 .cfgradio button span{color:var(--green);font-weight:700}
 .help p{margin:0 0 12px;font-size:14.5px;line-height:1.5}
 .help p:last-child{margin-bottom:0}
+.hlist{padding:4px 14px}.hsec{border-bottom:1px solid var(--line)}.hsec:last-child{border-bottom:0}
+.hsec summary{list-style:none;cursor:pointer;padding:13px 22px 13px 0;font-weight:600;font-size:15px;position:relative}
+.hsec summary::-webkit-details-marker{display:none}
+.hsec summary::after{content:'›';position:absolute;right:2px;top:50%;transform:translateY(-50%);font-size:20px;color:var(--muted);transition:transform .2s}
+.hsec[open] summary::after{transform:translateY(-50%) rotate(90deg)}
+.hsec>div{padding:0 0 12px}.help ul{margin:0 0 12px;padding-left:20px;font-size:14.5px;line-height:1.5}.help li{margin-bottom:6px}
+.hlist>p.sub{margin:10px 0}.hlist>p{margin:10px 0}
 /* app shell: la página no hace scroll; solo el contenido. Así la barra inferior nunca se mueve */
 html,body{height:100%;overflow:hidden;overscroll-behavior:none}
 body{position:fixed;inset:0}
@@ -418,6 +425,7 @@ a{color:var(--green)}
   const now = new Date(); let calY = now.getFullYear(), calM = now.getMonth();
 
   const $ = s => document.querySelector(s);
+  const escUrl = u => { u = String(u == null ? '' : u).trim(); const k = u.replace(/[\u0000-\u0020]/g, ''); return esc(/^[a-z][a-z0-9+.-]*:/i.test(k) && !/^(https?|mailto|tel):/i.test(k) ? '' : u); };
   const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   const MESES_L = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -600,7 +608,7 @@ a{color:var(--green)}
         <button class="chip ${mine&&mine.estado==='inscrito'?'act-ins':'greenl'}" data-add="${esc(w.id)}" data-st="inscrito">${mine&&mine.estado==='inscrito'?'✓ Inscrito ✕':'✓ Inscrito'}</button>
         ${mine ? '' : `<button class="chip" data-hide="${esc(w.id)}">Descartar</button>`}
         ${w.clubEv ? `<button class="chip" data-cev="${esc(w.clubEv)}">Ver evento</button>` : ''}
-        ${w.url ? `<a class="chip" href="${esc(w.url)}" target="_blank" rel="noopener">Ver web ↗</a>` : ''}
+        ${w.url ? `<a class="chip" href="${escUrl(w.url)}" target="_blank" rel="noopener">Ver web ↗</a>` : ''}
       </div></div></div>`;
   }
   function renderEventos(){
@@ -679,7 +687,7 @@ a{color:var(--green)}
     let h = `<div class="ptop"><div class="pill"><button id="pgear" aria-label="Ajustes">${ICON.gear}</button><button id="pshare" aria-label="Compartir perfil">${ICON.share}</button></div></div>
       <div class="phead">
         <div class="pphoto-col">
-          <div class="pphoto" id="pphoto" title="Mantén pulsado para cambiar la foto">${p.foto ? `<img src="${p.foto}" alt="Foto de perfil">` : ICON.user}</div>
+          <div class="pphoto" id="pphoto" title="Mantén pulsado para cambiar la foto">${p.foto ? `<img src="${esc(p.foto)}" alt="Foto de perfil">` : ICON.user}</div>
           <div class="pnum" title="Rutas realizadas">${rutasRealizadas().length}</div>
         </div>
         <div class="pinfo">
@@ -777,7 +785,7 @@ a{color:var(--green)}
       </div>
       <div class="cfgfoot"><b>¿Te gusta Mis rutas y trails?</b><span>Compártela con tus compañeros de ruta.</span>
         <button class="cfgdanger" id="cfgborrar">Borrar mis datos</button>
-        <div class="cfgver">Versión 1.0</div></div>`);
+        <div class="cfgver">Versión 2.0</div></div>`);
     const go = {personal: cfgPersonal, copia: cfgCopia, prefs: cfgPrefs, notif: cfgNotif, ayuda: cfgAyuda, condiciones: cfgCondiciones, privacidad: cfgPrivacidad, acerca: cfgAcerca};
     document.querySelectorAll('[data-cfg]').forEach(b => b.onclick = () => go[b.dataset.cfg]());
     bindCuentaCfg();
@@ -878,9 +886,9 @@ a{color:var(--green)}
         <p><b>Importante</b><br>Los datos de cada evento (fechas, precios, plazos, plazas) pueden cambiar. Comprueba siempre la información en la web oficial antes de inscribirte; la inscripción se hace siempre en la web del organizador.</p>
       </div>
       <div class="cfglabel">Webs de eventos que se revisan (${(state.fuentes || []).length})</div>
-      <div class="cfgbox">${(state.fuentes || []).map(f => `<a class="fuente" href="${esc(f.url)}" target="_blank" rel="noopener"><b>${esc(f.nombre)} ↗</b>${f.zona ? `<span>${esc(f.zona)}</span>` : ''}</a>`).join('') || '<span class="sub">—</span>'}
+      <div class="cfgbox">${(state.fuentes || []).map(f => `<a class="fuente" href="${escUrl(f.url)}" target="_blank" rel="noopener"><b>${esc(f.nombre)} ↗</b>${f.zona ? `<span>${esc(f.zona)}</span>` : ''}</a>`).join('') || '<span class="sub">—</span>'}
         <div class="sub" style="margin-top:10px">${n} eventos próximos en el buscador${state.webActualizado ? ' · última actualización: ' + esc(state.webActualizado) : ''}.</div></div>
-      <div class="cfgfoot"><span>Versión 1.0</span><span>Contacto: <a href="mailto:misrutasytrail@gmail.com" style="color:var(--green)">misrutasytrail@gmail.com</a></span></div>`, true);
+      <div class="cfgfoot"><span>Versión 2.0</span><span>Contacto: <a href="mailto:misrutasytrail@gmail.com" style="color:var(--green)">misrutasytrail@gmail.com</a></span></div>`, true);
   }
   function cfgNotif(){
     const d = avisoDias(), opts = [[0,'No avisarme'],[3,'3 días antes'],[7,'7 días antes'],[10,'10 días antes'],[15,'15 días antes']];
@@ -891,28 +899,156 @@ a{color:var(--green)}
       <div class="sub" style="margin:10px 4px">Los avisos aparecen dentro de la app, en tu agenda. Al ser una página web, la app no puede enviar notificaciones al móvil.</div>`, true);
     document.querySelectorAll('[data-av]').forEach(b => b.onclick = () => { state.prefs.avisoDias = +b.dataset.av; renderAgenda(); cfgNotif(); clearTimeout(cfgNotif._t); cfgNotif._t = setTimeout(save, 1500); });
   }
+  // ---------- Centro de ayuda, condiciones de uso y política de privacidad ----------
+  const LEGAL_FECHA = '11 de noviembre de 2026';
+  const MAIL = '<a href="mailto:misrutasytrail@gmail.com">misrutasytrail@gmail.com</a>';
+  const sec = (t, html, abierto) => `<details class="hsec"${abierto ? ' open' : ''}><summary>${t}</summary><div>${html}</div></details>`;
   function cfgAyuda(){
-    cfgPage('Centro de ayuda', `<div class="cfgbox help">
-      <p><b>Buscar rutas</b><br>Escribe en «Encuentra rutas» (nombre, pueblo, provincia…) o usa <b>Filtros</b> para elegir actividad, fechas y provincias en el mapa.</p>
-      <p><b>Añadir a tu agenda</b><br>Pulsa <b>★ Me interesa</b> o <b>✓ Inscrito</b> en cualquier evento. Vuelve a pulsarlo para quitarlo.</p>
-      <p><b>Compartir</b><br>Toca el icono de compartir de la tarjeta para enviarla por WhatsApp, Telegram… Mantenlo pulsado para compartirla como imagen.</p>
-      <p><b>Amigos</b><br>Con una cuenta, entra en Perfil › Amigos para elegir tu nombre de usuario, invitar a tus amigos con un enlace o buscarlos. Cuando aceptan, veis las rutas a las que vais y en cada evento aparece qué amigos están apuntados.</p>
-      <p><b>Clubs</b><br>En la pestaña Club puedes crear un club (serás su administrador), buscar clubs y unirte. Los administradores crean rutas y eventos, eligen si son públicos o solo para socios, invitan a usuarios y nombran a otros administradores. Si respondes «Voy» o «Me interesa» a un evento, se añade a tu agenda.</p>
-      <p><b>Instalar la app</b><br>En Safari, pulsa Compartir › «Añadir a pantalla de inicio».</p>
-      <p><b>Modalidades sin confirmar</b><br>La web del evento no detalla sus pruebas; puede tener más modalidades (por ejemplo, senderismo).</p>
-      <p><b>¿Falta un evento?</b><br>La lista se actualiza cada mañana. Comprueba siempre los datos en la web oficial del evento antes de inscribirte.</p></div>`, true);
+    cfgPage('Centro de ayuda', `<div class="sub" style="margin:0 4px 10px">Toca cada apartado para ver cómo funciona.</div><div class="cfgbox help hlist">
+      ${sec('Primeros pasos', `
+        <p><b>Instalar la app.</b> En iPhone, abre la app en Safari y pulsa Compartir › «Añadir a pantalla de inicio». En Android, abre el menú de Chrome › «Instalar aplicación» o «Añadir a pantalla de inicio».</p>
+        <p><b>Con o sin cuenta.</b> Sin cuenta puedes buscar rutas y usar tu agenda; todo se guarda solo en tu móvil. Con una cuenta (correo y contraseña, o Google) tus datos se guardan en la nube, los tienes en cualquier dispositivo y puedes usar Amigos y Clubs.</p>
+        <p><b>Al crear la cuenta</b> te pedimos un nombre de usuario (lo que ven los demás) y tu nombre y apellidos (privados, solo para los administradores de tus clubs).</p>`, true)}
+      ${sec('Buscar rutas y eventos', `
+        <p>Escribe en «Encuentra rutas» el nombre, el pueblo o la provincia, o usa <b>Filtros</b> para elegir actividad, fechas y provincias en el mapa.</p>
+        <p>La lista de eventos se actualiza cada mañana a partir de webs públicas de inscripción y cronometraje (puedes verlas en Configuración › Acerca de). Comprueba siempre los datos en la web oficial antes de inscribirte.</p>
+        <p><b>Modalidades sin confirmar:</b> la web del evento no detalla sus pruebas y puede tener otras (por ejemplo, senderismo).</p>
+        <p><b>Ocultar un evento:</b> pulsa «Descartar» y dejará de aparecer en la lista.</p>`)}
+      ${sec('Tu agenda', `
+        <p>Pulsa <b>★ Me interesa</b> o <b>✓ Inscrito</b> en cualquier evento para añadirlo a tu agenda. Vuelve a pulsarlo para quitarlo.</p>
+        <p>Para los eventos marcados como «Me interesa», la agenda te avisa cuando se acerca el fin del plazo de inscripción (puedes elegir cuántos días antes en Configuración › Preferencias de notificaciones). Los avisos se ven dentro de la app.</p>
+        <p>Los eventos en los que estabas inscrito y ya han pasado cuentan como <b>rutas realizadas</b> en tu perfil.</p>`)}
+      ${sec('Compartir', `
+        <p>Toca el icono de compartir de una tarjeta para enviarla por WhatsApp, Telegram u otra app. Mantenlo pulsado para compartirla como imagen.</p>
+        <p>Los eventos de club se comparten con su cartel y con un enlace que lleva directamente a la inscripción en la app.</p>`)}
+      ${sec('Perfil y datos personales', `
+        <p>En Perfil verás tu foto, tus rutas realizadas y tus clubs. Mantén pulsada la foto para cambiarla.</p>
+        <p>En Configuración › Información personal puedes cambiar tu nombre de usuario, tu nombre y tus apellidos. Los demás usuarios solo ven tu nombre de usuario y tu foto.</p>`)}
+      ${sec('Amigos', `
+        <p>Entra en Perfil › Amigos para invitar a tus amigos con un enlace o buscarlos por su nombre de usuario. La amistad empieza cuando la otra persona acepta.</p>
+        <p>Tus amigos ven las rutas de tu agenda y tus clubs, y en cada evento aparece qué amigos van. En Configuración › Tus preferencias y privacidad eliges qué pueden ver. Puedes eliminar a un amigo cuando quieras.</p>`)}
+      ${sec('Clubs', `
+        <p>En la pestaña <b>Club</b> puedes crear un club (serás su administrador), buscar clubs y unirte.</p>
+        <p>Cada club elige si la entrada es <b>libre</b> o <b>con aprobación</b>. Con aprobación, un administrador tiene que aceptar la solicitud, aunque hayas entrado con un enlace de invitación.</p>
+        <p>Los administradores pueden invitar con un enlace (también a gente que aún no tiene la app), aceptar solicitudes, nombrar a otros administradores, quitar socios y poner la imagen del club.</p>
+        <p>Si el último administrador se va o borra su cuenta, el socio más antiguo pasa a ser administrador.</p>`)}
+      ${sec('Eventos de club', `
+        <p><b>Crear un evento:</b> en tu club, pulsa «Crear ruta o evento». Rellena primero la información común (nombre, fecha, hora y lugar de quedada…) y después cada modalidad con su tipo, distancia, desnivel, hora de salida, precio para socios y no socios, y plazas.</p>
+        <p><b>Material:</b> marca qué es obligatorio o recomendable y añade lo que falte.</p>
+        <p><b>Visibilidad:</b> un evento puede ser público (lo ve cualquiera) o solo para socios. También puedes invitar a todos los socios o a usuarios concretos.</p>
+        <p><b>Eventos que se repiten:</b> activa «Evento recurrente» y elige cada cuánto (cada semana, cada mes, el día 1 o el primer domingo de cada mes, por ejemplo). Al día siguiente de cada salida se crea la siguiente automáticamente.</p>`)}
+      ${sec('Apuntarte a un evento de club', `
+        <p>Pulsa <b>Voy</b> o <b>Me interesa</b>. Si el evento tiene varias modalidades, elige en cuál participas. El evento se añade a tu agenda.</p>
+        <p>Si una modalidad tiene las plazas completas, no se puede elegir. Puedes cambiar de modalidad desde la ficha del evento con «Cambiar de modalidad».</p>`)}
+      ${sec('Carteles', `
+        <p>Los administradores pueden crear el cartel de un evento con el botón 🖼️ Cartel. Hay tres opciones: <b>Serio</b>, <b>Deportivo</b> o <b>Subir mi cartel</b> (imagen o PDF). Los carteles creados en la app llevan un código QR para apuntarse.</p>
+        <p>El cartel elegido es el que se envía al compartir el evento.</p>`)}
+      ${sec('Cuotas y pagos (administradores)', `
+        <p>En el club puedes indicar la cuota (anual o por temporada) y anotar quién la ha pagado. En cada evento puedes anotar quién ha pagado su inscripción, con el precio de su modalidad.</p>
+        <p>Desde ambos listados puedes generar un informe en PDF o en hoja de cálculo (CSV). Esta información solo la ven los administradores del club.</p>
+        <p>La app no cobra ni gestiona pagos: solo sirve para llevar la cuenta.</p>`)}
+      ${sec('Copia de seguridad y cambio de móvil', `
+        <p>Con cuenta, basta con entrar con el mismo correo en el móvil nuevo. Sin cuenta, usa Configuración › Copia de seguridad para guardar un archivo y recuperarlo después.</p>`)}
+      ${sec('Problemas frecuentes', `
+        <p><b>No me llega el correo de confirmación o de nueva contraseña:</b> revisa la carpeta de spam o de promociones. Si sigue sin llegar, escríbenos.</p>
+        <p><b>He olvidado la contraseña:</b> en la pantalla de entrar, pulsa «¿Has olvidado tu contraseña?».</p>
+        <p><b>No veo los últimos cambios de la app:</b> ciérrala del todo y vuelve a abrirla.</p>
+        <p><b>No puedo ver un evento de club:</b> puede ser solo para socios. Pide entrar en el club o que te inviten.</p>`)}
+      ${sec('Contacto', `<p>Si tienes dudas, sugerencias o encuentras un error, escríbenos a ${MAIL}.</p>`)}
+    </div>`, true);
   }
   function cfgCondiciones(){
-    cfgPage('Condiciones de uso', `<div class="cfgbox help">
-      <p>Mis rutas y trails es una herramienta personal para organizar salidas y eventos deportivos.</p>
-      <p>La información de los eventos se recopila de webs públicas de inscripción y cronometraje, y puede contener errores o cambiar sin aviso. La web oficial de cada evento es la única fuente válida para fechas, precios, plazos y modalidades.</p>
-      <p>Las inscripciones se hacen siempre en la web del organizador; esta app no gestiona pagos ni inscripciones.</p></div>`, true);
+    cfgPage('Condiciones de uso', `<div class="cfgbox help hlist">
+      <p class="sub">Última actualización: ${LEGAL_FECHA}</p>
+      ${sec('1. Qué es Mis rutas y trails', `<p>Mis rutas y trails es una aplicación gratuita para encontrar y organizar rutas y eventos de senderismo, trail, carreras y bicicleta de montaña, y para que los clubs organicen sus salidas. Al usarla aceptas estas condiciones. Si no estás de acuerdo, no la uses.</p>`, true)}
+      ${sec('2. Quién puede usarla', `<p>Para crear una cuenta debes tener al menos 14 años. Si eres menor de esa edad, solo puedes usarla con el permiso y la supervisión de tus padres o tutores.</p>`)}
+      ${sec('3. Tu cuenta', `
+        <p>Los datos que indiques deben ser verdaderos, especialmente tu nombre y apellidos, porque los clubs los usan para gestionar inscripciones.</p>
+        <p>Eres responsable de guardar tu contraseña y de lo que se haga con tu cuenta. Cada cuenta es personal.</p>
+        <p>Tu nombre de usuario no puede ser ofensivo, engañoso ni hacerse pasar por otra persona o entidad.</p>`)}
+      ${sec('4. Información de los eventos', `
+        <p>La información de los eventos públicos se recopila automáticamente de webs públicas de inscripción y cronometraje. Puede contener errores o cambiar sin aviso. La web oficial de cada evento es la única fuente válida para fechas, precios, plazos, modalidades y requisitos.</p>
+        <p>Las inscripciones a esos eventos se hacen siempre en la web del organizador. La app no inscribe a nadie ni cobra nada por ellos.</p>`)}
+      ${sec('5. Clubs y eventos de club', `
+        <p>Cada club y sus administradores son los únicos responsables de sus eventos: la información que publican, los precios, el cobro de cuotas e inscripciones, los seguros, los permisos y la organización y seguridad de la actividad.</p>
+        <p>La app no cobra ni intermedia pagos. Los apartados de cuotas y pagos son solo una herramienta para que el club anote quién ha pagado.</p>
+        <p>Los administradores pueden ver el nombre y apellidos de los socios y de quien pide entrar. Solo deben usarlos para gestionar el club y deben guardar con cuidado los informes que descarguen, de los que son responsables una vez fuera de la app.</p>`)}
+      ${sec('6. Actividad deportiva bajo tu responsabilidad', `
+        <p>Las actividades de montaña y deportivas tienen riesgos. Participas bajo tu responsabilidad: valora tu forma física y tu experiencia, consulta el tiempo, lleva el material necesario y respeta las indicaciones de la organización.</p>
+        <p>La app no sustituye la información oficial ni la valoración de un profesional, y no garantiza que una ruta sea adecuada o segura para ti.</p>`)}
+      ${sec('7. Lo que no está permitido', `
+        <p>Publicar contenido ilegal, ofensivo, discriminatorio, engañoso o publicitario no deseado. Acosar o molestar a otros usuarios. Hacerse pasar por otra persona o club.</p>
+        <p>Subir imágenes, logos o carteles sobre los que no tengas derechos. Usar los datos de otros usuarios para fines ajenos a la app.</p>
+        <p>Intentar acceder a datos o cuentas ajenas, saltarse las medidas de seguridad, sobrecargar el servicio o copiar sus datos de forma masiva.</p>`)}
+      ${sec('8. Contenido que subes', `
+        <p>Sigues siendo dueño de lo que subes (fotos, imágenes de club, carteles, descripciones). Nos permites mostrarlo dentro de la app y al compartirlo, solo para que funcione.</p>
+        <p>Las imágenes de los carteles se pueden abrir con su enlace, así que no subas información privada en ellas.</p>`)}
+      ${sec('9. Suspensión de cuentas y contenido', `<p>Podemos retirar contenido o suspender cuentas que incumplan estas condiciones o la ley. Puedes dejar de usar la app y borrar tu cuenta en cualquier momento desde Configuración › Borrar mi cuenta.</p>`)}
+      ${sec('10. Disponibilidad y cambios', `
+        <p>La app es gratuita y se ofrece tal cual. Intentamos que funcione siempre bien, pero puede tener errores o interrupciones, y sus funciones pueden cambiar.</p>
+        <p>En el futuro podría incluir funciones de pago o publicidad. Si ocurre, lo indicaremos antes y actualizaremos estas condiciones y la política de privacidad.</p>`)}
+      ${sec('11. Responsabilidad', `<p>En la medida en que la ley lo permite, no somos responsables de los daños derivados de errores en la información de los eventos, de la organización de los eventos de club, de las relaciones entre usuarios y clubs, ni de la práctica deportiva. Esto no limita los derechos que te reconoce la ley como consumidor.</p>`)}
+      ${sec('12. Propiedad intelectual', `<p>El diseño y el código de la app pertenecen a su titular. Los nombres de los eventos, organizadores y webs de inscripción pertenecen a sus dueños y solo se citan para informar. La app usa la librería QR Code de Kazuhiko Arase (licencia MIT). «QR Code» es una marca registrada de DENSO WAVE INCORPORATED.</p>`)}
+      ${sec('13. Cambios en estas condiciones', `<p>Si cambiamos estas condiciones, actualizaremos la fecha de arriba y, si el cambio es importante, te avisaremos en la app.</p>`)}
+      ${sec('14. Ley aplicable y contacto', `<p>Estas condiciones se rigen por la ley española. Para cualquier duda o reclamación, escríbenos a ${MAIL}. Si eres consumidor, puedes acudir a los tribunales de tu domicilio.</p>`)}
+    </div>`, true);
   }
   function cfgPrivacidad(){
-    cfgPage('Política de privacidad', `<div class="cfgbox help">
-      <p><b>Sin cuenta:</b> tus datos (agenda, nombre, clubes, foto y provincias) se guardan solo en tu móvil y no se envían a ningún servidor.</p><p><b>Con cuenta:</b> guardamos tu correo electrónico y esos mismos datos para que puedas usarlos en cualquier dispositivo. Se almacenan en servidores de Supabase situados en la Unión Europea (Frankfurt, Alemania). Tu contraseña se guarda cifrada y nadie puede verla. Si entras con Google, solo recibimos tu correo.</p><p>Solo tú puedes ver y cambiar tus datos. No los vendemos ni los compartimos con nadie, y no los usamos para publicidad.</p><p><b>Nombre de usuario y nombre real:</b> los demás usuarios solo ven tu nombre de usuario y tu foto, para poder encontrarte. Tu nombre y apellidos, si los indicas, solo los ven los administradores de los clubs a los que perteneces, y aparecen en los listados de pagos de cuotas y eventos que ellos generan. Puedes cambiarlos o borrarlos cuando quieras en Información personal.</p><p><b>Amigos:</b> Las rutas de tu agenda (inscrito, me interesa y realizadas) y tus clubs solo las ven los amigos cuya solicitud hayas aceptado (o que hayan aceptado la tuya), y puedes elegir qué ven en Configuración › Tus preferencias y privacidad. Tus clubs del perfil también los ven solo tus amigos aceptados. <b>Clubs:</b> el nombre, la descripción y el lugar de los clubs los puede ver cualquier usuario; la lista de socios y quién va a cada evento solo la ven los socios de ese club. Los eventos públicos los ve cualquier usuario. Puedes eliminar a un amigo en cualquier momento.</p>
-      <p>La app no usa tu ubicación ni envía tus datos a las webs de eventos. Al pulsar «Ver web», WhatsApp o Telegram, se abre esa web o app fuera de aquí.</p>
-      <p>Puedes borrar tu cuenta y todos sus datos cuando quieras desde Configuración › Borrar mi cuenta. Sin cuenta, si borras los datos del navegador o desinstalas la app se pierden: usa Configuración › Copia de seguridad.</p><p><b>Responsable y contacto:</b> para cualquier duda sobre tus datos, o para pedir que los consultemos, corrijamos o borremos, escribe a <a href="mailto:misrutasytrail@gmail.com">misrutasytrail@gmail.com</a>. También puedes reclamar ante la Agencia Española de Protección de Datos (aepd.es).</p></div>`, true);
+    cfgPage('Política de privacidad', `<div class="cfgbox help hlist">
+      <p class="sub">Última actualización: ${LEGAL_FECHA}</p>
+      <p>En resumen: solo guardamos los datos necesarios para que la app funcione, no los vendemos, no los usamos para publicidad y puedes borrarlos cuando quieras.</p>
+      ${sec('1. Responsable', `<p>El responsable del tratamiento es el titular de la app Mis rutas y trails. Contacto: ${MAIL}.</p>`, true)}
+      ${sec('2. Qué datos tratamos', `
+        <p><b>Sin cuenta:</b> tu agenda, preferencias, foto y provincias se guardan solo en tu móvil y no se envían a ningún servidor.</p>
+        <p><b>Con cuenta:</b></p>
+        <ul>
+          <li>Tu correo electrónico y tu contraseña (guardada cifrada: nadie puede verla). Si entras con Google, Google nos facilita tu correo y los datos básicos de tu cuenta de Google, que no mostramos a nadie.</li>
+          <li>Tu nombre de usuario y tu foto de perfil.</li>
+          <li>Tu nombre y apellidos.</li>
+          <li>Tu agenda, tus preferencias y tus opciones de privacidad.</li>
+          <li>Tus amistades y solicitudes de amistad.</li>
+          <li>Los clubs a los que perteneces y tu papel en ellos (socio, administrador, solicitud pendiente o invitado).</li>
+          <li>Tus respuestas a los eventos de club (voy, me interesa, no voy) y la modalidad elegida.</li>
+          <li>Los pagos de cuotas y eventos que anoten los administradores de tus clubs.</li>
+          <li>Si administras un club: los datos del club, su imagen, sus eventos y los carteles que subas.</li>
+          <li>Datos técnicos que generan los servidores al usar la app (dirección IP, fecha y hora), que se usan solo por seguridad.</li>
+        </ul>
+        <p>No usamos tu ubicación ni pedimos datos de salud o de pago.</p>`)}
+      ${sec('3. Para qué los usamos y con qué base legal', `
+        <ul>
+          <li><b>Darte el servicio</b> (tu cuenta, agenda, amigos y clubs): es necesario para cumplir lo que pides al usar la app (art. 6.1.b del RGPD).</li>
+          <li><b>Gestión de los clubs</b> (que los administradores vean tu nombre y apellidos, tus respuestas y tus pagos): es necesario para el funcionamiento de los clubs a los que tú decides unirte (art. 6.1.b del RGPD).</li>
+          <li><b>Seguridad y prevención de abusos:</b> interés legítimo en proteger la app y a sus usuarios (art. 6.1.f del RGPD).</li>
+        </ul>
+        <p>No tomamos decisiones automatizadas sobre ti, no hacemos perfiles comerciales y no te enviamos publicidad.</p>`)}
+      ${sec('4. Quién ve tus datos dentro de la app', `
+        <ul>
+          <li><b>Cualquier usuario:</b> tu nombre de usuario y tu foto (para poder encontrarte), el nombre, la descripción, el lugar y la imagen de los clubs, y los eventos públicos.</li>
+          <li><b>Tus amigos aceptados:</b> las rutas de tu agenda (inscrito, me interesa y realizadas) y tus clubs, según lo que elijas en Configuración › Tus preferencias y privacidad.</li>
+          <li><b>Los socios de tus clubs:</b> la lista de socios (por nombre de usuario) y quién va a cada evento y en qué modalidad.</li>
+          <li><b>Los administradores de tus clubs:</b> además, tu nombre y apellidos (también cuando pides entrar) y los pagos anotados, que pueden aparecer en los informes que descarguen.</li>
+          <li>Nadie más ve tu correo, tu nombre real ni el resto de tu agenda.</li>
+        </ul>`)}
+      ${sec('5. Proveedores que nos ayudan', `
+        <ul>
+          <li><b>Supabase</b>: base de datos, cuentas y archivos. Los datos se guardan en servidores de la Unión Europea (Frankfurt, Alemania).</li>
+          <li><b>GitHub Pages</b> (GitHub, Inc., EE. UU.): aloja los archivos de la app. Al abrirla recibe datos técnicos como tu dirección IP.</li>
+          <li><b>Google Fonts</b> (Google LLC, EE. UU.): proporciona los tipos de letra. Al cargarlos recibe datos técnicos como tu dirección IP.</li>
+          <li><b>Google</b>, solo si eliges entrar con tu cuenta de Google.</li>
+        </ul>
+        <p>Estos proveedores solo tratan los datos para prestarnos su servicio. Las transferencias a EE. UU. están amparadas por el Marco de Privacidad de Datos UE-EE. UU. o por cláusulas contractuales tipo de la Comisión Europea.</p>
+        <p>Al pulsar «Ver web», WhatsApp, Telegram u otras apps se abren fuera de Mis rutas y trails y se aplican sus propias políticas.</p>`)}
+      ${sec('6. Cuánto tiempo los guardamos', `
+        <p>Mientras tengas la cuenta. Si la borras desde Configuración › Borrar mi cuenta, se eliminan tu cuenta, tu perfil, tu nombre y apellidos, tu agenda, tus amistades, tus respuestas a eventos y los pagos anotados. Pueden quedar durante un tiempo limitado en las copias de seguridad técnicas del proveedor.</p>
+        <p>Los clubs y eventos que creaste siguen existiendo para sus socios. Los informes que un administrador haya descargado quedan bajo su responsabilidad.</p>`)}
+      ${sec('7. Tus derechos', `
+        <p>Puedes acceder a tus datos, corregirlos o borrarlos, oponerte a su uso, pedir que se limite y llevártelos a otro servicio. Muchos los puedes ejercer tú desde la app: Información personal, Tus preferencias y privacidad, Copia de seguridad (descarga tus datos) y Borrar mi cuenta.</p>
+        <p>Para todo lo demás, escribe a ${MAIL}. Si crees que no hemos tratado bien tus datos, puedes reclamar ante la Agencia Española de Protección de Datos (aepd.es).</p>`)}
+      ${sec('8. Menores', `<p>Para crear una cuenta hay que tener al menos 14 años. Si sabemos que una cuenta pertenece a un menor de esa edad sin permiso de sus padres o tutores, la borraremos.</p>`)}
+      ${sec('9. Cookies y almacenamiento en el móvil', `<p>La app no usa cookies de publicidad ni de seguimiento. Guarda en tu navegador los datos necesarios para funcionar (tu agenda, tu sesión y tus preferencias). Este almacenamiento es técnico y no necesita tu consentimiento.</p>`)}
+      ${sec('10. Seguridad', `<p>Todas las comunicaciones van cifradas (HTTPS). Las contraseñas se guardan cifradas, y la base de datos tiene reglas que impiden que un usuario vea o cambie datos que no le corresponden. Aun así, ningún sistema es totalmente infalible: usa una contraseña segura y no la compartas.</p>`)}
+      ${sec('11. Cambios en esta política', `<p>Si la cambiamos, actualizaremos la fecha de arriba y, si el cambio es importante, te avisaremos en la app.</p>`)}
+    </div>`, true);
   }
   async function sharePerfil(){
     const p = state.prefs, st = perfilStats(), dd = pd(p.desde);
@@ -1123,7 +1259,7 @@ a{color:var(--green)}
           <div><label>Precio (€)</label><input type="number" step="0.01" min="0" name="precio" value="${esc(e.precio)}"></div>
         </div>
         <label>Web / enlace</label><input name="url" value="${esc(e.url)}" placeholder="https://...">
-        ${e.url ? `<div style="margin-top:4px;font-size:13px"><a href="${esc(e.url)}" target="_blank" rel="noopener">Abrir enlace ↗</a></div>` : ''}
+        ${e.url ? `<div style="margin-top:4px;font-size:13px"><a href="${escUrl(e.url)}" target="_blank" rel="noopener">Abrir enlace ↗</a></div>` : ''}
         <label>Notas</label><textarea name="notas" placeholder="Material, con quién vas, horario...">${esc(e.notas)}</textarea>
         <div class="btns">
           ${ev ? '<button type="button" class="btn del" id="del">Quitar</button>' : ''}
@@ -3106,7 +3242,14 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
         const m = est === 'borrar' ? null : modQ.get(id);
         try {
           try { await sbRest('rpc/responder_evento', {method: 'POST', body: JSON.stringify({p_evento: id, p_estado: est, p_modalidad: m})}); }
-          catch(err){ await sbRest('rpc/responder_evento', {method: 'POST', body: JSON.stringify({p_evento: id, p_estado: est})}); }
+          catch(err){
+            if(/completa|plazas/i.test(err.message)){
+              state.events = state.events.filter(x => x.webId !== 'club-' + id); userSave(); nubeGuardar(); render();
+              toast('Lo sentimos: ya no quedan plazas en esa modalidad. Se ha quitado de tu agenda.'); continue;
+            }
+            if(!/could not find|schema cache|function/i.test(err.message)) throw err;
+            await sbRest('rpc/responder_evento', {method: 'POST', body: JSON.stringify({p_evento: id, p_estado: est})});
+          }
           if(est === 'borrar'){ CLUB.resp.delete(id); CLUB.respMod.delete(id); } else { CLUB.resp.set(id, est); CLUB.respMod.set(id, m); }
         } catch(e){}
       }
@@ -3459,7 +3602,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
         tipo: m0.tipo, km: m0.km, desnivel: m0.desnivel, dificultad: m0.dificultad, precio: m0.precio, precio_no_socios: m0.precio_no_socios,
         plazas: modalidades.every(m => m.plazas) ? modalidades.reduce((t, m) => t + m.plazas, 0) : null,
         recurrente: $('#rec').checked, periodicidad: $('#rec').checked ? $('#persel').value : null,
-        limite: f.limite.value || null, descripcion: f.descripcion.value.trim(), url: f.url.value.trim(), publico,
+        limite: f.limite.value || null, descripcion: f.descripcion.value.trim(), url: (u => !u ? '' : /^https?:\/\//i.test(u) ? u : /^[a-z][a-z0-9+.-]*:/i.test(u) ? '' : 'https://' + u)(f.url.value.trim()), publico,
         modalidades: modalidades.length === 1 && !m0.nombre && !m0.hora && !m0.plazas ? [] : modalidades,
         material: mat.filter(m => m.t).map(m => ({n: m.n, t: m.t}))};
       if($('#matnew').value.trim()){ const v = $('#matnew').value.trim(); if(!d.material.some(m => m.n === v)) d.material.push({n: v, t: 'obligatorio'}); }
@@ -3525,8 +3668,8 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
         ${e.descripcion ? `<p style="margin:12px 0 0;font-size:14.5px;line-height:1.5;white-space:pre-line">${esc(e.descripcion)}</p>` : ''}
         ${conMods ? `<div class="evsec"><b>${modsDe(e).length > 1 ? 'Modalidades' : 'Modalidad'}</b>${modsDe(e).map((m, i) => `<div class="evmod2"><div><span class="tipoico">${esc((TIPOS_EV.find(t => t[0] === m.tipo) || ['', ''])[1])}</span> <b>${esc(m.nombre || (TIPOS_EV.find(t => t[0] === m.tipo) || ['', 'Ruta'])[1])}</b></div><div class="sub">${esc([m.km ? m.km + ' km' : '', m.desnivel ? m.desnivel + ' m D+' : '', m.dificultad, m.hora ? 'Salida ' + m.hora + ' h' : ''].filter(Boolean).join(' · '))}</div>${modPrecio(m) ? `<div class="mprecio">💶 ${esc(modPrecio(m))}</div>` : ''}${m.plazas ? `<div class="sub">👥 ${socio ? ocupadas(i) + ' de ' + plz(m.plazas) + (ocupadas(i) >= m.plazas ? ' · <b>completa</b>' : '') : plz(m.plazas)}</div>` : ''}</div>`).join('')}</div>` : ''}
         ${matDe(e).length ? `<div class="evsec"><b>Material</b>${matTxt(e, 'obligatorio').length ? `<div class="evmat"><span class="mtag ob">Obligatorio</span>${matTxt(e, 'obligatorio').map(esc).join(', ')}</div>` : ''}${matTxt(e, 'recomendable').length ? `<div class="evmat"><span class="mtag re">Recomendable</span>${matTxt(e, 'recomendable').map(esc).join(', ')}</div>` : ''}</div>` : ''}
-        ${e.url ? `<div class="btns"><a class="btn" href="${esc(e.url)}" target="_blank" rel="noopener">Inscripción / más info ↗</a></div>` : ''}
-        ${e.cartel_estilo === 'propio' && e.cartel_url ? (esPdf(e.cartel_url) ? `<div class="btns"><a class="btn" href="${esc(e.cartel_url)}" target="_blank" rel="noopener">📄 Ver cartel (PDF)</a></div>` : `<a href="${esc(e.cartel_url)}" target="_blank" rel="noopener"><img class="evcartel" src="${esc(e.cartel_url)}" alt="Cartel del evento"></a>`) : ''}</div>
+        ${e.url ? `<div class="btns"><a class="btn" href="${escUrl(e.url)}" target="_blank" rel="noopener">Inscripción / más info ↗</a></div>` : ''}
+        ${e.cartel_estilo === 'propio' && e.cartel_url ? (esPdf(e.cartel_url) ? `<div class="btns"><a class="btn" href="${escUrl(e.cartel_url)}" target="_blank" rel="noopener">📄 Ver cartel (PDF)</a></div>` : `<a href="${escUrl(e.cartel_url)}" target="_blank" rel="noopener"><img class="evcartel" src="${esc(e.cartel_url)}" alt="Cartel del evento"></a>`) : ''}</div>
       <div class="cfglabel">Tu respuesta</div>
       <div class="cfgbox"><div class="resp"><button class="chip ${mine && mine.estado === 'inscrito' ? 'act-ins' : 'greenl'}" data-r="voy">✓ Voy</button><button class="chip ${mine && mine.estado === 'interesado' ? 'act-int' : 'amber'}" data-r="interesa">★ Me interesa</button><button class="chip ${!mine && r === 'no' ? 'act-no' : ''}" data-r="no">No voy</button></div>
         <div class="sub" style="margin-top:8px">${mine ? 'Está en tu agenda' + (modsDe(e).length > 1 && mine.modalidad != null ? ' · modalidad: <b>' + esc(nomMod(mine.modalidad)) + '</b>' : '') + '.' : r === 'invitado' ? 'Te han invitado a este evento.' : 'Si respondes «Voy» o «Me interesa», se añade a tu agenda.'}</div>
@@ -3911,7 +4054,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     cfgPage('Cartel del evento', `
       <div class="seg3">${ESTILOS.map(([k, l]) => `<button type="button" data-est="${k}" class="${opt.estilo === k ? 'on' : ''}">${l}</button>`).join('')}</div>
       ${propio ? `
-        <div class="cartelprev" style="margin-top:10px">${e.cartel_url ? (esPdf(e.cartel_url) ? `<div class="pdfbox">📄<b>Cartel en PDF</b><a class="btn" href="${esc(e.cartel_url)}" target="_blank" rel="noopener">Ver el PDF ↗</a></div>` : `<img src="${esc(e.cartel_url)}" alt="Cartel del evento">`) : '<div class="sub" style="padding:30px 10px">Sube un cartel que ya tengas hecho: una foto, una imagen o un PDF, desde Fotos o desde Archivos.</div>'}</div>
+        <div class="cartelprev" style="margin-top:10px">${e.cartel_url ? (esPdf(e.cartel_url) ? `<div class="pdfbox">📄<b>Cartel en PDF</b><a class="btn" href="${escUrl(e.cartel_url)}" target="_blank" rel="noopener">Ver el PDF ↗</a></div>` : `<img src="${esc(e.cartel_url)}" alt="Cartel del evento">`) : '<div class="sub" style="padding:30px 10px">Sube un cartel que ya tengas hecho: una foto, una imagen o un PDF, desde Fotos o desde Archivos.</div>'}</div>
         <div class="btns"><button class="btn ${e.cartel_url ? '' : 'pri'}" id="csub">${e.cartel_url ? 'Cambiar cartel' : '⬆️ Subir cartel'}</button>${e.cartel_url ? '<button class="btn del" id="cquit">Quitar</button>' : ''}</div>
         <input type="file" id="cfile3" accept="image/*,application/pdf,.pdf" hidden>
         <div class="amsg" id="cmsg" style="color:var(--muted)"></div>`

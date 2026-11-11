@@ -1,5 +1,5 @@
 // Mis rutas y trails: funciona sin conexión y se actualiza sola
-const CACHE = 'mis-rutas-v2';
+const CACHE = 'mis-rutas-v3';
 const BASE = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'eventos.json'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(BASE)).then(() => self.skipWaiting()));
