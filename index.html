@@ -359,6 +359,8 @@ a{color:var(--green)}
   .sheet{max-height:calc(92dvh - env(safe-area-inset-top))}
   .sheet.cfg{max-height:calc(100dvh - 12px - env(safe-area-inset-top));min-height:min(80dvh, calc(100dvh - 12px - env(safe-area-inset-top)))}
 }
+.nuevas{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--green2);color:var(--ink);border:0;border-radius:14px;padding:11px 14px;margin:0 0 12px;font:500 14.5px Inter,sans-serif;cursor:pointer}
+.nuevas>span:first-child{font-size:20px}.nuevas .nver{margin-left:auto;color:var(--green);font-weight:700}
 </style>
 </head>
 <body>
@@ -427,6 +429,7 @@ a{color:var(--green)}
 
   let artifact = null, saving = false;
   let dfilter = 'todos', fprovs = new Set(), selDay = null, mapZoom = false;
+  const FPROVS_REF = () => fprovs, MAPZOOM_REF = () => mapZoom;
   let ui = {};
   try { Object.assign(ui, JSON.parse(localStorage.getItem('rutas-ui')||'{}')); } catch(e){}
   if(ui.dfilter) dfilter = ui.dfilter;
@@ -463,7 +466,8 @@ a{color:var(--green)}
 
   const MAPIMG = (document.getElementById('mapimg') || {}).textContent || '';
   let PATHS = {}; try { PATHS = JSON.parse(document.getElementById('mapsvg').textContent); } catch(e){}
-  function mapHTML(counts){
+  function mapHTML(counts, selP, zoomP){
+    const fprovs = selP || FPROVS_REF(), mapZoom = zoomP === undefined ? MAPZOOM_REF() : zoomP;
     let svg = `<svg viewBox="0 0 759 600" xmlns="http://www.w3.org/2000/svg">`;
     Object.entries(PATHS).forEach(([n,d]) => { svg += `<path class="prov ${counts[n]?'has':''} ${fprovs.has(n)?'sel':''}" data-p="${esc(n)}" d="${d}"><title>${esc(n)}</title></path>`; });
     Object.entries(MAPPTS).forEach(([name,[x,y]]) => {
@@ -573,8 +577,10 @@ a{color:var(--green)}
   const normTxt = t => String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   let query = '';
   let ffecha = Object.assign({modo:'todas', desde:'', hasta:''}, ui.fecha || {});
+  const FFECHA_REF = () => ffecha;
   const FECHAS = [['todas','Cualquier fecha'],['finde','Este fin de semana'],['7','Próximos 7 días'],['30','Próximos 30 días'],['mes','Este mes'],['mesprox','Mes que viene'],['rango','Elegir fechas']];
-  function rangoFechas(){
+  function rangoFechas(fsel){
+    const ffecha = fsel || FFECHA_REF();
     const t = today(); let a = null, b = null; const add = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
     switch(ffecha.modo){
       case 'finde': { const dow = t.getDay(); if(dow === 0){ a = t; b = t; } else { a = add(t, (6 - dow + 7) % 7); b = add(a, 1); } break; }
@@ -638,6 +644,7 @@ a{color:var(--green)}
     let h = `<div class="count">${shown.length === all.length ? `<b>${all.length}</b> eventos` : `<b>${shown.length}</b> de ${all.length} eventos`}${state.webActualizado ? ' · actualizado ' + esc(state.webActualizado) : ''}</div>`;
     h += '<div class="hscroll">' + DCHIPS.map(([k,l]) => { const n = k==='todos' ? base.length : base.filter(w => tiposOf(w).includes(k)).length; return `<button class="chip ${dfilter===k?'on':''}" data-d="${k}">${l} ${n}</button>`; }).join('') + '</div>';
     if(fprovs.size || ffecha.modo !== 'todas') h += '<div class="hscroll">' + (ffecha.modo !== 'todas' ? `<button class="chip greenl" id="rmfecha">📅 ${esc(fechaLabel())} ✕</button>` : '') + [...fprovs].map(p => `<button class="chip greenl" data-rmp="${esc(p)}">📍 ${esc(p)} ✕</button>`).join('') + '</div>';
+    h = h.replace('</div>', '</div>' + (typeof bannerNuevas === 'function' ? bannerNuevas() : ''));
     if(!shown.length) h += `<div class="empty">${query ? 'No hay rutas que coincidan con «' + esc(query) + '».' : 'No hay eventos con estos filtros.'}</div>`;
     let lastM = '';
     shown.forEach(w => {
@@ -652,6 +659,7 @@ a{color:var(--green)}
     document.querySelectorAll('#rutasList [data-add]').forEach(b => b.onclick = () => b.dataset.add.startsWith('club-') && typeof apuntarClub === 'function' ? apuntarClub(b.dataset.add.slice(5), b.dataset.st) : addFromWeb(b.dataset.add, b.dataset.st));
     document.querySelectorAll('#rutasList [data-cev]').forEach(b => b.onclick = () => eventoPantalla(b.dataset.cev));
     document.querySelectorAll('#rutasList [data-hide]').forEach(b => b.onclick = async () => { const w = state.web.find(x => x.id === b.dataset.hide); if(await confirmDlg('¿Descartar este evento?', w ? `«${w.nombre}» dejará de aparecer en la lista.` : '', 'Descartar')){ state.ocultas.push(b.dataset.hide); save(); } });
+    const vn = $('#vernuevas'); if(vn) vn.onclick = verNuevas;
     document.querySelectorAll('#rutasList [data-share]').forEach(b => bindShare(b, () => state.web.find(x => x.id === b.dataset.share), 'buscador'));
   }
 
@@ -908,7 +916,7 @@ a{color:var(--green)}
         <div class="sub" style="margin-top:10px">${n} eventos próximos en el buscador${state.webActualizado ? ' · última actualización: ' + esc(state.webActualizado) : ''}.</div></div>
       <div class="cfgfoot"><span>Versión 2.0</span><span>Contacto: <a href="mailto:misrutasytrail@gmail.com" style="color:var(--green)">misrutasytrail@gmail.com</a></span></div>`, true);
   }
-  function cfgNotif(){
+  function cfgNotifAntigua(){
     const d = avisoDias(), opts = [[0,'No avisarme'],[3,'3 días antes'],[7,'7 días antes'],[10,'10 días antes'],[15,'15 días antes']];
     cfgPage('Notificaciones', `
       <div class="cfglabel">Aviso de cierre de inscripción</div>
@@ -934,8 +942,12 @@ a{color:var(--green)}
         <p><b>Ocultar un evento:</b> pulsa «Descartar» y dejará de aparecer en la lista.</p>`)}
       ${sec('Tu agenda', `
         <p>Pulsa <b>★ Me interesa</b> o <b>✓ Inscrito</b> en cualquier evento para añadirlo a tu agenda. Vuelve a pulsarlo para quitarlo.</p>
-        <p>Para los eventos marcados como «Me interesa», la agenda te avisa cuando se acerca el fin del plazo de inscripción (puedes elegir cuántos días antes en Configuración › Preferencias de notificaciones). Los avisos se ven dentro de la app.</p>
+        <p>Para los eventos marcados como «Me interesa», la agenda te avisa cuando se acerca el fin del plazo de inscripción (puedes elegir cuántos días antes en Configuración › Preferencias de notificaciones). Este aviso se ve dentro de la app.</p>
         <p>Los eventos en los que estabas inscrito y ya han pasado cuentan como <b>rutas realizadas</b> en tu perfil.</p><p>Las rutas que añades desde el buscador se ven en la agenda igual que allí y sus datos no se pueden modificar. Solo puedes editar las que creas tú con <b>+ Añadir</b>.</p>`)}
+      ${sec('Avisos de rutas nuevas', `
+        <p>En Configuración › Preferencias de notificaciones activa «Avisarme de rutas nuevas» y elige actividad, fechas y provincias en el mapa. Estos filtros son solo para los avisos: no cambian los del buscador ni tus preferencias.</p>
+        <p>Cuando aparezcan rutas nuevas que los cumplan, al abrir la app verás arriba «🔔 Rutas nuevas que cumplen tus avisos».</p>
+        <p><b>Notificaciones en el móvil:</b> con tu cuenta iniciada, pulsa «Activar notificaciones» y acepta el permiso. Te llegará un aviso cada mañana que haya novedades, aunque tengas la app cerrada. En iPhone solo funciona con la app instalada en la pantalla de inicio (iOS 16.4 o posterior). Con «Enviar prueba» puedes comprobar que llegan.</p>`)}
       ${sec('Compartir', `
         <p>Toca el icono de compartir de una tarjeta para enviarla por WhatsApp, Telegram u otra app. Mantenlo pulsado para compartirla como imagen.</p><p>El mensaje empieza según desde dónde compartes: desde el buscador, «¡Mira lo que encontré en la aplicación Mis rutas y trails!»; desde tu agenda, «¡Estoy interesado en esta ruta!» o «¡Estoy inscrito en esta ruta!». Siempre lleva el enlace a la app.</p>
         <p>Los eventos de club se comparten con su cartel y con un enlace que lleva directamente a la inscripción en la app.</p>`)}
@@ -1029,6 +1041,7 @@ a{color:var(--green)}
           <li>Tus respuestas a los eventos de club (voy, me interesa, no voy) y la modalidad elegida.</li>
           <li>Los pagos de cuotas y eventos que anoten los administradores de tus clubs.</li>
           <li>Si administras un club: los datos del club, su imagen, sus eventos y los carteles que subas.</li>
+          <li>Tus filtros de avisos de rutas nuevas y, si activas las notificaciones, el identificador de notificaciones de cada móvil (una dirección técnica que dan Apple, Google o Mozilla para poder enviarle avisos) y el tipo de dispositivo.</li>
           <li>Datos técnicos que generan los servidores al usar la app (dirección IP, fecha y hora), que se usan solo por seguridad.</li>
         </ul>
         <p>No usamos tu ubicación ni pedimos datos de salud o de pago.</p>`)}
@@ -1053,11 +1066,12 @@ a{color:var(--green)}
           <li><b>GitHub Pages</b> (GitHub, Inc., EE. UU.): aloja los archivos de la app. Al abrirla recibe datos técnicos como tu dirección IP.</li>
           <li><b>Google Fonts</b> (Google LLC, EE. UU.): proporciona los tipos de letra. Al cargarlos recibe datos técnicos como tu dirección IP.</li>
           <li><b>Google</b>, solo si eliges entrar con tu cuenta de Google.</li>
+          <li><b>Servicios de notificaciones de Apple, Google o Mozilla</b>, solo si activas las notificaciones: reciben el aviso cifrado para entregarlo en tu móvil y no pueden leer su contenido.</li>
         </ul>
         <p>Estos proveedores solo tratan los datos para prestarnos su servicio. Las transferencias a EE. UU. están amparadas por el Marco de Privacidad de Datos UE-EE. UU. o por cláusulas contractuales tipo de la Comisión Europea.</p>
         <p>Al pulsar «Ver web», WhatsApp, Telegram u otras apps se abren fuera de Mis rutas y trails y se aplican sus propias políticas.</p>`)}
       ${sec('6. Cuánto tiempo los guardamos', `
-        <p>Mientras tengas la cuenta. Si la borras desde Configuración › Borrar mi cuenta, se eliminan tu cuenta, tu perfil, tu nombre y apellidos, tu agenda, tus amistades, tus respuestas a eventos y los pagos anotados. Pueden quedar durante un tiempo limitado en las copias de seguridad técnicas del proveedor.</p>
+        <p>Mientras tengas la cuenta. El identificador de notificaciones de un móvil se borra al desactivarlas, al cerrar sesión o cuando el móvil deja de aceptarlas. Si borras la cuenta desde Configuración › Borrar mi cuenta, se eliminan tu cuenta, tu perfil, tu nombre y apellidos, tu agenda, tus amistades, tus respuestas a eventos y los pagos anotados. Pueden quedar durante un tiempo limitado en las copias de seguridad técnicas del proveedor.</p>
         <p>Los clubs y eventos que creaste siguen existiendo para sus socios. Los informes que un administrador haya descargado quedan bajo su responsabilidad.</p>`)}
       ${sec('7. Tus derechos', `
         <p>Puedes acceder a tus datos, corregirlos o borrarlos, oponerte a su uso, pedir que se limite y llevártelos a otro servicio. Muchos los puedes ejercer tú desde la app: Información personal, Tus preferencias y privacidad, Copia de seguridad (descarga tus datos) y Borrar mi cuenta.</p>
@@ -1346,10 +1360,11 @@ a{color:var(--green)}
       state.fuentes = Array.isArray(d.fuentes) ? d.fuentes : [];
       state.webActualizado = d.webActualizado || '';
       $('#sub').textContent = '';
+      try { revisarNuevas(); } catch(err){}
     } catch(e){
       if(!state.web.length) $('#sub').textContent = 'No se pudieron cargar los eventos. Revisa tu conexión.';
     }
-    render();
+    render(); try { leerHashNuevas(); pushRenovar(); } catch(err){}
   }
   ['gesturestart','gesturechange','gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), {passive:false}));
   document.addEventListener('touchmove', e => { if(e.touches && e.touches.length > 1) e.preventDefault(); }, {passive:false});
@@ -1553,6 +1568,7 @@ a{color:var(--green)}
   async function cerrarSesion(){
     if(!await confirmDlg('¿Cerrar sesión?', 'Tu agenda y tu perfil seguirán guardados en tu cuenta. En este móvil se borrarán hasta que vuelvas a entrar.', 'Cerrar sesión')) return;
     if(nubePendiente){ clearTimeout(nubeT); await nubeSubir(); }
+    try { if(typeof pushQuitar === 'function') await pushQuitar(true); } catch(e){}
     try { await sbAuth('logout', {}); } catch(e){}
     guardarSesion(null); try { localStorage.removeItem(SYNC_KEY); } catch(e){}
     $('#sheet').classList.remove('cfg'); close();
@@ -4513,6 +4529,180 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     ctx.font = `800 24px ${TX}`; ctx.textAlign = 'right'; ctx.fillText(e.publico ? 'EVENTO ABIERTO' : 'SOLO SOCIOS', W - P, H - 38); ctx.textAlign = 'left';
     return cv;
   }
+
+  // ---------- avisos de rutas nuevas (filtros propios de notificaciones) ----------
+  const VAPID_PUBLIC = 'BFGUVMz9fksn9A1E4tB6RJvDDMq8euy30wzrDWVqdE-WVYN8Iyb-nZkkPYHupcFZrGgqakIfVvh8-BcfGUK44N4';
+  const NOTIF_DEF = () => ({activo: false, actividad: 'todos', fecha: {modo: 'todas', desde: '', hasta: ''}, provs: []});
+  function notifCfg(){
+    const n = Object.assign(NOTIF_DEF(), state.prefs.notif || {});
+    n.fecha = Object.assign({modo: 'todas', desde: '', hasta: ''}, n.fecha || {});
+    n.provs = Array.isArray(n.provs) ? n.provs : [];
+    return n;
+  }
+  function notifGuardar(n){ state.prefs.notif = n; clearTimeout(notifGuardar._t); notifGuardar._t = setTimeout(save, 800); }
+  function cumpleNotif(w, n){
+    if(!w || !w.date || days(w.date) < 0 || w.clubEv) return false;
+    if((state.ocultas || []).includes(w.id)) return false;
+    if(n.actividad && n.actividad !== 'todos' && !tiposOf(w).includes(n.actividad)) return false;
+    if(n.provs.length && !n.provs.includes(w._p || normProv(w.provincia))) return false;
+    if(n.fecha.modo !== 'todas'){ const [a, b] = rangoFechas(n.fecha), d = pd(w.date); if((a && d < a) || (b && d > b)) return false; }
+    return true;
+  }
+  const notifTxt = n => {
+    const act = (DCHIPS.find(x => x[0] === n.actividad) || DCHIPS[0])[1];
+    const f = n.fecha.modo === 'rango' ? 'fechas elegidas' : (FECHAS.find(x => x[0] === n.fecha.modo) || FECHAS[0])[1].toLowerCase();
+    return (n.actividad === 'todos' ? 'Todas las actividades' : act) + ' · ' + f + ' · ' + (n.provs.length ? n.provs.join(', ') : 'toda España');
+  };
+
+  // ---------- rutas nuevas dentro de la app ----------
+  var NUEVAS = [];
+  const VISTAS_KEY = 'rutas-vistas';
+  function vistasLeer(){ try { const v = JSON.parse(localStorage.getItem(VISTAS_KEY)); return Array.isArray(v) ? new Set(v) : null; } catch(e){ return null; } }
+  function vistasGuardar(set){ try { localStorage.setItem(VISTAS_KEY, JSON.stringify([...set])); } catch(e){} }
+  function revisarNuevas(){
+    const web = (state.web || []).filter(w => !w.clubEv && w.id);
+    if(!web.length) return;
+    let vistas = vistasLeer();
+    if(!vistas){ vistasGuardar(new Set(web.map(w => w.id))); NUEVAS = []; return; }   // primera vez: nada es «nuevo»
+    const n = notifCfg(), nuevas = [];
+    web.forEach(w => { if(vistas.has(w.id)) return; if(n.activo && cumpleNotif(w, n)) nuevas.push(w); else vistas.add(w.id); });
+    const vivas = new Set(web.map(w => w.id)); vistas = new Set([...vistas].filter(id => vivas.has(id)));
+    vistasGuardar(vistas);
+    NUEVAS = nuevas.sort((a, b) => a.date < b.date ? -1 : 1);
+  }
+  function nuevasVistas(){
+    const v = vistasLeer() || new Set(); NUEVAS.forEach(w => v.add(w.id)); vistasGuardar(v); NUEVAS = []; renderEventos();
+  }
+  function bannerNuevas(){
+    if(!NUEVAS.length) return '';
+    return `<button class="nuevas" id="vernuevas"><span>🔔</span><span>${NUEVAS.length === 1 ? '<b>1 ruta nueva</b> que cumple tus avisos' : '<b>' + NUEVAS.length + ' rutas nuevas</b> que cumplen tus avisos'}</span><span class="nver">Ver</span></button>`;
+  }
+  function verNuevas(){
+    if(!NUEVAS.length){ toast('No hay rutas nuevas para ti ahora mismo'); return; }
+    const lista = NUEVAS.slice();
+    $('#sheet').innerHTML = `<div class="cfghead"><button class="cfgx" id="nvx" aria-label="Cerrar">✕</button><div class="cfgtitle">Rutas nuevas para ti</div><span style="width:44px"></span></div>
+      <div class="sub" style="margin:0 4px 10px">Cumplen los filtros de tus avisos: ${esc(notifTxt(notifCfg()))}.</div>
+      <div id="nvlist">${lista.map(w => cardWeb(w)).join('')}</div>
+      <div class="btns"><button class="btn pri" id="nvok">Marcar como vistas</button></div>`;
+    $('#sheet').classList.add('cfg'); $('#ovl').classList.add('show');
+    const el = $('#nvlist');
+    const enlazar = () => {
+      el.querySelectorAll('[data-add]').forEach(b => b.onclick = async () => { await addFromWeb(b.dataset.add, b.dataset.st); const w = lista.find(x => x.id === b.dataset.add); const card = b.closest('.ev'); if(w && card){ card.outerHTML = cardWeb(w); enlazar(); } });
+      el.querySelectorAll('[data-hide]').forEach(b => b.onclick = () => { if(!state.ocultas.includes(b.dataset.hide)){ state.ocultas.push(b.dataset.hide); save(); } const card = b.closest('.ev'); if(card) card.remove(); });
+      el.querySelectorAll('[data-share]').forEach(b => { if(!b._ok){ b._ok = 1; bindShare(b, () => state.web.find(x => x.id === b.dataset.share), 'buscador'); } });
+    };
+    enlazar();
+    const fin = () => { $('#sheet').classList.remove('cfg'); close(); nuevasVistas(); };
+    $('#nvx').onclick = fin; $('#nvok').onclick = fin;
+  }
+  function leerHashNuevas(){
+    if(location.hash !== '#nuevas') return;
+    history.replaceState(null, '', location.pathname + location.search + '#rutas');
+    setTimeout(() => { showTab(); try { revisarNuevas(); renderEventos(); } catch(e){} if(NUEVAS.length){ $('#sheet').classList.remove('cfg'); verNuevas(); } }, 600);
+  }
+  window.addEventListener('hashchange', leerHashNuevas);
+
+  // ---------- notificaciones al móvil ----------
+  const pushSoportado = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const esIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const instalada = () => navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  const b64ToU8 = s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while(s.length % 4) s += '='; const r = atob(s), u = new Uint8Array(r.length); for(let i = 0; i < r.length; i++) u[i] = r.charCodeAt(i); return u; };
+  async function pushSuscripcion(){ if(!pushSoportado()) return null; try { const reg = await navigator.serviceWorker.ready; return await reg.pushManager.getSubscription(); } catch(e){ return null; } }
+  async function pushActivar(){
+    if(!sesion){ toast('Entra con tu cuenta para recibir notificaciones'); return false; }
+    if(!pushSoportado()){ toast(esIOS() && !instalada() ? 'Primero instala la app en la pantalla de inicio' : 'Este navegador no permite notificaciones'); return false; }
+    let perm = Notification.permission;
+    if(perm !== 'granted') perm = await Notification.requestPermission();
+    if(perm !== 'granted'){ toast('Sin permiso no se pueden enviar notificaciones'); return false; }
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if(!sub) sub = await reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: b64ToU8(VAPID_PUBLIC)});
+      const j = sub.toJSON();
+      await sbRest('rpc/guardar_suscripcion', {method: 'POST', body: JSON.stringify({p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_dispositivo: (esIOS() ? 'iPhone' : /android/i.test(navigator.userAgent) ? 'Android' : 'Ordenador')})});
+      return true;
+    } catch(e){ toast(/guardar_suscripcion|function/i.test(e.message || '') ? 'Falta ejecutar notificaciones.sql en Supabase' : 'No se pudieron activar las notificaciones'); return false; }
+  }
+  async function pushQuitar(silencio){
+    const sub = await pushSuscripcion(); if(!sub) return;
+    try { if(sesion) await sbRest('rpc/borrar_suscripcion', {method: 'POST', body: JSON.stringify({p_endpoint: sub.endpoint})}); } catch(e){}
+    try { await sub.unsubscribe(); } catch(e){}
+    if(!silencio) toast('Notificaciones desactivadas en este móvil');
+  }
+  async function pushPrueba(){
+    const sub = await pushSuscripcion(); if(!sub){ toast('Activa primero las notificaciones'); return; }
+    try {
+      const r = await fetch(SB_URL + '/functions/v1/avisar-rutas', {method: 'POST', headers: {'Content-Type': 'application/json', 'apikey': SB_KEY}, body: JSON.stringify({prueba: sub.endpoint})});
+      const d = await r.json().catch(() => ({}));
+      toast(d.ok ? 'Enviada. Debería llegarte en unos segundos.' : 'No se pudo enviar la prueba' + (d.motivo ? ' (' + d.motivo + ')' : r.status === 404 ? ' (falta crear la función avisar-rutas)' : ''));
+    } catch(e){ toast('No se pudo enviar la prueba'); }
+  }
+
+  // ---------- pantalla de notificaciones ----------
+  let nMapZoom = false;
+  async function cfgNotif(){
+    const d = avisoDias(), opts = [[0,'No avisarme'],[3,'3 días antes'],[7,'7 días antes'],[10,'10 días antes'],[15,'15 días antes']];
+    const n = notifCfg(), sel = new Set(n.provs);
+    const all = (state.web || []).filter(w => !w.clubEv && days(w.date) >= 0);
+    const counts = {}; all.forEach(w => { const pp = w._p || normProv(w.provincia); if(pp) counts[pp] = (counts[pp] || 0) + 1; });
+    const ahora = all.filter(w => cumpleNotif(w, Object.assign({}, n, {activo: true}))).length;
+    const sub = await pushSuscripcion(), perm = 'Notification' in window ? Notification.permission : 'default';
+    let movil;
+    if(!sesion) movil = '<div class="sub">Entra con tu cuenta para recibir las notificaciones en el móvil. Mientras tanto, las rutas nuevas te aparecerán al abrir la app.</div>';
+    else if(!pushSoportado()) movil = `<div class="sub">${esIOS() && !instalada() ? 'En iPhone, las notificaciones solo funcionan con la app instalada: abre la app en Safari, pulsa <b>Compartir</b> › <b>Añadir a pantalla de inicio</b> y ábrela desde el icono.' : 'Este navegador no permite notificaciones.'}</div>`;
+    else if(perm === 'denied') movil = '<div class="sub">Has bloqueado las notificaciones. Actívalas en los ajustes del móvil (Ajustes › Notificaciones › Mis rutas y trails) y vuelve aquí.</div>';
+    else if(sub) movil = '<div class="sub">✅ Activadas en este móvil.</div><div class="btns"><button class="btn" id="npru">Enviar prueba</button><button class="btn del" id="noff">Desactivar</button></div>';
+    else movil = '<div class="sub">Recibe un aviso en el móvil, aunque tengas la app cerrada, cuando aparezcan rutas nuevas que cumplan tus filtros.</div><div class="btns"><button class="btn pri" id="non">Activar notificaciones</button></div>';
+    cfgPage('Notificaciones', `
+      <div class="cfglabel">Rutas nuevas</div>
+      <div class="cfgbox">
+        <label class="sw" style="padding-top:0"><span><b>Avisarme de rutas nuevas</b><span class="cfgsub">Solo las que cumplan estos filtros. Son independientes de los del buscador.</span></span><input type="checkbox" id="nact" ${n.activo ? 'checked' : ''}><i></i></label>
+        <div id="nfil" ${n.activo ? '' : 'hidden'}>
+          <label>Actividad</label>
+          <div class="bar" style="margin-top:4px">${DCHIPS.map(([k, l]) => `<button class="chip ${n.actividad === k ? 'on' : ''}" data-na="${k}">${l}</button>`).join('')}</div>
+          <label>Fechas de la ruta</label>
+          <div class="bar" style="margin-top:4px">${FECHAS.map(([k, l]) => `<button class="chip ${n.fecha.modo === k ? 'on' : ''}" data-nf="${k}">${l}</button>`).join('')}</div>
+          ${n.fecha.modo === 'rango' ? `<div class="row"><div><label>Desde</label><input type="date" id="nd1" value="${esc(n.fecha.desde)}"></div><div><label>Hasta</label><input type="date" id="nd2" value="${esc(n.fecha.hasta)}"></div></div>` : ''}
+          <label>Provincias <span style="font-weight:400">(toca todas las que quieras)</span></label>
+          <div id="nmap">${mapHTML(counts, sel, nMapZoom)}</div>
+          <div class="provlist">${sel.size ? [...sel].map(p => `<span class="chip on" data-nrm="${esc(p)}">${esc(p)} ✕</span>`).join('') : '<span class="sub">Sin selección: toda España.</span>'}</div>
+          <div class="btns"><button class="btn" id="nzoom">${nMapZoom ? '🔍 Reducir' : '🔍 Ampliar'}</button><button class="btn" id="nclear">Borrar filtros</button></div>
+          <div class="sub" style="margin-top:8px">Ahora mismo hay <b>${ahora}</b> ${ahora === 1 ? 'ruta' : 'rutas'} que cumplen estos filtros. Te avisaremos de las que aparezcan a partir de ahora.</div>
+        </div>
+      </div>
+      <div class="cfglabel">Notificaciones en este móvil</div>
+      <div class="cfgbox" id="nmovil">${movil}</div>
+      <div class="cfglabel">Aviso de cierre de inscripción</div>
+      <div class="cfgbox"><div class="sub" style="margin-bottom:8px">Para las rutas marcadas como «Me interesa», la agenda te avisa cuando se acerca el fin del plazo de inscripción.</div>
+        <div class="cfgradio">${opts.map(([v,l]) => `<button data-av="${v}" class="${d===v?'on':''}">${l}<span>${d===v?'✓':''}</span></button>`).join('')}</div></div>`, true);
+    const sc = $('#sheet').scrollTop;
+    const otra = cambio => { cambio(n); notifGuardar(n); const keep = $('#sheet').scrollTop; cfgNotif().then(() => { $('#sheet').scrollTop = keep; }); };
+    $('#nact').onchange = async ev => {
+      const on = ev.target.checked;
+      if(on){ const v = vistasLeer() || new Set(); (state.web || []).forEach(w => v.add(w.id)); vistasGuardar(v); }   // solo lo que aparezca desde ahora
+      otra(x => { x.activo = on; });
+      if(on && sesion && pushSoportado() && Notification.permission === 'default' && !(await pushSuscripcion())){
+        if(await confirmDlg('¿Activar notificaciones en este móvil?', 'Así te llegará un aviso aunque tengas la app cerrada.', 'Activar')){ if(await pushActivar()){ toast('Notificaciones activadas ✓'); cfgNotif(); } }
+      }
+    };
+    document.querySelectorAll('[data-na]').forEach(b => b.onclick = () => otra(x => { x.actividad = b.dataset.na; }));
+    document.querySelectorAll('[data-nf]').forEach(b => b.onclick = () => otra(x => { x.fecha.modo = b.dataset.nf; if(x.fecha.modo === 'rango' && !x.fecha.desde) x.fecha.desde = iso(today()); }));
+    const d1 = $('#nd1'), d2 = $('#nd2');
+    if(d1) d1.onchange = () => otra(x => { x.fecha.desde = d1.value; if(x.fecha.hasta && x.fecha.hasta < x.fecha.desde) x.fecha.hasta = x.fecha.desde; });
+    if(d2) d2.onchange = () => otra(x => { x.fecha.hasta = d2.value; });
+    document.querySelectorAll('#nmap .hot, #nmap .prov').forEach(t => t.onclick = () => otra(x => { const p = t.dataset.p, i = x.provs.indexOf(p); i >= 0 ? x.provs.splice(i, 1) : x.provs.push(p); }));
+    document.querySelectorAll('[data-nrm]').forEach(c => c.onclick = () => otra(x => { x.provs = x.provs.filter(p => p !== c.dataset.nrm); }));
+    const nz = $('#nzoom'); if(nz) nz.onclick = () => { nMapZoom = !nMapZoom; otra(() => {}); };
+    const nc = $('#nclear'); if(nc) nc.onclick = () => otra(x => { x.actividad = 'todos'; x.fecha = {modo: 'todas', desde: '', hasta: ''}; x.provs = []; });
+    if(nMapZoom){ const scr = document.querySelector('#nmap .mapscroll'), inner = document.querySelector('#nmap .mapinner'); if(scr && inner){ const pts = [...sel].map(p => MAPPTS[p]).filter(Boolean); const cx = pts.length ? pts.reduce((t, p) => t + p[0], 0) / pts.length : 330; scr.scrollLeft = cx / 759 * inner.clientWidth - scr.clientWidth / 2; } }
+    const on = $('#non'); if(on) on.onclick = async () => { if(await pushActivar()){ toast('Notificaciones activadas ✓'); cfgNotif(); } };
+    const off = $('#noff'); if(off) off.onclick = async () => { await pushQuitar(); cfgNotif(); };
+    const pr = $('#npru'); if(pr) pr.onclick = pushPrueba;
+    document.querySelectorAll('[data-av]').forEach(b => b.onclick = () => { state.prefs.avisoDias = +b.dataset.av; renderAgenda(); cfgNotif(); clearTimeout(cfgNotif._t); cfgNotif._t = setTimeout(save, 1500); });
+    $('#sheet').scrollTop = sc;
+  }
+  // si el móvil ya tenía permiso, se renueva el registro al entrar (por si cambió de cuenta o caducó)
+  async function pushRenovar(){ if(!sesion || !pushSoportado() || Notification.permission !== 'granted') return; const s = await pushSuscripcion(); if(s) pushActivar(); }
 
   render(); showTab(); cargarEventos();
   document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && Date.now() - (window._evAt||0) > 3*3600e3){ window._evAt = Date.now(); cargarEventos(); } });
