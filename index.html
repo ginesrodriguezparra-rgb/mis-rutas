@@ -1170,16 +1170,16 @@ a{color:var(--green)}
     const app = 'la aplicación Mis rutas y trails';
     if(SHARE_CTX === 'agenda'){
       const m = state.events.find(e => e.id === x.id || (e.webId && (e.webId === x.id || e.webId === x.webId)));
-      if(m && m.estado === 'inscrito') return '¡Estoy inscrito en esta ruta! La encontré en ' + app + ' 👉 ' + APP_URL;
-      if(m && m.estado === 'interesado') return '¡Estoy interesado en esta ruta! La encontré en ' + app + ' 👉 ' + APP_URL;
+      if(m && m.estado === 'inscrito') return '¡Estoy inscrito en esta ruta! La encontré en ' + app + '.';
+      if(m && m.estado === 'interesado') return '¡Estoy interesado en esta ruta! La encontré en ' + app + '.';
     }
-    return '¡Mira lo que encontré en ' + app + '! 👉 ' + APP_URL;
+    return '¡Mira lo que encontré en ' + app + '!';
   }
   function shareText(x){
     const d = pd(x.date);
     const pr = normProv(x.provincia), lg = x.lugar || '';
     const lugar = lg && pr && lg.toLowerCase().includes(pr.toLowerCase()) ? lg : [lg, pr].filter(Boolean).join(', ');
-    return [x.nombre, `📅 ${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`, lugar && '📍 ' + lugar, x.modalidades && '🏁 ' + x.modalidades, x.url].filter(Boolean).join('\n').replace(/^/, introShare(x) + '\n\n');
+    return [x.nombre, `📅 ${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`, lugar && '📍 ' + lugar, x.modalidades && '🏁 ' + x.modalidades, x.url].filter(Boolean).join('\n').replace(/^/, introShare(x) + '\n\n') + (x.clubEv ? '' : '\n\n📲 Mis rutas y trails: ' + APP_URL);
   }
 
   function toast(msg){
