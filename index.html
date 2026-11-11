@@ -286,6 +286,10 @@ textarea{resize:vertical;min-height:70px}
 .mseg button.on.ob{background:#c2410c;border-color:#c2410c;color:#fff}.mseg button.on.re{background:var(--green);border-color:var(--green);color:#fff}
 .mseg .mx{padding:6px 8px}
 .evsec{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}.evsec>b{display:block;font-size:15px;margin-bottom:6px}
+.modcard2{margin-bottom:10px}
+.modcard2 label.mini{margin-top:8px !important}
+.evmod2{padding:8px 0;border-bottom:1px solid var(--line)}.evmod2:last-child{border-bottom:0}.evmod2 b{font-size:15px}.evmod2 .sub{margin-top:3px}
+.mprecio{font-size:14px;margin-top:3px;font-weight:600}
 .evmod{font-size:14.5px;padding:4px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .tipoico{font:600 11.5px Inter,sans-serif;background:var(--green2);color:var(--green);border-radius:999px;padding:2px 8px}
 .evmat{font-size:14.5px;padding:4px 0;line-height:1.5}
@@ -2959,7 +2963,8 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   const MATERIAL_BASE = ['Linterna o frontal', 'Manta térmica', 'Cortavientos', 'Palos telescópicos', 'Envase para bebidas', 'Agua', 'Snacks'];
   const modsDe = e => Array.isArray(e.modalidades) ? e.modalidades.filter(m => m && (m.nombre || m.km)) : [];
   const matDe = e => Array.isArray(e.material) ? e.material.filter(m => m && m.n && (m.t === 'obligatorio' || m.t === 'recomendable')) : [];
-  const modTxt = m => [m.nombre || (TIPOS_EV.find(t => t[0] === m.tipo) || ['', ''])[1], m.km ? m.km + ' km' : '', m.desnivel ? m.desnivel + ' m D+' : '', m.hora ? m.hora + ' h' : ''].filter(Boolean).join(' · ');
+  const modPrecio = m => { const s = m.precio || '', n = m.precio_no_socios || ''; if(s && n && s.trim() !== n.trim()) return 'Socios ' + precioBonito(s) + ' · No socios ' + precioBonito(n); return precioBonito(s || n); };
+  const modTxt = m => [m.nombre || (TIPOS_EV.find(t => t[0] === m.tipo) || ['', ''])[1], m.km ? m.km + ' km' : '', m.desnivel ? m.desnivel + ' m D+' : '', m.dificultad ? m.dificultad : '', m.hora ? 'Salida ' + m.hora + ' h' : ''].filter(Boolean).join(' · ');
   const modCorto = m => (m.nombre || (TIPOS_EV.find(t => t[0] === m.tipo) || ['', 'Ruta'])[1]) + (m.km ? ' ' + String(m.km).replace('.', ',') + 'K' : '');
   const matTxt = (e, t) => matDe(e).filter(m => m.t === t).map(m => m.n);
   const CLUB_CAMPOS = 'id,nombre,descripcion,localidad,provincia,abierto,cuota,periodo,mes_inicio,imagen', CLUB_CAMPOS2 = 'id,nombre,descripcion,localidad,provincia,abierto,cuota,periodo,mes_inicio';
@@ -2998,12 +3003,12 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   }
   function clubAWeb(e){
     const club = e.clubs && e.clubs.nombre || 'Club';
-    const pr = (e.precio || '') && (e.precio_no_socios || '') && e.precio.trim() !== e.precio_no_socios.trim() ? preciosTxt(e) : '';
     const mods = modsDe(e);
-    const mod = [mods.length ? mods.map(modCorto).join(' · ') : '', e.hora ? 'Salida ' + e.hora : '', e.dificultad ? 'Dificultad ' + e.dificultad.toLowerCase() : '', e.plazas ? e.plazas + ' plazas' : '', pr].filter(Boolean).join(' · ');
+    const pr = mods.length < 2 && (e.precio || '') && (e.precio_no_socios || '') && e.precio.trim() !== e.precio_no_socios.trim() ? preciosTxt(e) : '';
+    const mod = [mods.length ? mods.map(modCorto).join(' · ') : '', e.hora ? 'Quedada ' + e.hora : '', e.dificultad && mods.length < 2 ? 'Dificultad ' + e.dificultad.toLowerCase() : '', e.plazas ? e.plazas + ' plazas' : '', pr].filter(Boolean).join(' · ');
     return {id: 'club-' + e.id, clubEv: e.id, club: e.club, publico: e.publico, fuente: club, nombre: e.titulo, tipo: e.tipo, tipos: [...new Set([e.tipo].concat(modsDe(e).map(m => m.tipo).filter(Boolean)))], date: e.fecha,
-      lugar: e.lugar || '', provincia: e.provincia || '', _p: e.provincia || '', km: e.km != null ? String(e.km) : '', desnivel: e.desnivel != null ? String(e.desnivel) : '',
-      precio: pr ? '' : (e.precio || e.precio_no_socios || ''), modalidades: mod, url: e.url || '', limite: e.limite || '', verificado: true, dificultad: e.dificultad || '',
+      lugar: e.lugar || '', provincia: e.provincia || '', _p: e.provincia || '', km: e.km != null && mods.length < 2 ? String(e.km) : '', desnivel: e.desnivel != null && mods.length < 2 ? String(e.desnivel) : '',
+      precio: pr || mods.length > 1 ? '' : (e.precio || e.precio_no_socios || ''), modalidades: mod, url: e.url || '', limite: e.limite || '', verificado: true, dificultad: e.dificultad || '',
       estado: e.limite ? 'Inscripción hasta ' + pd(e.limite).getDate() + ' ' + MESES[pd(e.limite).getMonth()] : ''};
   }
   function mezclarClubEventos(){
@@ -3299,49 +3304,50 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   function eventoForm(club, e){
     e = e || {publico: true, tipo: 'senderismo'};
     const provOpts = ['<option value="">Provincia…</option>'].concat(PROVS.map(([n]) => n).sort((a, b) => a.localeCompare(b, 'es')).map(n => `<option ${e.provincia === n ? 'selected' : ''}>${esc(n)}</option>`)).join('');
-    cfgPage(e.id ? 'Editar evento' : 'Nueva ruta o evento', `<div class="cfgbox"><form id="ef">
-      <label>Título</label><input name="titulo" required minlength="3" maxlength="90" value="${esc(e.titulo || '')}" placeholder="Ej. Ruta al Calar Alto">
-      <label>Tipo</label><select name="tipo">${TIPOS_EV.map(([k, l]) => `<option value="${k}" ${e.tipo === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
-      <div class="two"><div><label>Fecha</label><input name="fecha" type="date" required value="${esc(e.fecha || '')}" min="${hoyISO()}"></div><div><label>Hora de salida</label><input name="hora" type="time" value="${esc(e.hora || '')}"></div></div>
+    cfgPage(e.id ? 'Editar evento' : 'Nueva ruta o evento', `<form id="ef">
+      <div class="cfglabel">Información común del evento</div>
+      <div class="cfgbox">
+      <label style="margin-top:0">Nombre del evento</label><input name="titulo" required minlength="3" maxlength="90" value="${esc(e.titulo || '')}" placeholder="Ej. Ruta al Calar Alto">
       <label>Lugar</label><input name="lugar" maxlength="80" value="${esc(e.lugar || '')}" placeholder="Localidad o paraje">
       <label>Provincia</label><select name="provincia">${provOpts}</select>
+      <div class="two"><div><label>Fecha</label><input name="fecha" type="date" required value="${esc(e.fecha || '')}" min="${hoyISO()}"></div><div><label>Hora de quedada</label><input name="hora" type="time" value="${esc(e.hora || '')}"></div></div>
       <label>Punto de encuentro</label><input name="encuentro" maxlength="120" value="${esc(e.encuentro || '')}" placeholder="Ej. Plaza del Ayuntamiento">
-      <div class="two"><div><label>Distancia (km)</label><input name="km" type="number" inputmode="decimal" min="0" step="0.1" value="${e.km != null ? esc(e.km) : ''}"></div><div><label>Desnivel (m)</label><input name="desnivel" type="number" inputmode="numeric" min="0" value="${e.desnivel != null ? esc(e.desnivel) : ''}"></div></div>
-      <label>Dificultad</label><select name="dificultad"><option value="">Sin indicar</option>${DIFS.map(d => `<option ${e.dificultad === d ? 'selected' : ''}>${d}</option>`).join('')}</select>
-      <label>Precio de inscripción</label>
-      <div class="two"><div><label class="mini">Socios</label><input name="precio" inputmode="decimal" maxlength="30" value="${esc(e.precio || '')}" placeholder="0 = gratis"></div><div><label class="mini">No socios</label><input name="precio_no_socios" inputmode="decimal" maxlength="30" value="${esc(e.precio_no_socios || '')}" placeholder="0 = gratis"></div></div>
-      <label>Plazas</label><input name="plazas" type="number" inputmode="numeric" min="1" value="${e.plazas != null ? esc(e.plazas) : ''}" placeholder="Sin límite">
-      <label>Inscripción hasta</label><input name="limite" type="date" value="${esc(e.limite || '')}">
-      <label>Descripción</label><textarea name="descripcion" rows="4" maxlength="1500" placeholder="Recorrido, material, avituallamiento…">${esc(e.descripcion || '')}</textarea>
-      <label>Modalidades</label>
-      <div class="sub" style="margin-bottom:6px">Si la ruta tiene varias pruebas (por ejemplo, trail largo, trail corto y ruta senderista), añádelas aquí.</div>
-      <div id="modlist"></div>
-      <button type="button" class="btn" id="modadd" style="width:100%;margin-top:6px">＋ Añadir modalidad</button>
-      <label>Material</label>
-      <div class="sub" style="margin-bottom:6px">Marca qué hay que llevar: obligatorio o recomendable.</div>
-      <div id="matlist"></div>
-      <div class="cadd" style="margin-top:8px"><input id="matnew" placeholder="Añadir otro material…" maxlength="40" enterkeyhint="done"><button type="button" class="btn" id="matok">Añadir</button></div>
+      <div class="two"><div><label>Plazas</label><input name="plazas" type="number" inputmode="numeric" min="1" value="${e.plazas != null ? esc(e.plazas) : ''}" placeholder="Sin límite"></div><div><label>Inscripción hasta</label><input name="limite" type="date" value="${esc(e.limite || '')}"></div></div>
+      <label>Descripción</label><textarea name="descripcion" rows="4" maxlength="1500" placeholder="Recorrido, avituallamiento, cómo llegar…">${esc(e.descripcion || '')}</textarea>
       <label>Enlace de inscripción o más información (opcional)</label><input name="url" type="url" maxlength="300" value="${esc(e.url || '')}" placeholder="https://…">
-      <label>¿Quién puede verlo?</label>
-      <div class="cfgradio"><button type="button" data-pub="1" class="${e.publico ? 'on' : ''}">Público: cualquiera con el enlace puede verlo<span>${e.publico ? '✓' : ''}</span></button><button type="button" data-pub="0" class="${e.publico ? '' : 'on'}">Solo socios e invitados<span>${e.publico ? '' : '✓'}</span></button></div>
+      </div>
+      <div class="cfglabel">Modalidades</div>
+      <div class="sub" style="margin:0 4px 8px">Cada prueba del evento con su tipo, distancia, hora de salida y precio. Si solo hay una, rellena solo la primera.</div>
+      <div id="modlist"></div>
+      <button type="button" class="btn" id="modadd" style="width:100%;margin-top:2px">＋ Añadir otra modalidad</button>
+      <div class="cfglabel">Material</div>
+      <div class="cfgbox"><div class="sub" style="margin-bottom:6px">Marca qué hay que llevar: obligatorio o recomendable.</div>
+      <div id="matlist"></div>
+      <div class="cadd" style="margin-top:8px"><input id="matnew" placeholder="Añadir otro material…" maxlength="40" enterkeyhint="done"><button type="button" class="btn" id="matok">Añadir</button></div></div>
+      <div class="cfglabel">¿Quién puede verlo?</div>
+      <div class="cfgbox"><div class="cfgradio"><button type="button" data-pub="1" class="${e.publico ? 'on' : ''}">Público: cualquiera con el enlace puede verlo<span>${e.publico ? '✓' : ''}</span></button><button type="button" data-pub="0" class="${e.publico ? '' : 'on'}">Solo socios e invitados<span>${e.publico ? '' : '✓'}</span></button></div></div>
       <div class="amsg" id="amsg"></div>
-      <div class="btns"><button class="btn pri" type="submit">${e.id ? 'Guardar cambios' : 'Crear evento'}</button></div></form></div>`, false);
+      <div class="btns"><button class="btn pri" type="submit">${e.id ? 'Guardar cambios' : 'Crear evento'}</button></div></form>`, false);
     $('#cfgx').onclick = () => e.id ? eventoPantalla(e.id) : clubPantalla(club);
     let publico = !!e.publico;
-    // modalidades
+    // modalidades (los eventos antiguos sin modalidades se convierten en una)
     let mods = modsDe(e).map(m => Object.assign({}, m));
+    if(!mods.length) mods = [{nombre: '', tipo: e.tipo || 'senderismo', km: e.km != null ? +e.km : null, desnivel: e.desnivel != null ? +e.desnivel : null, dificultad: e.dificultad || '', hora: '', precio: e.precio || '', precio_no_socios: e.precio_no_socios || ''}];
     const pintaMods = () => {
       const tipOpts = sel => TIPOS_EV.map(([k, l]) => `<option value="${k}" ${sel === k ? 'selected' : ''}>${l}</option>`).join('');
-      $('#modlist').innerHTML = mods.map((m, i) => `<div class="modcard" data-mi="${i}">
-        <div class="modhead"><b>Modalidad ${i + 1}</b><button type="button" class="chip" data-mdel="${i}">✕ Quitar</button></div>
-        <input data-mf="nombre" maxlength="40" value="${esc(m.nombre || '')}" placeholder="Nombre (ej. Trail largo, Ruta senderista)">
-        <div class="two" style="margin-top:8px"><div><label class="mini">Tipo</label><select data-mf="tipo">${tipOpts(m.tipo || e.tipo || 'senderismo')}</select></div><div><label class="mini">Hora de salida</label><input data-mf="hora" type="time" value="${esc(m.hora || '')}"></div></div>
+      const difOpts = sel => '<option value="">Sin indicar</option>' + DIFS.map(d => `<option ${sel === d ? 'selected' : ''}>${d}</option>`).join('');
+      $('#modlist').innerHTML = mods.map((m, i) => `<div class="cfgbox modcard2" data-mi="${i}">
+        <div class="modhead"><b>${mods.length > 1 ? 'Modalidad ' + (i + 1) : 'Modalidad'}</b>${mods.length > 1 ? `<button type="button" class="chip" data-mdel="${i}">✕ Quitar</button>` : ''}</div>
+        <label class="mini">Nombre${mods.length > 1 ? '' : ' (opcional)'}</label><input data-mf="nombre" maxlength="40" value="${esc(m.nombre || '')}" placeholder="Ej. Trail largo, Ruta senderista">
+        <div class="two"><div><label class="mini">Tipo</label><select data-mf="tipo">${tipOpts(m.tipo || 'senderismo')}</select></div><div><label class="mini">Hora de salida</label><input data-mf="hora" type="time" value="${esc(m.hora || '')}"></div></div>
         <div class="two"><div><label class="mini">Distancia (km)</label><input data-mf="km" type="number" inputmode="decimal" min="0" step="0.1" value="${m.km != null ? esc(m.km) : ''}"></div><div><label class="mini">Desnivel (m)</label><input data-mf="desnivel" type="number" inputmode="numeric" min="0" value="${m.desnivel != null ? esc(m.desnivel) : ''}"></div></div>
+        <label class="mini">Dificultad</label><select data-mf="dificultad">${difOpts(m.dificultad || '')}</select>
+        <div class="two"><div><label class="mini">Precio socios</label><input data-mf="precio" inputmode="decimal" maxlength="30" value="${esc(m.precio || '')}" placeholder="0 = gratis"></div><div><label class="mini">Precio no socios</label><input data-mf="precio_no_socios" inputmode="decimal" maxlength="30" value="${esc(m.precio_no_socios || '')}" placeholder="0 = gratis"></div></div>
       </div>`).join('');
       $('#modlist').querySelectorAll('[data-mf]').forEach(inp => inp.oninput = inp.onchange = () => { const i = +inp.closest('[data-mi]').dataset.mi, k = inp.dataset.mf; mods[i][k] = (k === 'km' || k === 'desnivel') ? (inp.value === '' ? null : +inp.value) : inp.value; });
       $('#modlist').querySelectorAll('[data-mdel]').forEach(b => b.onclick = () => { mods.splice(+b.dataset.mdel, 1); pintaMods(); });
     };
-    $('#modadd').onclick = () => { mods.push({nombre: '', tipo: $('#ef').tipo.value, km: null, desnivel: null, hora: ''}); pintaMods(); const ult = $('#modlist').lastElementChild; if(ult) ult.querySelector('input').focus(); };
+    $('#modadd').onclick = () => { const u = mods[mods.length - 1] || {}; mods.push({nombre: '', tipo: u.tipo || 'senderismo', km: null, desnivel: null, dificultad: '', hora: '', precio: '', precio_no_socios: ''}); pintaMods(); const ult = $('#modlist').lastElementChild; if(ult){ ult.scrollIntoView({behavior: 'smooth', block: 'center'}); ult.querySelector('input').focus(); } };
     pintaMods();
     // material
     const matIni = matDe(e);
@@ -3358,11 +3364,17 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     document.querySelectorAll('[data-pub]').forEach(b => b.onclick = () => { publico = b.dataset.pub === '1'; document.querySelectorAll('[data-pub]').forEach(x => { x.classList.toggle('on', x === b); x.querySelector('span').textContent = x === b ? '✓' : ''; }); });
     $('#ef').onsubmit = async ev => {
       ev.preventDefault();
-      const f = ev.target, num = v => v === '' ? null : Number(v);
-      const d = {titulo: f.titulo.value.trim(), tipo: f.tipo.value, fecha: f.fecha.value, hora: f.hora.value, lugar: f.lugar.value.trim(), provincia: f.provincia.value, encuentro: f.encuentro.value.trim(),
-        km: num(f.km.value), desnivel: f.desnivel.value === '' ? null : Math.round(+f.desnivel.value), dificultad: f.dificultad.value, precio: f.precio.value.trim(), precio_no_socios: f.precio_no_socios.value.trim(), plazas: f.plazas.value === '' ? null : Math.round(+f.plazas.value),
+      const f = ev.target;
+      const modalidades = mods.map(m => ({nombre: (m.nombre || '').trim(), tipo: m.tipo || 'senderismo', km: m.km, desnivel: m.desnivel != null ? Math.round(m.desnivel) : null, dificultad: m.dificultad || '', hora: m.hora || '', precio: (m.precio || '').trim(), precio_no_socios: (m.precio_no_socios || '').trim()}))
+        .filter((m, i) => i === 0 || m.nombre || m.km != null || m.precio || m.precio_no_socios);
+      if(modalidades.length > 1 && modalidades.some(m => !m.nombre)){ $('#amsg').textContent = 'Pon un nombre a cada modalidad (por ejemplo «Trail largo»).'; return; }
+      const m0 = modalidades[0];
+      // los datos generales del evento se toman de la primera modalidad (para listas, filtros y avisos)
+      const d = {titulo: f.titulo.value.trim(), fecha: f.fecha.value, hora: f.hora.value, lugar: f.lugar.value.trim(), provincia: f.provincia.value, encuentro: f.encuentro.value.trim(),
+        tipo: m0.tipo, km: m0.km, desnivel: m0.desnivel, dificultad: m0.dificultad, precio: m0.precio, precio_no_socios: m0.precio_no_socios,
+        plazas: f.plazas.value === '' ? null : Math.round(+f.plazas.value),
         limite: f.limite.value || null, descripcion: f.descripcion.value.trim(), url: f.url.value.trim(), publico,
-        modalidades: mods.filter(m => (m.nombre || '').trim() || m.km).map(m => ({nombre: (m.nombre || '').trim(), tipo: m.tipo, km: m.km, desnivel: m.desnivel != null ? Math.round(m.desnivel) : null, hora: m.hora || ''})),
+        modalidades: modalidades.length === 1 && !m0.nombre && !m0.hora ? [] : modalidades,
         material: mat.filter(m => m.t).map(m => ({n: m.n, t: m.t}))};
       if($('#matnew').value.trim()){ const v = $('#matnew').value.trim(); if(!d.material.some(m => m.n === v)) d.material.push({n: v, t: 'obligatorio'}); }
       if(d.url && !/^https?:\/\//i.test(d.url)) d.url = 'https://' + d.url;
@@ -3400,21 +3412,23 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     const d = pd(e.fecha);
     const fila = (k, v) => v ? `<div class="drow"><span>${k}</span><b>${v}</b></div>` : '';
     const mismoPrecio = (e.precio || '').trim() === (e.precio_no_socios || '').trim();
+    const conMods = modsDe(e).length > 0;
     const voyN = asist.filter(x => x.estado === 'voy').length;
     cfgPage(e.titulo, `
       <div class="cfgbox"><div class="frow" style="border:0;padding:0"><div class="date t-${esc(e.tipo)}"><b>${d.getDate()}</b><span>${MESES[d.getMonth()]}</span></div><div class="finfo"><b style="white-space:normal">${esc(e.titulo)}</b><span>${esc(e.clubs ? e.clubs.nombre : '')} · ${e.publico ? 'Público' : '🔒 Solo socios e invitados'}</span></div></div>
-        ${fila('Fecha', d.toLocaleDateString('es-ES', {weekday: 'long', day: 'numeric', month: 'long'}) + (e.hora ? ' · ' + esc(e.hora) + ' h' : ''))}
-        ${fila('Tipo', esc((TIPOS_EV.find(t => t[0] === e.tipo) || ['', e.tipo])[1]))}
+        ${fila('Fecha', d.toLocaleDateString('es-ES', {weekday: 'long', day: 'numeric', month: 'long'}))}
+        ${fila('Hora de quedada', e.hora ? esc(e.hora) + ' h' : '')}
+        ${conMods ? '' : fila('Tipo', esc((TIPOS_EV.find(t => t[0] === e.tipo) || ['', e.tipo])[1]))}
         ${fila('Lugar', esc([e.lugar, e.provincia].filter(Boolean).join(', ')))}
         ${fila('Punto de encuentro', esc(e.encuentro))}
-        ${fila('Distancia', e.km != null ? esc(e.km) + ' km' : '')}
-        ${fila('Desnivel', e.desnivel != null ? esc(e.desnivel) + ' m D+' : '')}
-        ${fila('Dificultad', esc(e.dificultad))}
-        ${mismoPrecio ? fila('Precio', esc(precioBonito(e.precio))) : fila('Precio socios', esc(precioBonito(e.precio)) || '—') + fila('Precio no socios', esc(precioBonito(e.precio_no_socios)) || '—')}
+        ${conMods ? '' : fila('Distancia', e.km != null ? esc(e.km) + ' km' : '')}
+        ${conMods ? '' : fila('Desnivel', e.desnivel != null ? esc(e.desnivel) + ' m D+' : '')}
+        ${conMods ? '' : fila('Dificultad', esc(e.dificultad))}
+        ${conMods ? '' : mismoPrecio ? fila('Precio', esc(precioBonito(e.precio))) : fila('Precio socios', esc(precioBonito(e.precio)) || '—') + fila('Precio no socios', esc(precioBonito(e.precio_no_socios)) || '—')}
         ${fila('Plazas', e.plazas ? (socio ? voyN + ' apuntados de ' + esc(e.plazas) : esc(e.plazas)) : '')}
         ${fila('Inscripción hasta', e.limite ? pd(e.limite).toLocaleDateString('es-ES', {day: 'numeric', month: 'long'}) : '')}
         ${e.descripcion ? `<p style="margin:12px 0 0;font-size:14.5px;line-height:1.5;white-space:pre-line">${esc(e.descripcion)}</p>` : ''}
-        ${modsDe(e).length ? `<div class="evsec"><b>Modalidades</b>${modsDe(e).map(m => `<div class="evmod"><span class="tipoico">${esc((TIPOS_EV.find(t => t[0] === m.tipo) || ['', ''])[1])}</span>${esc(modTxt(m))}</div>`).join('')}</div>` : ''}
+        ${conMods ? `<div class="evsec"><b>${modsDe(e).length > 1 ? 'Modalidades' : 'Modalidad'}</b>${modsDe(e).map(m => `<div class="evmod2"><div><span class="tipoico">${esc((TIPOS_EV.find(t => t[0] === m.tipo) || ['', ''])[1])}</span> <b>${esc(m.nombre || (TIPOS_EV.find(t => t[0] === m.tipo) || ['', 'Ruta'])[1])}</b></div><div class="sub">${esc([m.km ? m.km + ' km' : '', m.desnivel ? m.desnivel + ' m D+' : '', m.dificultad, m.hora ? 'Salida ' + m.hora + ' h' : ''].filter(Boolean).join(' · '))}</div>${modPrecio(m) ? `<div class="mprecio">💶 ${esc(modPrecio(m))}</div>` : ''}</div>`).join('')}</div>` : ''}
         ${matDe(e).length ? `<div class="evsec"><b>Material</b>${matTxt(e, 'obligatorio').length ? `<div class="evmat"><span class="mtag ob">Obligatorio</span>${matTxt(e, 'obligatorio').map(esc).join(', ')}</div>` : ''}${matTxt(e, 'recomendable').length ? `<div class="evmat"><span class="mtag re">Recomendable</span>${matTxt(e, 'recomendable').map(esc).join(', ')}</div>` : ''}</div>` : ''}
         ${e.url ? `<div class="btns"><a class="btn" href="${esc(e.url)}" target="_blank" rel="noopener">Inscripción / más info ↗</a></div>` : ''}
         ${e.cartel_estilo === 'propio' && e.cartel_url ? (esPdf(e.cartel_url) ? `<div class="btns"><a class="btn" href="${esc(e.cartel_url)}" target="_blank" rel="noopener">📄 Ver cartel (PDF)</a></div>` : `<a href="${esc(e.cartel_url)}" target="_blank" rel="noopener"><img class="evcartel" src="${esc(e.cartel_url)}" alt="Cartel del evento"></a>`) : ''}</div>
@@ -3650,20 +3664,22 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     }
     // ---- contenido ----
     const d = pd(e.fecha), dia = d.toLocaleDateString('es-ES', {weekday: 'long'}), mes = MESES_C[d.getMonth()];
-    const tipoTxt = ((TIPOS_EV.find(t => t[0] === e.tipo) || ['', 'Ruta'])[1]).toUpperCase();
+    const tiposEv = modsDe(e).length > 1 ? [...new Set(modsDe(e).map(m => m.tipo))] : [e.tipo];
+    const tipoTxt = tiposEv.map(t => (TIPOS_EV.find(x => x[0] === t) || ['', 'Ruta'])[1]).join(' · ').toUpperCase();
+    const tabla = modsDe(e).length > 1 ? modsDe(e).filter(m => modPrecio(m)).slice(0, 4) : [];
     const datos = [
       ['📍', [e.lugar, e.provincia].filter(Boolean).join(', ')],
       ['🚩', e.encuentro ? 'Encuentro: ' + e.encuentro : ''],
-      ['🥾', [e.km != null ? e.km + ' km' : '', e.desnivel != null ? e.desnivel + ' m D+' : ''].filter(Boolean).join('  ·  ')],
-      ['🏁', modsDe(e).map(modCorto).join('  ·  ')],
+      ['🥾', modsDe(e).length > 1 ? '' : [e.km != null ? e.km + ' km' : '', e.desnivel != null ? e.desnivel + ' m D+' : '', modsDe(e)[0] && modsDe(e)[0].hora ? 'salida ' + modsDe(e)[0].hora : ''].filter(Boolean).join('  ·  ')],
+      ...(modsDe(e).length > 1 ? modsDe(e).slice(0, 4).map(m => ['🏁', [modCorto(m), m.desnivel ? m.desnivel + ' m D+' : '', m.hora ? 'salida ' + m.hora : ''].filter(Boolean).join('  ·  ')]) : []),
       ['🎒', matTxt(e, 'obligatorio').length ? 'Obligatorio: ' + matTxt(e, 'obligatorio').join(', ').toLowerCase() : ''],
       ['👥', e.plazas ? e.plazas + ' plazas' : ''],
       ['⏳', e.limite ? 'Inscripción hasta el ' + pd(e.limite).getDate() + ' de ' + MESES_C[pd(e.limite).getMonth()] : '']
     ].filter(x => x[1]);
-    const ps = e.precio || '', pn = e.precio_no_socios || '';
+    const ps = modsDe(e).length > 1 ? '' : (e.precio || ''), pn = modsDe(e).length > 1 ? '' : (e.precio_no_socios || '');
     const precios = ps && pn && ps.trim() !== pn.trim() ? [['SOCIOS', precioBonito(ps)], ['NO SOCIOS', precioBonito(pn)]] : (ps || pn) ? [['PRECIO', precioBonito(ps || pn)]] : [];
     const QRW = opt.qr ? 250 : 0, QRH = opt.qr ? 292 : 0;
-    const PIE = 110, CAJA = precios.length ? 175 : 0, ZONA = Math.max(CAJA, QRH), FONDO = H - P - PIE - (ZONA ? ZONA + 40 : 0);
+    const PIE = 110, CAJA = precios.length ? 175 : tabla.length ? tabla.length * 64 + 36 : 0, ZONA = Math.max(CAJA, QRH), FONDO = H - P - PIE - (ZONA ? ZONA + 40 : 0);
     // elegir un tamaño que quepa
     let s = opt.formato === 'historia' ? 1.12 : 1, lin, fs, alto;
     const medir = () => {
@@ -3690,7 +3706,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     ctx.font = `600 ${Math.round(34 * s)}px ${TXT}`; ctx.fillStyle = col[2];
     ctx.fillText(recortar(ctx, (e.clubs ? e.clubs.nombre : 'Club').toUpperCase(), W - P - xt), xt, y + 34 * s); y += 46 * s;
     ctx.font = `600 ${Math.round(28 * s)}px ${TXT}`; ctx.fillStyle = 'rgba(255,255,255,.85)';
-    ctx.fillText(tipoTxt + (e.dificultad ? '  ·  ' + e.dificultad.toUpperCase() : ''), xt, y + 30 * s); y += 44 * s + 60 * s + hueco;
+    ctx.fillText(tipoTxt + (e.dificultad && tiposEv.length === 1 && modsDe(e).length < 2 ? '  ·  ' + e.dificultad.toUpperCase() : ''), xt, y + 30 * s); y += 44 * s + 60 * s + hueco;
     ctx.font = `700 ${fs}px ${TIT}`; ctx.fillStyle = '#fff'; ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = opt.foto ? 18 : 0;
     lin.forEach((l, k) => { ctx.fillText(k === 3 && partirTexto(ctx, e.titulo.toUpperCase(), AN).length > 4 ? recortar(ctx, l + ' …', AN) : l, P, y + fs * .78); y += fs * .95; });
     ctx.shadowBlur = 0; y += 40 * s + hueco;
@@ -3699,7 +3715,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     ctx.fillStyle = '#fff'; ctx.font = `700 ${Math.round(124 * s)}px ${TIT}`; const num = String(d.getDate()); ctx.fillText(num, P + 34, y + 112 * s);
     const dw = ctx.measureText(num).width, xf = P + 34 + dw + 26;
     ctx.font = `700 ${Math.round(54 * s)}px ${TIT}`; ctx.fillText(recortar(ctx, (dia + ' · ' + mes).toUpperCase(), W - P - xf), xf, y + 62 * s);
-    ctx.font = `500 ${Math.round(38 * s)}px ${TXT}`; ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillText(d.getFullYear() + (e.hora ? '  ·  Salida ' + e.hora + ' h' : ''), xf, y + 116 * s);
+    ctx.font = `500 ${Math.round(38 * s)}px ${TXT}`; ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillText(d.getFullYear() + (e.hora ? '  ·  Quedada ' + e.hora + ' h' : ''), xf, y + 116 * s);
     y += 150 * s + 50 * s + hueco * .6;
     ctx.font = `500 ${Math.round(40 * s)}px ${TXT}`;
     datos.forEach(([ic, t]) => { ctx.fillStyle = '#fff'; ctx.fillText(ic, P, y + 40 * s); ctx.fillText(recortar(ctx, t, AN - 72 * s), P + 72 * s, y + 40 * s); y += 62 * s; });
@@ -3714,6 +3730,19 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
         for(let r = 0; r < n; r++) for(let c = 0; c < n; c++) if(q.isDark(r, c)) ctx.fillRect(xq + 20 + c * m, yq + 20 + r * m, m + .6, m + .6);
       } catch(err){}
       ctx.fillStyle = col[0]; ctx.font = `600 24px ${TXT}`; ctx.textAlign = 'center'; ctx.fillText('Escanea y apúntate', xq + QRW / 2, yq + QRH - 20); ctx.textAlign = 'left';
+    }
+    if(tabla.length){
+      const anP = AN - (QRW ? QRW + 24 : 0), h = tabla.length * 64 + 36, yb = H - P - PIE - h;
+      ctx.fillStyle = 'rgba(255,255,255,.15)'; ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(P, yb, anP, h, 28); else ctx.rect(P, yb, anP, h); ctx.fill();
+      tabla.forEach((m, i) => {
+        const yy = yb + 30 + i * 64, s1 = precioBonito(m.precio || ''), s2 = precioBonito(m.precio_no_socios || '');
+        ctx.fillStyle = '#fff'; ctx.font = `600 30px ${TXT}`; ctx.fillText(recortar(ctx, modCorto(m), anP * .45), P + 28, yy + 30);
+        ctx.textAlign = 'right'; ctx.font = `700 30px ${TXT}`;
+        const txt = s1 && s2 && s1 !== s2 ? 'S ' + s1 + '  ·  NS ' + s2 : (s1 || s2);
+        ctx.fillText(txt, P + anP - 28, yy + 30); ctx.textAlign = 'left';
+        if(i < tabla.length - 1){ ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(P + 28, yy + 50, anP - 56, 2); }
+      });
+      if(tabla.some(m => m.precio && m.precio_no_socios && m.precio.trim() !== m.precio_no_socios.trim())){ ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.font = `400 22px ${TXT}`; ctx.fillText('S = socios · NS = no socios', P + 28, yb - 12); }
     }
     if(precios.length){
       const anP = AN - (QRW ? QRW + 24 : 0), unaCol = QRW && precios.length > 1;
@@ -4055,15 +4084,16 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     const datos = [
       ['📍', [e.lugar, e.provincia].filter(Boolean).join(', ')],
       ['🚩', e.encuentro ? 'Quedamos en ' + e.encuentro : ''],
-      ['🥾', [e.km != null ? e.km + ' km' : '', e.desnivel != null ? e.desnivel + ' m de subida' : ''].filter(Boolean).join(' · ')],
-      ['💪', e.dificultad ? 'Dificultad ' + e.dificultad.toLowerCase() : ''],
-      ['🏁', modsDe(e).map(modCorto).join(' · ')],
+      ['🥾', modsDe(e).length > 1 ? '' : [e.km != null ? e.km + ' km' : '', e.desnivel != null ? e.desnivel + ' m de subida' : ''].filter(Boolean).join(' · ')],
+      ['💪', modsDe(e).length > 1 || !e.dificultad ? '' : 'Dificultad ' + e.dificultad.toLowerCase()],
+      ...(modsDe(e).length > 1 ? modsDe(e).slice(0, 4).map(m => ['🏁', [modCorto(m), m.hora ? 'sale a las ' + m.hora : ''].filter(Boolean).join(' · ')]) : []),
       ['🎒', matTxt(e, 'obligatorio').length ? 'Trae: ' + matTxt(e, 'obligatorio').join(', ').toLowerCase() : ''],
       ['🎟️', [e.plazas ? e.plazas + ' plazas' : '', e.limite ? 'apúntate antes del ' + pd(e.limite).getDate() + ' de ' + MESES_C[pd(e.limite).getMonth()] : ''].filter(Boolean).join(' · ')]
     ].filter(x => x[1]);
-    const ps = e.precio || '', pn = e.precio_no_socios || '';
+    const ps = modsDe(e).length > 1 ? '' : (e.precio || ''), pn = modsDe(e).length > 1 ? '' : (e.precio_no_socios || '');
     const precios = ps && pn && ps.trim() !== pn.trim() ? [['Socios', precioBonito(ps), '#ff6b9a'], ['No socios', precioBonito(pn), '#ff9f1c']] : (ps || pn) ? [['Precio', precioBonito(ps || pn), '#ff6b9a']] : [];
-    const QRW = opt.qr ? 250 : 0, ZONA = Math.max(precios.length ? (opt.qr && precios.length > 1 ? 290 : 170) : 0, opt.qr ? 300 : 0), PIE = 80;
+    const tablaD = modsDe(e).length > 1 ? modsDe(e).filter(m => modPrecio(m)).slice(0, 4) : [];
+    const QRW = opt.qr ? 250 : 0, ZONA = Math.max(precios.length ? (opt.qr && precios.length > 1 ? 290 : 170) : tablaD.length ? tablaD.length * 66 + 30 : 0, opt.qr ? 300 : 0), PIE = 80;
     const INFO = datos.length ? datos.length * 58 + 44 : 0;
     const yInfo = H - P - PIE - (ZONA ? ZONA + 30 : 0) - INFO;
     let fs = opt.formato === 'historia' ? 150 : 124, lin;
@@ -4082,7 +4112,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     if(compacto){
       ctx.save(); ctx.translate(W - P - 115, 200); ctx.rotate(.12); estrella(ctx, 0, 0, 125, 98, 14); ctx.fillStyle = '#ff5d73'; ctx.fill(); contorno(ctx, 7);
       ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = `700 78px ${FT}`; ctx.fillText(String(d.getDate()), 0, 18); ctx.font = `700 32px ${FT}`; ctx.fillText(MESES_C[d.getMonth()].slice(0, 3).toUpperCase(), 0, 56); ctx.restore(); ctx.textAlign = 'left';
-      const t = '¡' + dia.charAt(0).toUpperCase() + dia.slice(1) + '!' + (e.hora ? '  Salimos a las ' + e.hora : '');
+      const t = '¡' + dia.charAt(0).toUpperCase() + dia.slice(1) + '!' + (e.hora ? '  Quedamos a las ' + e.hora : '');
       ctx.font = `700 46px ${FT}`; ctx.lineWidth = 10; ctx.strokeStyle = '#fff'; ctx.lineJoin = 'round';
       const yt = Math.min(y + 30, yInfo - 30); ctx.strokeText(recortar(ctx, t, AN), P, yt); ctx.fillStyle = '#1f2433'; ctx.fillText(recortar(ctx, t, AN), P, yt);
     } else {
@@ -4090,7 +4120,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(.12); estrella(ctx, 0, 0, 125, 98, 14); ctx.fillStyle = '#ff5d73'; ctx.fill(); contorno(ctx, 7);
     ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = `700 78px ${FT}`; ctx.fillText(String(d.getDate()), 0, 18); ctx.font = `700 32px ${FT}`; ctx.fillText(MESES_C[d.getMonth()].slice(0, 3).toUpperCase(), 0, 56); ctx.restore(); ctx.textAlign = 'left';
     ctx.font = `700 50px ${FT}`; ctx.lineWidth = 10; ctx.strokeStyle = '#fff';
-    const t1 = '¡' + dia.charAt(0).toUpperCase() + dia.slice(1) + '!', t2 = e.hora ? 'Salimos a las ' + e.hora : d.getFullYear() + '';
+    const t1 = '¡' + dia.charAt(0).toUpperCase() + dia.slice(1) + '!', t2 = e.hora ? 'Quedamos a las ' + e.hora : d.getFullYear() + '';
     ctx.strokeText(t1, cx + 150, cy - 6); ctx.fillStyle = '#1f2433'; ctx.fillText(t1, cx + 150, cy - 6);
     ctx.font = `700 40px ${FT}`; ctx.strokeText(t2, cx + 150, cy + 48); ctx.fillText(t2, cx + 150, cy + 48);
     }
@@ -4110,6 +4140,16 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       try { const q = new QRLIB.QRCode(-1, QRLIB.ECL.M); q.addData(APP_URL + '#evento=' + e.id); q.make(); const n = q.getModuleCount(), lado = QRW - 44, m = lado / n; ctx.fillStyle = '#111';
         for(let r = 0; r < n; r++) for(let c = 0; c < n; c++) if(q.isDark(r, c)) ctx.fillRect(xq + 22 + c * m, yz + 18 + r * m, m + .6, m + .6); } catch(err){}
       ctx.fillStyle = '#1f2433'; ctx.font = `700 22px ${FT}`; ctx.textAlign = 'center'; ctx.fillText(recortar(ctx, '¡Escanea y apúntate!', QRW - 20), xq + QRW / 2, yz + hq - 18); ctx.textAlign = 'left';
+    }
+    if(tablaD.length){
+      const anP = AN - (QRW ? QRW + 24 : 0), hT = tablaD.length * 66 + 30, yb = yz + ZONA - hT, cols = ['#ff6b9a', '#ff9f1c', '#4cc9f0', '#9b5de5'];
+      rrect(ctx, P, yb, anP, hT, 30); ctx.fillStyle = '#fff'; ctx.fill(); contorno(ctx, 6);
+      tablaD.forEach((m, i) => {
+        const yy = yb + 15 + i * 66, s1 = precioBonito(m.precio || ''), s2 = precioBonito(m.precio_no_socios || '');
+        rrect(ctx, P + 16, yy + 6, 18, 44, 9); ctx.fillStyle = cols[i % 4]; ctx.fill();
+        ctx.fillStyle = '#1f2433'; ctx.font = `700 32px ${FT}`; ctx.fillText(recortar(ctx, modCorto(m), anP * .48), P + 48, yy + 42);
+        ctx.textAlign = 'right'; ctx.font = `700 30px ${FT}`; ctx.fillText(s1 && s2 && s1 !== s2 ? 'socios ' + s1 + ' · resto ' + s2 : (s1 || s2), P + anP - 22, yy + 42); ctx.textAlign = 'left';
+      });
     }
     if(precios.length){
       const anP = AN - (QRW ? QRW + 24 : 0), col1 = QRW && precios.length > 1;
