@@ -942,7 +942,7 @@ a{color:var(--green)}
         <p>Si una modalidad tiene las plazas completas, no se puede elegir. Puedes cambiar de modalidad desde la ficha del evento con «Cambiar de modalidad».</p>`)}
       ${sec('Carteles', `
         <p>Los administradores pueden crear el cartel de un evento con el botón 🖼️ Cartel. Hay tres opciones: <b>Serio</b>, <b>Deportivo</b> o <b>Subir mi cartel</b> (imagen o PDF). Los carteles creados en la app llevan un código QR para apuntarse.</p>
-        <p>El cartel elegido es el que se envía al compartir el evento.</p>`)}
+        <p>Solo los administradores crean el cartel. El que elijan con «Usar este cartel en el evento» (o el que suban) aparece en la ficha del evento y se envía al compartirlo. Si un evento no tiene cartel, al compartirlo solo se envía el texto con el enlace.</p>`)}
       ${sec('Cuotas y pagos (administradores)', `
         <p>En el club puedes indicar la cuota (anual o por temporada) y anotar quién la ha pagado. En cada evento puedes anotar quién ha pagado su inscripción, con el precio de su modalidad.</p>
         <p>Desde ambos listados puedes generar un informe en PDF o en hoja de cálculo (CSV). Esta información solo la ven los administradores del club.</p>
@@ -3669,7 +3669,8 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
         ${conMods ? `<div class="evsec"><b>${modsDe(e).length > 1 ? 'Modalidades' : 'Modalidad'}</b>${modsDe(e).map((m, i) => `<div class="evmod2"><div><span class="tipoico">${esc((TIPOS_EV.find(t => t[0] === m.tipo) || ['', ''])[1])}</span> <b>${esc(m.nombre || (TIPOS_EV.find(t => t[0] === m.tipo) || ['', 'Ruta'])[1])}</b></div><div class="sub">${esc([m.km ? m.km + ' km' : '', m.desnivel ? m.desnivel + ' m D+' : '', m.dificultad, m.hora ? 'Salida ' + m.hora + ' h' : ''].filter(Boolean).join(' · '))}</div>${modPrecio(m) ? `<div class="mprecio">💶 ${esc(modPrecio(m))}</div>` : ''}${m.plazas ? `<div class="sub">👥 ${socio ? ocupadas(i) + ' de ' + plz(m.plazas) + (ocupadas(i) >= m.plazas ? ' · <b>completa</b>' : '') : plz(m.plazas)}</div>` : ''}</div>`).join('')}</div>` : ''}
         ${matDe(e).length ? `<div class="evsec"><b>Material</b>${matTxt(e, 'obligatorio').length ? `<div class="evmat"><span class="mtag ob">Obligatorio</span>${matTxt(e, 'obligatorio').map(esc).join(', ')}</div>` : ''}${matTxt(e, 'recomendable').length ? `<div class="evmat"><span class="mtag re">Recomendable</span>${matTxt(e, 'recomendable').map(esc).join(', ')}</div>` : ''}</div>` : ''}
         ${e.url ? `<div class="btns"><a class="btn" href="${escUrl(e.url)}" target="_blank" rel="noopener">Inscripción / más info ↗</a></div>` : ''}
-        ${e.cartel_estilo === 'propio' && e.cartel_url ? (esPdf(e.cartel_url) ? `<div class="btns"><a class="btn" href="${escUrl(e.cartel_url)}" target="_blank" rel="noopener">📄 Ver cartel (PDF)</a></div>` : `<a href="${escUrl(e.cartel_url)}" target="_blank" rel="noopener"><img class="evcartel" src="${esc(e.cartel_url)}" alt="Cartel del evento"></a>`) : ''}</div>
+        ${tieneCartel(e) && e.cartel_estilo !== 'propio' ? '<div id="evcartgen"></div>' : ''}
+        ${tieneCartel(e) && e.cartel_estilo === 'propio' ? (esPdf(e.cartel_url) ? `<div class="btns"><a class="btn" href="${escUrl(e.cartel_url)}" target="_blank" rel="noopener">📄 Ver cartel (PDF)</a></div>` : `<a href="${escUrl(e.cartel_url)}" target="_blank" rel="noopener"><img class="evcartel" src="${esc(e.cartel_url)}" alt="Cartel del evento"></a>`) : ''}</div>
       <div class="cfglabel">Tu respuesta</div>
       <div class="cfgbox"><div class="resp"><button class="chip ${mine && mine.estado === 'inscrito' ? 'act-ins' : 'greenl'}" data-r="voy">✓ Voy</button><button class="chip ${mine && mine.estado === 'interesado' ? 'act-int' : 'amber'}" data-r="interesa">★ Me interesa</button><button class="chip ${!mine && r === 'no' ? 'act-no' : ''}" data-r="no">No voy</button></div>
         <div class="sub" style="margin-top:8px">${mine ? 'Está en tu agenda' + (modsDe(e).length > 1 && mine.modalidad != null ? ' · modalidad: <b>' + esc(nomMod(mine.modalidad)) + '</b>' : '') + '.' : r === 'invitado' ? 'Te han invitado a este evento.' : 'Si respondes «Voy» o «Me interesa», se añade a tu agenda.'}</div>
@@ -3695,6 +3696,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     const dl = $('#edel'); if(dl) dl.onclick = async () => { if(await confirmDlg('¿Borrar este evento?', 'Desaparecerá para todos los socios e invitados.', 'Borrar')){ try { await sbRest('club_eventos?id=eq.' + id, {method: 'DELETE', headers: {'Prefer': 'return=minimal'}}); toast('Evento borrado'); await clubCargar(); clubPantalla(e.club); } catch(err){ toast('No se pudo borrar.'); } } };
     $('#eclub').onclick = () => clubPantalla(e.club);
     const ec = $('#ecartel'); if(ec) ec.onclick = () => cartelPantalla(e);
+    const cg = $('#evcartgen'); if(cg) prepararCartel(e).then(b => { if(b && document.body.contains(cg)){ const u = URL.createObjectURL(b); cg.innerHTML = `<img class="evcartel" src="${u}" alt="Cartel del evento">`; cg.firstChild.onclick = () => { const w = window.open(u, '_blank'); if(!w) toast('Mantén pulsado el cartel para guardarlo'); }; } });
     if(admin) pagosEvento(e, asist, perf);
     prepararCartel(e);
     $('#eshare').onclick = () => { if(!CLUB.eventos.some(x => x.id === e.id)){ CLUB.eventos.push(e); mezclarClubEventos(); } compartirEventoClub(e.id); };
@@ -4042,13 +4044,14 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     if(e.cartel_url){ const vieja = e.cartel_url.split('/object/public/carteles/')[1]; if(vieja) fetch(SB_URL + '/storage/v1/object/carteles/' + vieja, {method: 'DELETE', headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + t}}).catch(() => {}); }
     return SB_URL + '/storage/v1/object/public/carteles/' + ruta;
   }
+  const tieneCartel = e => !!(e && e.cartel_listo) && (e.cartel_estilo !== 'propio' || !!e.cartel_url);
   async function guardarEstiloCartel(e, cambios){
     await sbRest('club_eventos?id=eq.' + e.id, {method: 'PATCH', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify(cambios)});
     Object.assign(e, cambios); const ce = CLUB.eventos.find(x => x.id === e.id); if(ce && ce !== e) Object.assign(ce, cambios);
   }
   async function cartelPantalla(e, estiloIni){
-    const estiloEv = e.cartel_estilo === 'propio' && !e.cartel_url ? 'serio' : (e.cartel_estilo || 'serio');
-    const opt = {formato: 'post', foto: null, qr: true, estilo: estiloIni || estiloEv};
+    const estiloEv = tieneCartel(e) ? (e.cartel_estilo || 'serio') : null;
+    const opt = {formato: 'post', foto: null, qr: true, estilo: estiloIni || estiloEv || 'serio'};
     const propio = opt.estilo === 'propio', usable = !propio || !!e.cartel_url;
     const nomEst = k => (ESTILOS.find(x => x[0] === k) || ESTILOS[0])[1].toLowerCase();
     cfgPage('Cartel del evento', `
@@ -4064,21 +4067,25 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
         ${opt.estilo === 'serio' ? '<div class="btns"><button class="btn" id="cfoto">Añadir foto de fondo</button><button class="btn" id="cnofoto" hidden>Quitar foto</button></div><input type="file" id="cfile2" accept="image/*" hidden>' : ''}
         <label class="chk" style="margin:12px 4px 0"><input type="checkbox" id="cqr" checked><span>Incluir código QR para apuntarse${e.publico ? '' : ' (solo funcionará para socios e invitados)'}</span></label>`}
       <div class="btns"><button class="btn pri" id="ccomp" ${usable ? '' : 'disabled'}>Compartir o guardar cartel</button></div>
-      <div class="cfgbox" style="margin-top:12px"><div class="sub">${estiloEv === opt.estilo ? '✓ Este es el cartel que se envía al compartir el evento.' : 'Ahora, al compartir el evento se envía el cartel <b>' + nomEst(estiloEv) + '</b>.'}</div>
-        ${estiloEv !== opt.estilo && usable ? '<div class="btns"><button class="btn" id="cusar">Usar este cartel al compartir</button></div>' : ''}</div>`, false);
+      <div class="cfgbox" style="margin-top:12px"><div class="sub">${estiloEv === opt.estilo ? '✓ Este es el cartel del evento: aparece en la ficha del evento y se envía al compartirlo.' : !estiloEv ? 'Este evento aún no tiene cartel. Mientras no elijas uno, al compartirlo solo se envía el texto.' : 'Ahora el cartel del evento es el <b>' + nomEst(estiloEv) + '</b>.'}</div>
+        ${estiloEv !== opt.estilo && usable ? '<div class="btns"><button class="btn pri" id="cusar">Usar este cartel en el evento</button></div>' : ''}
+        ${estiloEv && estiloEv === opt.estilo ? '<div class="btns"><button class="btn del" id="cnocartel">Dejar el evento sin cartel</button></div>' : ''}</div>`, false);
     $('#cfgx').onclick = () => eventoPantalla(e.id);
     document.querySelectorAll('[data-est]').forEach(b => b.onclick = () => cartelPantalla(e, b.dataset.est));
-    const usar = $('#cusar'); if(usar) usar.onclick = async () => { try { await guardarEstiloCartel(e, {cartel_estilo: opt.estilo}); toast('Listo: se enviará este cartel al compartir ✓'); cartelPantalla(e, opt.estilo); } catch(err){ toast('No se pudo guardar. ¿Has ejecutado carteles.sql en Supabase?'); } };
+    const avisoSql = () => toast('No se pudo guardar. ¿Has ejecutado cartel_evento.sql en Supabase?');
+    const usar = $('#cusar'); if(usar) usar.onclick = async () => { try { await guardarEstiloCartel(e, {cartel_estilo: opt.estilo, cartel_listo: true}); toast('Listo: este es el cartel del evento ✓'); cartelPantalla(e, opt.estilo); } catch(err){ avisoSql(); } };
+    const nc = $('#cnocartel'); if(nc) nc.onclick = async () => { if(!await confirmDlg('¿Dejar el evento sin cartel?', 'No aparecerá en la ficha y al compartir el evento solo se enviará el texto.', 'Quitar cartel')) return;
+      try { await guardarEstiloCartel(e, {cartel_listo: false}); toast('El evento ya no tiene cartel'); cartelPantalla(e, opt.estilo); } catch(err){ avisoSql(); } };
     const nombreBase = 'cartel-' + (e.titulo || 'evento').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').slice(0, 40);
     if(propio){
       $('#csub').onclick = () => $('#cfile3').click();
-      const q = $('#cquit'); if(q) q.onclick = async () => { if(!await confirmDlg('¿Quitar el cartel subido?', 'Al compartir el evento se volverá a usar el cartel serio.', 'Quitar')) return;
+      const q = $('#cquit'); if(q) q.onclick = async () => { if(!await confirmDlg('¿Quitar el cartel subido?', 'El evento se quedará sin cartel hasta que elijas otro.', 'Quitar')) return;
         try { const vieja = e.cartel_url.split('/object/public/carteles/')[1], t = await tokenValido(); if(vieja && t) fetch(SB_URL + '/storage/v1/object/carteles/' + vieja, {method: 'DELETE', headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + t}}).catch(() => {});
-          await guardarEstiloCartel(e, {cartel_url: '', cartel_estilo: 'serio'}); toast('Cartel quitado'); cartelPantalla(e, 'propio'); } catch(err){ toast('No se pudo quitar.'); } };
+          await guardarEstiloCartel(e, {cartel_url: '', cartel_estilo: 'serio', cartel_listo: false}).catch(() => guardarEstiloCartel(e, {cartel_url: '', cartel_estilo: 'serio'})); toast('Cartel quitado'); cartelPantalla(e, 'propio'); } catch(err){ toast('No se pudo quitar.'); } };
       $('#cfile3').onchange = async ev => {
         const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; if(!f) return;
         $('#cmsg').textContent = 'Subiendo cartel…'; $('#csub').disabled = true;
-        try { const url = await subirCartel(e, f); await guardarEstiloCartel(e, {cartel_url: url, cartel_estilo: 'propio'}); toast('Cartel subido ✓ Se enviará al compartir el evento'); cartelPantalla(e, 'propio'); }
+        try { const url = await subirCartel(e, f); try { await guardarEstiloCartel(e, {cartel_url: url, cartel_estilo: 'propio', cartel_listo: true}); } catch(err){ await guardarEstiloCartel(e, {cartel_url: url, cartel_estilo: 'propio'}); avisoSql(); } toast('Cartel subido ✓ Es el cartel del evento'); cartelPantalla(e, 'propio'); }
         catch(err){ $('#csub').disabled = false; $('#cmsg').textContent = /grande/.test(err.message) ? 'El archivo pesa más de 10 MB.' : 'No se pudo subir. ¿Has ejecutado carteles.sql en Supabase? Revisa también tu conexión.'; }
       };
       $('#ccomp').onclick = async () => {
@@ -4113,8 +4120,9 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   }
   // ----- compartir un evento de club con su cartel -----
   var CARTELES = new Map();
-  const firmaCartel = e => e.id + '|' + (e.cartel_estilo || 'serio') + '|' + (e.cartel_url || '') + '|' + JSON.stringify([e.titulo, e.fecha, e.hora, e.lugar, e.provincia, e.encuentro, e.km, e.desnivel, e.dificultad, e.precio, e.precio_no_socios, e.plazas, e.limite, e.tipo, e.publico, e.clubs && e.clubs.nombre, JSON.stringify(e.modalidades || []), JSON.stringify(e.material || []), ((CLUB.mis.find(x => x.club === e.club) || {}).clubs || {}).imagen ? 'logo' : '']);
+  const firmaCartel = e => e.id + '|' + (e.cartel_listo ? 1 : 0) + (e.cartel_estilo || 'serio') + '|' + (e.cartel_url || '') + '|' + JSON.stringify([e.titulo, e.fecha, e.hora, e.lugar, e.provincia, e.encuentro, e.km, e.desnivel, e.dificultad, e.precio, e.precio_no_socios, e.plazas, e.limite, e.tipo, e.publico, e.clubs && e.clubs.nombre, JSON.stringify(e.modalidades || []), JSON.stringify(e.material || []), ((CLUB.mis.find(x => x.club === e.club) || {}).clubs || {}).imagen ? 'logo' : '']);
   async function cartelBlob(e){
+    if(!tieneCartel(e)) return null;
     const k = firmaCartel(e);
     if(CARTELES.has(k)) return CARTELES.get(k);
     const p = (async () => {
@@ -4130,7 +4138,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   async function prepararCartel(e){ const b = await cartelBlob(e); const p = CARTELES.get(firmaCartel(e)); if(p && b) p.listo = b; return b; }
   // preparar en segundo plano los carteles de los próximos eventos, para poder compartir al momento
   function precalentarCarteles(){
-    const lista = CLUB.eventos.filter(e => days(e.fecha) >= 0).slice(0, 12);
+    const lista = CLUB.eventos.filter(e => days(e.fecha) >= 0 && tieneCartel(e)).slice(0, 12);
     let i = 0;
     const sig = () => { if(i >= lista.length) return; const e = lista[i++]; prepararCartel(e).finally(() => setTimeout(sig, 250)); };
     setTimeout(sig, 1500);
@@ -4144,6 +4152,11 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     const pdf = e.cartel_estilo === 'propio' && esPdf(e.cartel_url);
     const nombre = 'cartel-' + (e.titulo || 'evento').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').slice(0, 40) + (pdf ? '.pdf' : '.jpg');
     const texto = textoEvento(e);
+    if(!tieneCartel(e)){ // sin cartel: solo texto y enlace
+      if(navigator.share){ try { await navigator.share({title: e.titulo, text: texto}); } catch(err){} }
+      else { try { await navigator.clipboard.writeText(texto); toast('Enlace copiado ✓'); } catch(err){} }
+      return true;
+    }
     const enviar = async blob => {
       const file = new File([blob], nombre, {type: pdf ? 'application/pdf' : 'image/jpeg'});
       if(!(navigator.canShare && navigator.canShare({files: [file]}))) return 'sin-archivos';
