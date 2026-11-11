@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Mis rutas y trails</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Mis rutas y trails">
+<meta property="og:title" content="Mis rutas y trails">
+<meta property="og:description" content="Rutas de senderismo, trail, carreras y MTB de toda España. Organiza tu agenda y las salidas de tu club.">
+<meta property="og:url" content="https://ginesrodriguezparra-rgb.github.io/mis-rutas/">
+<meta property="og:image" content="https://ginesrodriguezparra-rgb.github.io/mis-rutas/icon-512.png">
+<meta property="og:image:width" content="512"><meta property="og:image:height" content="512">
+<meta name="twitter:card" content="summary">
 <meta name="description" content="Rutas de senderismo, trail, carreras y MTB de toda España">
 <meta name="theme-color" content="#f4f1ea" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#141814" media="(prefers-color-scheme: dark)">
@@ -1162,10 +1170,10 @@ a{color:var(--green)}
     const app = 'la aplicación Mis rutas y trails';
     if(SHARE_CTX === 'agenda'){
       const m = state.events.find(e => e.id === x.id || (e.webId && (e.webId === x.id || e.webId === x.webId)));
-      if(m && m.estado === 'inscrito') return '¡Estoy inscrito en esta ruta! La encontré en ' + app + ': ' + APP_URL;
-      if(m && m.estado === 'interesado') return '¡Estoy interesado en esta ruta! La encontré en ' + app + ': ' + APP_URL;
+      if(m && m.estado === 'inscrito') return '¡Estoy inscrito en esta ruta! La encontré en ' + app + ' 👉 ' + APP_URL;
+      if(m && m.estado === 'interesado') return '¡Estoy interesado en esta ruta! La encontré en ' + app + ' 👉 ' + APP_URL;
     }
-    return '¡Mira lo que encontré en ' + app + '! ' + APP_URL;
+    return '¡Mira lo que encontré en ' + app + '! 👉 ' + APP_URL;
   }
   function shareText(x){
     const d = pd(x.date);
@@ -4106,7 +4114,8 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     if(e.cartel_url){ const vieja = e.cartel_url.split('/object/public/carteles/')[1]; if(vieja) fetch(SB_URL + '/storage/v1/object/carteles/' + vieja, {method: 'DELETE', headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + t}}).catch(() => {}); }
     return SB_URL + '/storage/v1/object/public/carteles/' + ruta;
   }
-  const tieneCartel = e => !!(e && e.cartel_listo) && (e.cartel_estilo !== 'propio' || !!e.cartel_url);
+  // si aún no existe la columna cartel_listo (falta cartel_evento.sql), se mantiene el funcionamiento anterior
+  const tieneCartel = e => !!e && (e.cartel_listo === undefined ? true : !!e.cartel_listo) && (e.cartel_estilo !== 'propio' || !!e.cartel_url);
   async function guardarEstiloCartel(e, cambios){
     await sbRest('club_eventos?id=eq.' + e.id, {method: 'PATCH', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify(cambios)});
     Object.assign(e, cambios); const ce = CLUB.eventos.find(x => x.id === e.id); if(ce && ce !== e) Object.assign(ce, cambios);
