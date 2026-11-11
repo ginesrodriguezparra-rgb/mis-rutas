@@ -726,7 +726,7 @@ a{color:var(--green)}
     const p = state.prefs;
     $('#sheet').innerHTML = `<h2>Editar perfil</h2><form id="pf">
       <label>Nombre${sesion ? ' *' : ''}</label><input name="nombre" value="${esc((p.nombreReal || {}).nombre || '')}" placeholder="Ej. Ginés" maxlength="50" autocomplete="given-name" ${sesion ? 'required' : ''}>
-      <label>Apellidos${sesion ? ' *' : ''}</label><input name="apellidos" value="${esc((p.nombreReal || {}).apellidos || '')}" placeholder="Ej. Rodríguez Parra" maxlength="60" autocomplete="family-name" ${sesion ? 'required' : ''}><div class="sub" style="margin-top:6px;line-height:1.4">🔒 Tu nombre y apellidos solo los verán los administradores de los clubs a los que perteneces (también cuando pidas entrar), y aparecerán en los listados de pagos que generen. El resto de usuarios solo ve tu nombre de usuario.</div>
+      <label>Apellidos${sesion ? ' *' : ''}</label><input name="apellidos" value="${esc((p.nombreReal || {}).apellidos || '')}" placeholder="Ej. Rodríguez Parra" maxlength="60" autocomplete="family-name" ${sesion ? 'required' : ''}><div class="sub" style="margin-top:6px;line-height:1.4">🔒 Tu nombre y apellidos solo los verán los administradores de los clubs a los que perteneces (también cuando pidas entrar). El resto de usuarios solo ve tu nombre de usuario.</div>
 
       <label>Foto de perfil</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pfoto">${p.foto ? 'Cambiar foto' : 'Añadir foto'}</button>${p.foto ? '<button type="button" class="btn del" id="pnofoto">Quitar foto</button>' : ''}</div>
       <div class="btns"><button type="button" class="btn" id="pcancel">Cancelar</button><button class="btn pri" type="submit">Guardar</button></div></form>`;
@@ -793,7 +793,7 @@ a{color:var(--green)}
     const p = state.prefs;
     cfgPage('Información personal', `<div class="cfgbox"><form id="pf2">
       <label>Nombre${sesion ? ' *' : ''}</label><input name="nombre" value="${esc((p.nombreReal || {}).nombre || '')}" placeholder="Ej. Ginés" maxlength="50" autocomplete="given-name" ${sesion ? 'required' : ''}>
-      <label>Apellidos${sesion ? ' *' : ''}</label><input name="apellidos" value="${esc((p.nombreReal || {}).apellidos || '')}" placeholder="Ej. Rodríguez Parra" maxlength="60" autocomplete="family-name" ${sesion ? 'required' : ''}><div class="sub" style="margin-top:6px;line-height:1.4">🔒 Tu nombre y apellidos solo los verán los administradores de los clubs a los que perteneces (también cuando pidas entrar), y aparecerán en los listados de pagos que generen. El resto de usuarios solo ve tu nombre de usuario.</div>
+      <label>Apellidos${sesion ? ' *' : ''}</label><input name="apellidos" value="${esc((p.nombreReal || {}).apellidos || '')}" placeholder="Ej. Rodríguez Parra" maxlength="60" autocomplete="family-name" ${sesion ? 'required' : ''}><div class="sub" style="margin-top:6px;line-height:1.4">🔒 Tu nombre y apellidos solo los verán los administradores de los clubs a los que perteneces (también cuando pidas entrar). El resto de usuarios solo ve tu nombre de usuario.</div>
 
       ${sesion ? `<label>Nombre de usuario (lo que ven los demás)</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pusr">${AMI.yo ? esc(AMI.yo.usuario) + ' · Cambiar' : 'Elegir nombre de usuario'}</button></div>` : ''}
       <label>Foto de perfil</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pfoto2">${p.foto ? 'Cambiar foto' : 'Añadir foto'}</button>${p.foto ? '<button type="button" class="btn del" id="pnofoto2">Quitar foto</button>' : ''}</div>
@@ -1451,10 +1451,10 @@ a{color:var(--green)}
     if(!nr.nombre && state.prefs.nombreCompleto){ const p = state.prefs.nombreCompleto.trim().split(/\s+/); nr = {nombre: p[0] || '', apellidos: p.slice(1).join(' ')}; }
     $('#sheet').dataset.vista = 'nombre';
     $('#sheet').innerHTML = `<div class="cfghead"><span style="width:44px"></span><div class="cfgtitle">Tu nombre y apellidos</div><span style="width:44px"></span></div>
-      <div class="cfgbox"><div class="sub" style="margin-bottom:8px">Para usar la app con cuenta necesitamos tu nombre y apellidos. Los clubs los usan para gestionar las inscripciones y los pagos.</div>
+      <div class="cfgbox"><div class="sub" style="margin-bottom:8px">Para usar la app con cuenta necesitamos tu nombre y apellidos. Los clubs los usan para gestionar las inscripciones.</div>
       <form id="nf"><label>Nombre *</label><input name="nombre" required maxlength="50" autocomplete="given-name" value="${esc(nr.nombre || '')}" placeholder="Ej. Ginés">
       <label>Apellidos *</label><input name="apellidos" required maxlength="60" autocomplete="family-name" value="${esc(nr.apellidos || '')}" placeholder="Ej. Rodríguez Parra">
-      <div class="sub" style="margin-top:8px;line-height:1.4">🔒 Solo los verán los administradores de los clubs a los que perteneces (también cuando pidas entrar), y aparecerán en los listados de pagos que generen. El resto de usuarios solo ve tu nombre de usuario.</div>
+      <div class="sub" style="margin-top:8px;line-height:1.4">🔒 Solo los verán los administradores de los clubs a los que perteneces (también cuando pidas entrar). El resto de usuarios solo ve tu nombre de usuario.</div>
       <div class="amsg" id="amsg"></div><div class="btns"><button class="btn pri" type="submit">Guardar</button></div></form></div>`;
     $('#sheet').classList.add('cfg'); $('#ovl').classList.add('show');
     $('#nf').onsubmit = async ev => {
@@ -1530,7 +1530,7 @@ a{color:var(--green)}
       <form id="uf"><label>Nombre</label><input name="usuario" value="${esc(actual || sugerirUsuario())}" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="20">
       ${actual ? '' : `<label>Nombre *</label><input name="nombre" required maxlength="50" autocomplete="given-name" value="${esc((state.prefs.nombreReal || {}).nombre || '')}" placeholder="Ej. Ginés">
       <label>Apellidos *</label><input name="apellidos" required maxlength="60" autocomplete="family-name" value="${esc((state.prefs.nombreReal || {}).apellidos || '')}" placeholder="Ej. Rodríguez Parra">
-      <div class="sub" style="margin-top:6px;line-height:1.4">🔒 Tu nombre y apellidos solo los verán los administradores de tus clubs y aparecerán en sus listados de pagos.</div>`}
+      <div class="sub" style="margin-top:6px;line-height:1.4">🔒 Tu nombre y apellidos solo los verán los administradores de tus clubs.</div>`}
       <div class="amsg" id="amsg"></div><div class="btns"><button class="btn pri" type="submit">Guardar</button></div></form></div>
       <div class="sub" style="margin:12px 4px">Los demás usuarios solo ven tu nombre de usuario y tu foto. Tu agenda solo la ven los amigos que tú aceptes.</div>`;
     $('#sheet').classList.add('cfg'); $('#ovl').classList.add('show');
@@ -3881,7 +3881,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.font = `400 28px ${TXT}`; ctx.textAlign = 'right'; ctx.fillText(e.publico ? 'Evento abierto' : 'Solo socios', W - P, H - P - 20); ctx.textAlign = 'left';
     return cv;
   }
-  const ESTILOS = [['serio', 'Serio'], ['divertido', 'Divertido'], ['propio', 'Subir mi cartel']];
+  const ESTILOS = [['serio', 'Serio'], ['divertido', 'Deportivo'], ['propio', 'Subir mi cartel']];
   const esPdf = u => /\.pdf(\?|$)/i.test(u || '');
   async function subirCartel(e, file){
     const t = await tokenValido(); if(!t) throw new Error('sin sesión');
@@ -4147,146 +4147,143 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     elegirFormatoInforme(f => ({nombre: 'pagos-' + nombreArchivo(e.titulo + '-' + e.fecha),
       blob: f === 'pdf' ? crearPdf(titulo, sub, columnas, filas, resumen) : crearCsv(columnas, filas, [[titulo], [sub[0]], ...resumen])}));
   }
-  // ----- cartel estilo divertido (tipo dibujo) -----
   const FUN = {trail: ['#ff8a3d', '#ffb26b'], senderismo: ['#3fae5a', '#7ed36f'], carrera: ['#3b82f6', '#7cb6ff'], mtb: ['#9b5de5', '#c39bff'], otro: ['#64748b', '#a3b1c2']};
   const EMO = {trail: '🏃', senderismo: '🥾', carrera: '🏃‍♀️', mtb: '🚵', otro: '⛰️'};
   function contorno(ctx, w){ ctx.lineWidth = w || 8; ctx.strokeStyle = '#1f2433'; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke(); }
   function rrect(ctx, x, y, w, h, r){ ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
   function estrella(ctx, cx, cy, ro, ri, n){ ctx.beginPath(); for(let i = 0; i < n * 2; i++){ const r = i % 2 ? ri : ro, a = Math.PI * i / n - Math.PI / 2; ctx[i ? 'lineTo' : 'moveTo'](cx + r * Math.cos(a), cy + r * Math.sin(a)); } ctx.closePath(); }
   function nube(ctx, x, y, k){ ctx.beginPath(); [[0, 0, 46], [50, -22, 56], [110, 0, 46], [55, 18, 50]].forEach(([dx, dy, r]) => { ctx.moveTo(x + dx * k + r * k, y + dy * k); ctx.arc(x + dx * k, y + dy * k, r * k, 0, Math.PI * 2); }); ctx.fillStyle = '#fff'; ctx.fill(); }
+  // ----- cartel estilo deportivo (clave interna «divertido») -----
+  const DEP = {trail: '#ff6a1a', senderismo: '#b8e30a', carrera: '#1fb6ff', mtb: '#ff3d8b', otro: '#ffd400'};
   async function dibujarCartelDivertido(e, opt){
     const W = 1080, H = opt.formato === 'historia' ? 1920 : 1350, P = 70, AN = W - 2 * P;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
-    const ctx = cv.getContext('2d'), col = FUN[e.tipo] || FUN.otro;
-    const FT = '"Chalkboard SE", "Marker Felt", "Comic Sans MS", "Barlow Condensed", "Arial Rounded MT Bold", sans-serif';
+    const ctx = cv.getContext('2d'), ac = DEP[e.tipo] || DEP.otro, OSC = '#0d1013';
+    const CON = '"Barlow Condensed", "Avenir Next Condensed", "Arial Narrow", sans-serif', TX = 'Inter, "Helvetica Neue", system-ui, sans-serif';
     if(opt.logo === undefined){
       const m = CLUB.mis.find(x => x.club === e.club), src = m && m.clubs && m.clubs.imagen;
       opt.logo = src ? await new Promise(r => { const im = new Image(); im.onload = () => r(im); im.onerror = () => r(null); im.src = src; }) : null;
     }
-    // cielo
-    const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#8fdcff'); g.addColorStop(.55, '#d8f4ff'); g.addColorStop(1, '#fff6d8');
+    // ---- fondo: oscuro con franjas diagonales ----
+    const g = ctx.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#1e252c'); g.addColorStop(1, '#0b0e11');
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    const compacto = opt.formato !== 'historia'; // en 4:5 la fecha ocupa el sitio del sol
-    // sol sonriente
-    const sx = W - 170, sy = 190;
-    if(!compacto){
-    ctx.save(); ctx.translate(sx, sy); for(let i = 0; i < 12; i++){ ctx.rotate(Math.PI / 6); ctx.beginPath(); ctx.moveTo(0, -105); ctx.lineTo(0, -140); ctx.lineWidth = 12; ctx.strokeStyle = '#ffb703'; ctx.lineCap = 'round'; ctx.stroke(); } ctx.restore();
-    ctx.beginPath(); ctx.arc(sx, sy, 88, 0, Math.PI * 2); ctx.fillStyle = '#ffd60a'; ctx.fill(); contorno(ctx, 7);
-    ctx.fillStyle = '#1f2433'; ctx.beginPath(); ctx.arc(sx - 28, sy - 14, 9, 0, Math.PI * 2); ctx.arc(sx + 28, sy - 14, 9, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(sx, sy + 8, 36, .15 * Math.PI, .85 * Math.PI); ctx.lineWidth = 7; ctx.stroke();
-    ctx.fillStyle = 'rgba(255,120,120,.55)'; ctx.beginPath(); ctx.arc(sx - 50, sy + 18, 13, 0, Math.PI * 2); ctx.arc(sx + 50, sy + 18, 13, 0, Math.PI * 2); ctx.fill();
-    }
-    nube(ctx, 110, 330, 1); nube(ctx, W - 420, 420, .8);
-    // montañas y colinas
-    const base = H * .62;
-    const monte = (x0, x1, pico, alto, color) => {
-      ctx.beginPath(); ctx.moveTo(x0, base + 40); ctx.quadraticCurveTo(pico - 60, base - alto + 40, pico, base - alto); ctx.quadraticCurveTo(pico + 60, base - alto + 40, x1, base + 40); ctx.closePath();
-      ctx.fillStyle = color; ctx.fill(); contorno(ctx, 7);
-      ctx.beginPath(); ctx.moveTo(pico - 52, base - alto + 70); ctx.quadraticCurveTo(pico, base - alto - 8, pico + 52, base - alto + 70); ctx.lineTo(pico + 26, base - alto + 58); ctx.lineTo(pico, base - alto + 80); ctx.lineTo(pico - 26, base - alto + 58); ctx.closePath();
-      ctx.fillStyle = '#fff'; ctx.fill(); contorno(ctx, 5);
-    };
-    monte(-80, 560, 240, 380, col[0]); monte(380, W + 80, 760, 470, col[1]); monte(200, 760, 470, 300, col[0]);
-    ctx.beginPath(); ctx.moveTo(0, base + 20); ctx.bezierCurveTo(W * .3, base - 60, W * .6, base + 90, W, base - 10); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
-    ctx.fillStyle = '#8bd67a'; ctx.fill(); contorno(ctx, 7);
-    ctx.setLineDash([2, 26]); ctx.lineWidth = 12; ctx.strokeStyle = '#fff'; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(W * .15, H); ctx.bezierCurveTo(W * .25, base + 260, W * .7, base + 220, W * .55, base + 60); ctx.stroke(); ctx.setLineDash([]);
-    // banderín del club
-    ctx.save(); ctx.translate(P, 60); ctx.rotate(-.03);
-    ctx.font = `700 40px ${FT}`; const club = recortar(ctx, (e.clubs ? e.clubs.nombre : 'Club'), AN - 330), bw = ctx.measureText(club).width + (opt.logo ? 120 : 60);
-    rrect(ctx, 0, 0, bw, 84, 42); ctx.fillStyle = '#ffd60a'; ctx.fill(); contorno(ctx, 6);
-    if(opt.logo){ ctx.save(); ctx.beginPath(); ctx.arc(46, 42, 30, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(opt.logo, 16, 12, 60, 60); ctx.restore(); ctx.beginPath(); ctx.arc(46, 42, 30, 0, Math.PI * 2); contorno(ctx, 4); }
-    ctx.fillStyle = '#1f2433'; ctx.fillText(club, opt.logo ? 90 : 30, 56); ctx.restore();
-    // título con contorno
+    const franja = (x, w, a) => { ctx.globalAlpha = a; ctx.fillStyle = ac; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + w, 0); ctx.lineTo(x + w - H * .5, H); ctx.lineTo(x - H * .5, H); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1; };
+    franja(W * .62, 230, .07); franja(W * .9, 70, .12); franja(W * 1.08, 30, .2);
+    ctx.fillStyle = ac; ctx.beginPath(); ctx.moveTo(W - 190, 0); ctx.lineTo(W, 0); ctx.lineTo(W, 190); ctx.closePath(); ctx.fill();
+    // ---- datos ----
+    const mods = modsDe(e), varias = mods.length > 1, d = pd(e.fecha);
+    const dia = d.toLocaleDateString('es-ES', {weekday: 'long'}), mes = MESES_C[d.getMonth()];
+    const tiposEv = varias ? [...new Set(mods.map(m => m.tipo))] : [e.tipo];
+    const tipoTxt = tiposEv.map(t => (TIPOS_EV.find(x => x[0] === t) || ['', 'Ruta'])[1]).join(' · ').toUpperCase() + (e.dificultad && !varias ? '  ·  ' + e.dificultad.toUpperCase() : '');
     const datos = [
-      ['📍', [e.lugar, e.provincia].filter(Boolean).join(', ')],
-      ['🚩', e.encuentro ? 'Quedamos en ' + e.encuentro : ''],
-      ['🥾', modsDe(e).length > 1 ? '' : [e.km != null ? e.km + ' km' : '', e.desnivel != null ? e.desnivel + ' m de subida' : ''].filter(Boolean).join(' · ')],
-      ['💪', modsDe(e).length > 1 || !e.dificultad ? '' : 'Dificultad ' + e.dificultad.toLowerCase()],
-      ...(modsDe(e).length > 1 ? modsDe(e).slice(0, 4).map(m => ['🏁', [modCorto(m), m.hora ? 'sale a las ' + m.hora : '', m.plazas ? plz(m.plazas) : ''].filter(Boolean).join(' · ')]) : []),
-      ['🎒', matTxt(e, 'obligatorio').length ? 'Obligatorio: ' + matTxt(e, 'obligatorio').join(', ').toLowerCase() : ''],
-      [matTxt(e, 'obligatorio').length ? '' : '🎒', matTxt(e, 'recomendable').length ? 'Recomendable: ' + matTxt(e, 'recomendable').join(', ').toLowerCase() : ''],
-      ['🎟️', [e.plazas && modsDe(e).length < 2 ? plz(e.plazas) : '', e.limite ? 'apúntate antes del ' + pd(e.limite).getDate() + ' de ' + MESES_C[pd(e.limite).getMonth()] : ''].filter(Boolean).join(' · ')]
+      ['LUGAR', [e.lugar, e.provincia].filter(Boolean).join(', ')],
+      ['ENCUENTRO', e.encuentro || ''],
+      ['RECORRIDO', varias ? '' : [e.km != null ? e.km + ' km' : '', e.desnivel != null ? e.desnivel + ' m D+' : '', mods[0] && mods[0].hora ? 'salida ' + mods[0].hora : ''].filter(Boolean).join('  ·  ')],
+      ...(varias ? mods.slice(0, 4).map((m, i) => [i ? '' : 'PRUEBAS', [modCorto(m), m.desnivel ? m.desnivel + ' m D+' : '', m.hora ? 'salida ' + m.hora : '', m.plazas ? plz(m.plazas) : ''].filter(Boolean).join('  ·  ')]) : []),
+      ['OBLIGATORIO', matTxt(e, 'obligatorio').join(', ')],
+      ['RECOMENDABLE', matTxt(e, 'recomendable').join(', ')],
+      ['PLAZAS', !varias && e.plazas ? plz(e.plazas) : ''],
+      ['INSCRIPCIÓN', e.limite ? 'hasta el ' + pd(e.limite).getDate() + ' de ' + MESES_C[pd(e.limite).getMonth()] : '']
     ].filter(x => x[1]);
-    const ps = modsDe(e).length > 1 ? '' : (e.precio || ''), pn = modsDe(e).length > 1 ? '' : (e.precio_no_socios || '');
-    const precios = ps && pn && ps.trim() !== pn.trim() ? [['Socios', precioBonito(ps), '#ff6b9a'], ['No socios', precioBonito(pn), '#ff9f1c']] : (ps || pn) ? [['Precio', precioBonito(ps || pn), '#ff6b9a']] : [];
-    const tablaD = modsDe(e).length > 1 ? modsDe(e).filter(m => modPrecio(m)).slice(0, 4) : [];
-    const QRW = opt.qr ? 250 : 0, ZONA = Math.max(precios.length ? (opt.qr && precios.length > 1 ? 290 : 170) : tablaD.length ? tablaD.length * 66 + 30 : 0, opt.qr ? 300 : 0), PIE = 80;
-    ctx.font = `700 36px ${FT}`;
-    const lineasD = datos.map(x => { const ls = partirTexto(ctx, x[1], AN - 110); return ls.length > 3 ? [...ls.slice(0, 2), recortar(ctx, ls[2] + ' …', AN - 110)] : ls; });
-    const INFO = datos.length ? lineasD.reduce((t, l) => t + l.length * 46, 0) + datos.length * 12 + 44 : 0;
-    const yInfo = H - P - PIE - (ZONA ? ZONA + 30 : 0) - INFO;
-    let fs = opt.formato === 'historia' ? 150 : 124, lin;
-    const anTit = AN - (compacto ? 270 : 210); // deja sitio al sol o a la fecha
-    const altoTit = () => { ctx.font = `700 ${fs}px ${FT}`; lin = partirTexto(ctx, e.titulo, anTit); return lin.length; };
-    const hueco = compacto ? yInfo - 200 - 100 : yInfo - 260 - 300; // espacio para título + fecha
-    while((altoTit() > 3 || lin.length * fs * 1.02 > hueco) && fs > 64) fs -= 6;
-    let y = 200 + (opt.formato === 'historia' ? 60 : 0);
-    ctx.save(); ctx.translate(P, y); ctx.rotate(-.035);
-    ctx.font = `700 ${fs}px ${FT}`; ctx.lineJoin = 'round';
-    lin.slice(0, 3).forEach((l, i) => { const yy = fs * .9 + i * fs * 1.02; ctx.lineWidth = 18; ctx.strokeStyle = '#1f2433'; ctx.strokeText(l, 0, yy); ctx.fillStyle = '#fff'; ctx.fillText(l, 0, yy); });
-    ctx.restore();
-    y += lin.slice(0, 3).length * fs * 1.02 + 40;
-    // fecha en estrella
-    const d = pd(e.fecha), dia = d.toLocaleDateString('es-ES', {weekday: 'long'});
-    if(compacto){
-      ctx.save(); ctx.translate(W - P - 115, 200); ctx.rotate(.12); estrella(ctx, 0, 0, 125, 98, 14); ctx.fillStyle = '#ff5d73'; ctx.fill(); contorno(ctx, 7);
-      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = `700 78px ${FT}`; ctx.fillText(String(d.getDate()), 0, 18); ctx.font = `700 32px ${FT}`; ctx.fillText(MESES_C[d.getMonth()].slice(0, 3).toUpperCase(), 0, 56); ctx.restore(); ctx.textAlign = 'left';
-      const t = '¡' + dia.charAt(0).toUpperCase() + dia.slice(1) + '!' + (e.hora ? '  Quedamos a las ' + e.hora : '');
-      ctx.font = `700 46px ${FT}`; ctx.lineWidth = 10; ctx.strokeStyle = '#fff'; ctx.lineJoin = 'round';
-      const yt = Math.min(y + 30, yInfo - 30); ctx.strokeText(recortar(ctx, t, AN), P, yt); ctx.fillStyle = '#1f2433'; ctx.fillText(recortar(ctx, t, AN), P, yt);
-    } else {
-    const cx = P + 120, cy = y + 105;
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate(.12); estrella(ctx, 0, 0, 125, 98, 14); ctx.fillStyle = '#ff5d73'; ctx.fill(); contorno(ctx, 7);
-    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = `700 78px ${FT}`; ctx.fillText(String(d.getDate()), 0, 18); ctx.font = `700 32px ${FT}`; ctx.fillText(MESES_C[d.getMonth()].slice(0, 3).toUpperCase(), 0, 56); ctx.restore(); ctx.textAlign = 'left';
-    ctx.font = `700 50px ${FT}`; ctx.lineWidth = 10; ctx.strokeStyle = '#fff';
-    const t1 = '¡' + dia.charAt(0).toUpperCase() + dia.slice(1) + '!', t2 = e.hora ? 'Quedamos a las ' + e.hora : d.getFullYear() + '';
-    ctx.strokeText(t1, cx + 150, cy - 6); ctx.fillStyle = '#1f2433'; ctx.fillText(t1, cx + 150, cy - 6);
-    ctx.font = `700 40px ${FT}`; ctx.strokeText(t2, cx + 150, cy + 48); ctx.fillText(t2, cx + 150, cy + 48);
+    const ps = varias ? '' : (e.precio || ''), pn = varias ? '' : (e.precio_no_socios || '');
+    const precios = ps && pn && ps.trim() !== pn.trim() ? [['SOCIOS', precioBonito(ps)], ['NO SOCIOS', precioBonito(pn)]] : (ps || pn) ? [['PRECIO', precioBonito(ps || pn)]] : [];
+    const tabla = varias ? mods.filter(m => modPrecio(m)).slice(0, 4) : [];
+    const QRW = opt.qr ? 250 : 0, QRH = opt.qr ? 292 : 0, FOOT = 104;
+    const ZONA = Math.max(precios.length ? (QRW && precios.length > 1 ? QRH : 170) : tabla.length ? tabla.length * 66 + 6 : 0, QRH);
+    const yz = H - FOOT - 36 - ZONA, LIM = ZONA ? yz - 36 : H - FOOT - 36;
+    const COLL = 230; // ancho de la columna de etiquetas
+    // ---- encajar tamaños ----
+    let s = opt.formato === 'historia' ? 1.12 : 1, fs, lin, filas;
+    const medir = () => {
+      fs = Math.round(150 * s); ctx.font = `italic 800 ${fs}px ${CON}`;
+      const todas = partirTexto(ctx, e.titulo.toUpperCase(), AN); lin = todas.slice(0, 4);
+      if(todas.length > 4) return 1e9;
+      ctx.font = `600 ${Math.round(34 * s)}px ${TX}`;
+      filas = datos.map(([k, t]) => { const ls = partirTexto(ctx, t, AN - COLL * s); return ls.length > 3 ? [ls[0], ls[1], recortar(ctx, ls[2] + ' …', AN - COLL * s)] : ls; });
+      return P + 84 * s + 40 * s + lin.length * fs * .9 + 26 * s + 50 * s + 150 * s + 44 * s + filas.reduce((t, l) => t + l.length * 44 * s + 26 * s, 0);
+    };
+    while(medir() > LIM && s > .5) s -= .03;
+    if(medir() > 1e8){ s = .5; medir(); }
+    const hueco = Math.min(Math.max(0, LIM - medir()) / 4, opt.formato === 'historia' ? 120 : 50);
+    let y = P + hueco * .5;
+    ctx.textBaseline = 'alphabetic';
+    // cabecera: logo + club + tipo
+    let xt = P;
+    if(opt.logo){
+      const L = Math.round(84 * s);
+      ctx.save(); ctx.beginPath(); ctx.arc(P + L / 2, y + L / 2, L / 2, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.clip(); ctx.drawImage(opt.logo, P, y, L, L); ctx.restore();
+      ctx.strokeStyle = ac; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(P + L / 2, y + L / 2, L / 2, 0, Math.PI * 2); ctx.stroke();
+      xt = P + L + 22;
     }
-    // emoji grande de la actividad
-    if(yInfo - 30 - 150 > 360){ ctx.font = '150px sans-serif'; ctx.fillText(EMO[e.tipo] || '⛰️', W - P - 170, Math.min(yInfo - 30, base + 120)); }
-    // tarjeta de datos
-    if(datos.length){
-      rrect(ctx, P, yInfo, AN, INFO, 30); ctx.fillStyle = 'rgba(255,255,255,.94)'; ctx.fill(); contorno(ctx, 6);
-      ctx.font = `700 38px ${FT}`; ctx.fillStyle = '#1f2433';
-      let yy = yInfo + 62;
-      datos.forEach(([ic], i) => { ctx.font = '38px sans-serif'; if(ic) ctx.fillText(ic, P + 28, yy); ctx.font = `700 36px ${FT}`; lineasD[i].forEach(l => { ctx.fillText(l, P + 88, yy); yy += 46; }); yy += 12; });
-    }
-    // precios y QR
-    const yz = H - P - PIE - ZONA;
+    ctx.fillStyle = '#fff'; ctx.font = `800 ${Math.round(34 * s)}px ${TX}`;
+    ctx.fillText(recortar(ctx, (e.clubs ? e.clubs.nombre : 'Club').toUpperCase(), W - 230 - xt), xt, y + 36 * s);
+    ctx.fillStyle = ac; ctx.font = `700 ${Math.round(26 * s)}px ${TX}`; ctx.fillText(recortar(ctx, tipoTxt, W - 230 - xt), xt, y + 74 * s);
+    y += 84 * s + 40 * s + hueco;
+    // título
+    ctx.font = `italic 800 ${fs}px ${CON}`; ctx.fillStyle = '#fff';
+    lin.forEach(l => { ctx.fillText(l, P - 4, y + fs * .8); y += fs * .9; });
+    y += 26 * s;
+    ctx.fillStyle = ac; ctx.beginPath(); ctx.moveTo(P + 10, y); ctx.lineTo(P + 190, y); ctx.lineTo(P + 180, y + 12); ctx.lineTo(P, y + 12); ctx.closePath(); ctx.fill();
+    y += 50 * s + hueco * .6;
+    // fecha en bloque inclinado
+    const BH = 150 * s, SK = 34 * s;
+    ctx.font = `italic 800 ${Math.round(128 * s)}px ${CON}`; const num = String(d.getDate()), nw = ctx.measureText(num).width;
+    ctx.font = `italic 800 ${Math.round(52 * s)}px ${CON}`; const mw = ctx.measureText(mes.slice(0, 3).toUpperCase()).width;
+    const bw = nw + mw + 76 * s;
+    ctx.fillStyle = ac; ctx.beginPath(); ctx.moveTo(P + SK, y); ctx.lineTo(P + SK + bw, y); ctx.lineTo(P + bw, y + BH); ctx.lineTo(P, y + BH); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = OSC; ctx.font = `italic 800 ${Math.round(128 * s)}px ${CON}`; ctx.fillText(num, P + 30 * s, y + 122 * s);
+    ctx.font = `italic 800 ${Math.round(52 * s)}px ${CON}`; ctx.fillText(mes.slice(0, 3).toUpperCase(), P + 44 * s + nw, y + 120 * s);
+    const xf = P + bw + SK + 30 * s;
+    ctx.fillStyle = '#fff'; { const tf = (dia + ' ' + d.getDate() + ' de ' + mes).toUpperCase(); let z = Math.round(60 * s); ctx.font = `italic 800 ${z}px ${CON}`; while(ctx.measureText(tf).width > W - P - xf && z > 36 * s){ z--; ctx.font = `italic 800 ${z}px ${CON}`; } ctx.fillText(recortar(ctx, tf, W - P - xf), xf, y + 66 * s); }
+    ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.font = `600 ${Math.round(32 * s)}px ${TX}`; ctx.fillText(recortar(ctx, d.getFullYear() + (e.hora ? '  ·  Quedada ' + e.hora + ' h' : ''), W - P - xf), xf, y + 116 * s);
+    y += BH + 44 * s + hueco * .4;
+    // filas de datos
+    datos.forEach(([k], i) => {
+      if(i && k){ ctx.fillStyle = 'rgba(255,255,255,.13)'; ctx.fillRect(P, y - 12 * s, AN, 2); }
+      ctx.fillStyle = ac; ctx.font = `800 ${Math.round(23 * s)}px ${TX}`; if(k) ctx.fillText(k, P, y + 30 * s);
+      ctx.fillStyle = '#fff'; ctx.font = `600 ${Math.round(34 * s)}px ${TX}`;
+      filas[i].forEach(l => { ctx.fillText(l, P + COLL * s, y + 32 * s); y += 44 * s; });
+      y += 26 * s;
+    });
+    // ---- precios / tabla / QR ----
+    const anP = AN - (QRW ? QRW + 28 : 0);
+    const encaja = (t, max, z, fn) => { ctx.font = fn(z); while(ctx.measureText(t).width > max && z > 12){ z--; ctx.font = fn(z); } };
     if(opt.qr){
-      const xq = W - P - QRW, hq = ZONA;
-      rrect(ctx, xq, yz, QRW, hq, 26); ctx.fillStyle = '#fff'; ctx.fill(); contorno(ctx, 6);
-      try { const q = new QRLIB.QRCode(-1, QRLIB.ECL.M); q.addData(APP_URL + '#evento=' + e.id); q.make(); const n = q.getModuleCount(), lado = QRW - 44, m = lado / n; ctx.fillStyle = '#111';
-        for(let r = 0; r < n; r++) for(let c = 0; c < n; c++) if(q.isDark(r, c)) ctx.fillRect(xq + 22 + c * m, yz + 18 + r * m, m + .6, m + .6); } catch(err){}
-      ctx.fillStyle = '#1f2433'; ctx.font = `700 22px ${FT}`; ctx.textAlign = 'center'; ctx.fillText(recortar(ctx, '¡Escanea y apúntate!', QRW - 20), xq + QRW / 2, yz + hq - 18); ctx.textAlign = 'left';
+      const xq = W - P - QRW, yq = yz + ZONA - QRH;
+      ctx.fillStyle = '#fff'; rrect(ctx, xq, yq, QRW, QRH, 22); ctx.fill();
+      try { const q = new QRLIB.QRCode(-1, QRLIB.ECL.M); q.addData(APP_URL + '#evento=' + e.id); q.make(); const n = q.getModuleCount(), lado = QRW - 40, m = lado / n; ctx.fillStyle = '#111';
+        for(let r = 0; r < n; r++) for(let c = 0; c < n; c++) if(q.isDark(r, c)) ctx.fillRect(xq + 20 + c * m, yq + 20 + r * m, m + .6, m + .6); } catch(err){}
+      ctx.fillStyle = OSC; encaja('ESCANEA Y APÚNTATE', QRW - 28, 22, z => `800 ${z}px ${TX}`); ctx.textAlign = 'center'; ctx.fillText('ESCANEA Y APÚNTATE', xq + QRW / 2, yq + QRH - 18); ctx.textAlign = 'left';
     }
-    if(tablaD.length){
-      const anP = AN - (QRW ? QRW + 24 : 0), hT = tablaD.length * 66 + 30, yb = yz + ZONA - hT, cols = ['#ff6b9a', '#ff9f1c', '#4cc9f0', '#9b5de5'];
-      rrect(ctx, P, yb, anP, hT, 30); ctx.fillStyle = '#fff'; ctx.fill(); contorno(ctx, 6);
-      tablaD.forEach((m, i) => {
-        const yy = yb + 15 + i * 66, s1 = precioBonito(m.precio || ''), s2 = precioBonito(m.precio_no_socios || '');
-        rrect(ctx, P + 16, yy + 6, 18, 44, 9); ctx.fillStyle = cols[i % 4]; ctx.fill();
-        const pt = s1 && s2 && s1 !== s2 ? 'socios ' + s1 + ' · resto ' + s2 : (s1 || s2);
-        ctx.font = `700 30px ${FT}`; const pw = ctx.measureText(pt).width;
-        ctx.fillStyle = '#1f2433'; ctx.font = `700 32px ${FT}`; ctx.fillText(recortar(ctx, modCorto(m), anP - 48 - 22 - pw - 18), P + 48, yy + 42);
-        ctx.textAlign = 'right'; ctx.font = `700 30px ${FT}`; ctx.fillText(pt, P + anP - 22, yy + 42); ctx.textAlign = 'left';
-      });
-    }
+    const para = (x, yy, w, h, k) => { ctx.beginPath(); ctx.moveTo(x + k, yy); ctx.lineTo(x + w, yy); ctx.lineTo(x + w - k, yy + h); ctx.lineTo(x, yy + h); ctx.closePath(); };
     if(precios.length){
-      const anP = AN - (QRW ? QRW + 24 : 0), col1 = QRW && precios.length > 1;
-      const bw = col1 ? anP : (anP - (precios.length - 1) * 24) / precios.length, bh = col1 ? (ZONA - 20) / 2 : Math.min(ZONA, 170);
-      precios.forEach(([k, v, c], i) => {
-        const x = col1 ? P : P + i * (bw + 24), yb = col1 ? yz + i * (bh + 20) : yz + ZONA - bh;
-        ctx.save(); ctx.translate(x + bw / 2, yb + bh / 2); ctx.rotate(i % 2 ? .02 : -.02);
-        rrect(ctx, -bw / 2, -bh / 2, bw, bh, 30); ctx.fillStyle = c; ctx.fill(); contorno(ctx, 6);
-        ctx.fillStyle = '#fff'; ctx.font = `700 34px ${FT}`; ctx.fillText(k, -bw / 2 + 28, col1 ? 12 : -bh / 2 + 52);
-        ctx.font = `700 ${col1 ? 66 : 80}px ${FT}`; ctx.textAlign = col1 ? 'right' : 'left'; ctx.lineWidth = 10; ctx.strokeStyle = '#1f2433';
-        const xv = col1 ? bw / 2 - 28 : -bw / 2 + 28, yv = col1 ? 24 : bh / 2 - 26; ctx.strokeText(v, xv, yv); ctx.fillText(v, xv, yv); ctx.textAlign = 'left'; ctx.restore();
+      const apil = QRW && precios.length > 1;
+      const bw2 = apil ? anP : (anP - (precios.length - 1) * 24) / precios.length, bh = apil ? (ZONA - 20) / 2 : 170;
+      precios.forEach(([k, v], i) => {
+        const x = apil ? P : P + i * (bw2 + 24), yb = apil ? yz + i * (bh + 20) : yz + ZONA - bh;
+        para(x, yb, bw2, bh, 26);
+        if(i === 0){ ctx.fillStyle = ac; ctx.fill(); } else { ctx.fillStyle = 'rgba(255,255,255,.06)'; ctx.fill(); ctx.strokeStyle = ac; ctx.lineWidth = 4; ctx.stroke(); }
+        const ct = i === 0 ? OSC : '#fff';
+        ctx.fillStyle = ct; ctx.font = `800 26px ${TX}`;
+        if(apil){ ctx.fillText(k, x + 44, yb + bh / 2 + 10); ctx.font = `italic 800 72px ${CON}`; ctx.textAlign = 'right'; ctx.fillText(v, x + bw2 - 44, yb + bh / 2 + 26); ctx.textAlign = 'left'; }
+        else { ctx.fillText(k, x + 44, yb + 46); ctx.font = `italic 800 88px ${CON}`; ctx.fillText(recortar(ctx, v, bw2 - 70), x + 34, yb + bh - 28); }
       });
+    } else if(tabla.length){
+      tabla.forEach((m, i) => {
+        const yy = yz + ZONA - tabla.length * 66 + i * 66, s1 = precioBonito(m.precio || ''), s2 = precioBonito(m.precio_no_socios || '');
+        ctx.fillStyle = 'rgba(255,255,255,.07)'; rrect(ctx, P, yy, anP, 56, 10); ctx.fill();
+        ctx.fillStyle = ac; ctx.fillRect(P, yy, 10, 56);
+        const pt = s1 && s2 && s1 !== s2 ? 'S ' + s1 + '  ·  NS ' + s2 : (s1 || s2);
+        ctx.font = `800 28px ${TX}`; const pw = ctx.measureText(pt).width;
+        ctx.fillStyle = '#fff'; ctx.font = `700 28px ${TX}`; ctx.fillText(recortar(ctx, modCorto(m), anP - 30 - pw - 40), P + 30, yy + 38);
+        ctx.fillStyle = ac; ctx.font = `800 28px ${TX}`; ctx.textAlign = 'right'; ctx.fillText(pt, P + anP - 20, yy + 38); ctx.textAlign = 'left';
+      });
+      if(tabla.some(m => (m.precio || '') && (m.precio_no_socios || '') && m.precio.trim() !== m.precio_no_socios.trim())){ ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.font = `500 22px ${TX}`; ctx.fillText('S = socios · NS = no socios', P, yz + ZONA - tabla.length * 66 - 14); }
     }
-    // pie
-    ctx.font = `700 34px ${FT}`; ctx.fillStyle = '#1f2433'; ctx.fillText('¡Apúntate en la app Mis rutas y trails!', P, H - P - 10);
+    // ---- pie: banda de color ----
+    ctx.fillStyle = ac; ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(0, H - FOOT + 18); ctx.lineTo(W, H - FOOT - 18); ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = OSC; encaja('APÚNTATE EN LA APP MIS RUTAS Y TRAILS', AN - 240, 46, z => `italic 800 ${z}px ${CON}`); ctx.fillText('APÚNTATE EN LA APP MIS RUTAS Y TRAILS', P, H - 34);
+    ctx.font = `800 24px ${TX}`; ctx.textAlign = 'right'; ctx.fillText(e.publico ? 'EVENTO ABIERTO' : 'SOLO SOCIOS', W - P, H - 38); ctx.textAlign = 'left';
     return cv;
   }
 
