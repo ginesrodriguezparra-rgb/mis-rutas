@@ -520,15 +520,18 @@ a{color:var(--green)}
     let list = selDay ? evs.filter(e => e.date === selDay) : evs.filter(e => days(e.date) >= 0 && !e.done);
     h += `<div class="month" style="margin-top:14px">${selDay ? 'Día ' + pd(selDay).getDate() + ' de ' + MESES_L[pd(selDay).getMonth()].toLowerCase() + ' · <a href="#" id="clearDay">ver todas</a>' : 'Próximas en tu agenda'}</div>`;
     if(!list.length) h += `<div class="empty">${state.events.length ? 'Nada este día.' : 'Tu agenda está vacía.<br>Marca eventos como <b>Me interesa</b> o <b>Inscrito</b>, o pulsa <b>+ Añadir</b>.'}</div>`;
-    list.forEach(e => h += cardMine(e));
+    list.forEach(e => { const w = e.webId && state.web.find(x => x.id === e.webId); h += w ? cardWeb(w) : cardMine(e); });
     $('#agenda').innerHTML = h;
     $('#prevM').onclick = () => { calM--; if(calM<0){calM=11;calY--;} renderAgenda(); };
     $('#nextM').onclick = () => { calM++; if(calM>11){calM=0;calY++;} renderAgenda(); };
     document.querySelectorAll('.cal .d').forEach(el => el.onclick = () => { selDay = selDay === el.dataset.day ? null : el.dataset.day; renderAgenda(); });
     const cd = $('#clearDay'); if(cd) cd.onclick = ev => { ev.preventDefault(); selDay = null; renderAgenda(); };
-    document.querySelectorAll('.ev.mine').forEach(c => c.onclick = ev => { if(ev.target.closest('button')) return; openForm(state.events.find(e => e.id === c.dataset.id)); });
+    document.querySelectorAll('#agenda .ev.mine').forEach(c => { const e0 = state.events.find(e => e.id === c.dataset.id); if(e0 && !e0.webId) c.onclick = ev => { if(ev.target.closest('button')) return; openForm(e0); }; else c.style.cursor = 'default'; });
+    document.querySelectorAll('#agenda [data-add]').forEach(b => b.onclick = () => b.dataset.add.startsWith('club-') && typeof apuntarClub === 'function' ? apuntarClub(b.dataset.add.slice(5), b.dataset.st) : addFromWeb(b.dataset.add, b.dataset.st));
+    document.querySelectorAll('#agenda [data-cev]').forEach(b => b.onclick = () => eventoPantalla(b.dataset.cev));
+    document.querySelectorAll('#agenda [data-share]').forEach(b => bindShare(b, () => state.web.find(x => x.id === b.dataset.share), 'agenda'));
     document.querySelectorAll('[data-mst]').forEach(b => b.onclick = ev => { ev.stopPropagation(); const e = state.events.find(x => x.id === b.dataset.mid); if(e) setEstado(e, b.dataset.mst); });
-    document.querySelectorAll('[data-share-mine]').forEach(b => bindShare(b, () => state.events.find(x => x.id === b.dataset.shareMine)));
+    document.querySelectorAll('#agenda [data-share-mine]').forEach(b => bindShare(b, () => state.events.find(x => x.id === b.dataset.shareMine), 'agenda'));
   }
 
   function cardMine(e){
@@ -592,6 +595,8 @@ a{color:var(--green)}
   function cardWeb(w){
     const d = pd(w.date);
     const tags = [];
+    const mineA = state.events.find(e => e.webId === w.id);
+    if(mineA && mineA.estado === 'interesado' && (mineA.limite || w.limite)){ const lm = mineA.limite || w.limite; tags.push(`<span class="tag ${days(lm)<=Math.max(avisoDias(),3)?'bad':'warn'}">Inscripción hasta ${pd(lm).getDate()} ${MESES[pd(lm).getMonth()]}</span>`); }
     if(w.km) tags.push(`<span class="tag">${esc(w.km)} km</span>`);
     if(w.desnivel) tags.push(`<span class="tag">${esc(w.desnivel)} m D+</span>`);
     if(w.precio) tags.push(`<span class="tag">${precioTxt(w.precio)}</span>`);
@@ -636,10 +641,10 @@ a{color:var(--green)}
     document.querySelectorAll('#rutasList .chip[data-d]').forEach(b => b.onclick = () => { dfilter = b.dataset.d; saveUI(); renderEventos(); });
     const rf = $('#rmfecha'); if(rf) rf.onclick = () => { ffecha = {modo:'todas', desde:'', hasta:''}; saveFecha(); renderEventos(); };
     document.querySelectorAll('[data-rmp]').forEach(b => b.onclick = () => { fprovs.delete(b.dataset.rmp); saveLocalProvs(); renderEventos(); commitZona(); });
-    document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => b.dataset.add.startsWith('club-') && typeof apuntarClub === 'function' ? apuntarClub(b.dataset.add.slice(5), b.dataset.st) : addFromWeb(b.dataset.add, b.dataset.st));
-    document.querySelectorAll('[data-cev]').forEach(b => b.onclick = () => eventoPantalla(b.dataset.cev));
-    document.querySelectorAll('[data-hide]').forEach(b => b.onclick = async () => { const w = state.web.find(x => x.id === b.dataset.hide); if(await confirmDlg('¿Descartar este evento?', w ? `«${w.nombre}» dejará de aparecer en la lista.` : '', 'Descartar')){ state.ocultas.push(b.dataset.hide); save(); } });
-    document.querySelectorAll('[data-share]').forEach(b => bindShare(b, () => state.web.find(x => x.id === b.dataset.share)));
+    document.querySelectorAll('#rutasList [data-add]').forEach(b => b.onclick = () => b.dataset.add.startsWith('club-') && typeof apuntarClub === 'function' ? apuntarClub(b.dataset.add.slice(5), b.dataset.st) : addFromWeb(b.dataset.add, b.dataset.st));
+    document.querySelectorAll('#rutasList [data-cev]').forEach(b => b.onclick = () => eventoPantalla(b.dataset.cev));
+    document.querySelectorAll('#rutasList [data-hide]').forEach(b => b.onclick = async () => { const w = state.web.find(x => x.id === b.dataset.hide); if(await confirmDlg('¿Descartar este evento?', w ? `«${w.nombre}» dejará de aparecer en la lista.` : '', 'Descartar')){ state.ocultas.push(b.dataset.hide); save(); } });
+    document.querySelectorAll('#rutasList [data-share]').forEach(b => bindShare(b, () => state.web.find(x => x.id === b.dataset.share), 'buscador'));
   }
 
   function openFiltros(){
@@ -922,9 +927,9 @@ a{color:var(--green)}
       ${sec('Tu agenda', `
         <p>Pulsa <b>★ Me interesa</b> o <b>✓ Inscrito</b> en cualquier evento para añadirlo a tu agenda. Vuelve a pulsarlo para quitarlo.</p>
         <p>Para los eventos marcados como «Me interesa», la agenda te avisa cuando se acerca el fin del plazo de inscripción (puedes elegir cuántos días antes en Configuración › Preferencias de notificaciones). Los avisos se ven dentro de la app.</p>
-        <p>Los eventos en los que estabas inscrito y ya han pasado cuentan como <b>rutas realizadas</b> en tu perfil.</p>`)}
+        <p>Los eventos en los que estabas inscrito y ya han pasado cuentan como <b>rutas realizadas</b> en tu perfil.</p><p>Las rutas que añades desde el buscador se ven en la agenda igual que allí y sus datos no se pueden modificar. Solo puedes editar las que creas tú con <b>+ Añadir</b>.</p>`)}
       ${sec('Compartir', `
-        <p>Toca el icono de compartir de una tarjeta para enviarla por WhatsApp, Telegram u otra app. Mantenlo pulsado para compartirla como imagen.</p>
+        <p>Toca el icono de compartir de una tarjeta para enviarla por WhatsApp, Telegram u otra app. Mantenlo pulsado para compartirla como imagen.</p><p>El mensaje empieza según desde dónde compartes: desde el buscador, «¡Mira lo que encontré en la aplicación Mis rutas y trails!»; desde tu agenda, «¡Estoy interesado en esta ruta!» o «¡Estoy inscrito en esta ruta!». Siempre lleva el enlace a la app.</p>
         <p>Los eventos de club se comparten con su cartel y con un enlace que lleva directamente a la inscripción en la app.</p>`)}
       ${sec('Perfil y datos personales', `
         <p>En Perfil verás tu foto, tus rutas realizadas y tus clubs. Mantén pulsada la foto para cambiarla.</p>
@@ -1153,11 +1158,20 @@ a{color:var(--green)}
     if(x.url){ let host = ''; try { host = new URL(x.url).host.replace(/^www\./,''); } catch(e){} ctx.textAlign = 'right'; ctx.font = '400 30px Inter'; ctx.fillText(host, W-P-8, H-40); }
     return cv;
   }
+  function introShare(x){
+    const app = 'la aplicación Mis rutas y trails';
+    if(SHARE_CTX === 'agenda'){
+      const m = state.events.find(e => e.id === x.id || (e.webId && (e.webId === x.id || e.webId === x.webId)));
+      if(m && m.estado === 'inscrito') return '¡Estoy inscrito en esta ruta! La encontré en ' + app + ': ' + APP_URL;
+      if(m && m.estado === 'interesado') return '¡Estoy interesado en esta ruta! La encontré en ' + app + ': ' + APP_URL;
+    }
+    return '¡Mira lo que encontré en ' + app + '! ' + APP_URL;
+  }
   function shareText(x){
     const d = pd(x.date);
     const pr = normProv(x.provincia), lg = x.lugar || '';
     const lugar = lg && pr && lg.toLowerCase().includes(pr.toLowerCase()) ? lg : [lg, pr].filter(Boolean).join(', ');
-    return [x.nombre, `📅 ${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`, lugar && '📍 ' + lugar, x.modalidades && '🏁 ' + x.modalidades, x.url].filter(Boolean).join('\n');
+    return [x.nombre, `📅 ${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`, lugar && '📍 ' + lugar, x.modalidades && '🏁 ' + x.modalidades, x.url].filter(Boolean).join('\n').replace(/^/, introShare(x) + '\n\n');
   }
 
   function toast(msg){
@@ -1211,13 +1225,14 @@ a{color:var(--green)}
     } finally { sharing = false; }
   }
   // pulsación corta = compartir texto; mantener pulsado = opciones con imagen
-  function bindShare(btn, getX){
+  var SHARE_CTX = 'buscador';
+  function bindShare(btn, getX, ctx){
     let t0 = 0, timer = null, longDone = false;
-    btn.addEventListener('pointerdown', e => { e.stopPropagation(); t0 = Date.now(); longDone = false; timer = setTimeout(() => { longDone = true; const x = getX(); if(x) openShare(x); }, 550); });
+    btn.addEventListener('pointerdown', e => { e.stopPropagation(); t0 = Date.now(); longDone = false; timer = setTimeout(() => { longDone = true; SHARE_CTX = ctx || 'buscador'; const x = getX(); if(x) openShare(x); }, 550); });
     const cancel = () => clearTimeout(timer);
     btn.addEventListener('pointerleave', cancel); btn.addEventListener('pointercancel', cancel);
     btn.addEventListener('contextmenu', e => e.preventDefault());
-    btn.onclick = e => { e.stopPropagation(); clearTimeout(timer); if(longDone) return; const x = getX(); if(x) quickShare(x); };
+    btn.onclick = e => { e.stopPropagation(); clearTimeout(timer); if(longDone) return; SHARE_CTX = ctx || 'buscador'; const x = getX(); if(x) quickShare(x); };
   }
 
   async function openShare(x){
@@ -3746,7 +3761,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     const cg = $('#evcartgen'); if(cg) prepararCartel(e).then(b => { if(b && document.body.contains(cg)){ const u = URL.createObjectURL(b); cg.innerHTML = `<img class="evcartel" src="${u}" alt="Cartel del evento">`; cg.firstChild.onclick = () => { const w = window.open(u, '_blank'); if(!w) toast('Mantén pulsado el cartel para guardarlo'); }; } });
     if(admin) pagosEvento(e, asist, perf);
     prepararCartel(e);
-    $('#eshare').onclick = () => { if(!CLUB.eventos.some(x => x.id === e.id)){ CLUB.eventos.push(e); mezclarClubEventos(); } compartirEventoClub(e.id); };
+    $('#eshare').onclick = () => { if(typeof SHARE_CTX !== 'undefined') SHARE_CTX = state.events.some(x => x.webId === 'club-' + e.id) ? 'agenda' : 'buscador'; if(!CLUB.eventos.some(x => x.id === e.id)){ CLUB.eventos.push(e); mezclarClubEventos(); } compartirEventoClub(e.id); };
     const sub = $('#eshare').closest('.btns'); if(sub) sub.insertAdjacentHTML('beforebegin', `<div class="sub" style="margin:12px 4px 0">${e.publico ? 'Al compartir se envía el cartel y un enlace al evento: cualquiera con cuenta podrá verlo y apuntarse.' : 'Al compartir se envía el cartel y un enlace al evento: solo podrán abrirlo los socios del club y los invitados.'}</div>`);
   }
   document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && sesion) clubCargar(); });
