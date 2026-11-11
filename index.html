@@ -622,7 +622,7 @@ a{color:var(--green)}
     document.querySelectorAll('#rutasList .chip[data-d]').forEach(b => b.onclick = () => { dfilter = b.dataset.d; saveUI(); renderEventos(); });
     const rf = $('#rmfecha'); if(rf) rf.onclick = () => { ffecha = {modo:'todas', desde:'', hasta:''}; saveFecha(); renderEventos(); };
     document.querySelectorAll('[data-rmp]').forEach(b => b.onclick = () => { fprovs.delete(b.dataset.rmp); saveLocalProvs(); renderEventos(); commitZona(); });
-    document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => addFromWeb(b.dataset.add, b.dataset.st));
+    document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => b.dataset.add.startsWith('club-') && typeof apuntarClub === 'function' ? apuntarClub(b.dataset.add.slice(5), b.dataset.st) : addFromWeb(b.dataset.add, b.dataset.st));
     document.querySelectorAll('[data-cev]').forEach(b => b.onclick = () => eventoPantalla(b.dataset.cev));
     document.querySelectorAll('[data-hide]').forEach(b => b.onclick = async () => { const w = state.web.find(x => x.id === b.dataset.hide); if(await confirmDlg('¿Descartar este evento?', w ? `«${w.nombre}» dejará de aparecer en la lista.` : '', 'Descartar')){ state.ocultas.push(b.dataset.hide); save(); } });
     document.querySelectorAll('[data-share]').forEach(b => bindShare(b, () => state.web.find(x => x.id === b.dataset.share)));
@@ -725,14 +725,15 @@ a{color:var(--green)}
   function editPerfil(){
     const p = state.prefs;
     $('#sheet').innerHTML = `<h2>Editar perfil</h2><form id="pf">
-      <label>Nombre y apellidos</label><input name="nombre" value="${esc(p.nombreCompleto||'')}" placeholder="Ej. Ginés Rodríguez Parra" maxlength="100" autocomplete="name"><div class="sub" style="margin-top:6px;line-height:1.4">🔒 Solo lo verán los administradores de los clubs a los que perteneces, y aparecerá en los listados de pagos que generen. El resto de usuarios solo ve tu nombre de usuario.</div>
+      <label>Nombre${sesion ? ' *' : ''}</label><input name="nombre" value="${esc((p.nombreReal || {}).nombre || '')}" placeholder="Ej. Ginés" maxlength="50" autocomplete="given-name" ${sesion ? 'required' : ''}>
+      <label>Apellidos${sesion ? ' *' : ''}</label><input name="apellidos" value="${esc((p.nombreReal || {}).apellidos || '')}" placeholder="Ej. Rodríguez Parra" maxlength="60" autocomplete="family-name" ${sesion ? 'required' : ''}><div class="sub" style="margin-top:6px;line-height:1.4">🔒 Tu nombre y apellidos solo los verán los administradores de los clubs a los que perteneces (también cuando pidas entrar), y aparecerán en los listados de pagos que generen. El resto de usuarios solo ve tu nombre de usuario.</div>
 
       <label>Foto de perfil</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pfoto">${p.foto ? 'Cambiar foto' : 'Añadir foto'}</button>${p.foto ? '<button type="button" class="btn del" id="pnofoto">Quitar foto</button>' : ''}</div>
       <div class="btns"><button type="button" class="btn" id="pcancel">Cancelar</button><button class="btn pri" type="submit">Guardar</button></div></form>`;
     $('#pcancel').onclick = close;
     $('#pfoto').onclick = () => { close(); $('#pfile').click(); };
     const nf = $('#pnofoto'); if(nf) nf.onclick = async () => { if(await confirmDlg('¿Quitar la foto de perfil?', '', 'Quitar')){ delete state.prefs.foto; close(); save(); } };
-    $('#pf').onsubmit = ev => { ev.preventDefault(); const fd = new FormData(ev.target); p.nombreCompleto = (fd.get('nombre')||'').toString().trim(); if(typeof nombreRealSubir === 'function') nombreRealSubir();  close(); save(); };
+    $('#pf').onsubmit = ev => { ev.preventDefault(); const fd = new FormData(ev.target); p.nombreReal = {nombre: (fd.get('nombre')||'').toString().trim(), apellidos: (fd.get('apellidos')||'').toString().trim()}; p.nombreCompleto = (p.nombreReal.nombre + ' ' + p.nombreReal.apellidos).trim(); if(typeof nombreRealSubir === 'function') nombreRealSubir();  close(); save(); };
     $('#ovl').classList.add('show');
   }
   function amigos(){
@@ -791,7 +792,8 @@ a{color:var(--green)}
   function cfgPersonal(){
     const p = state.prefs;
     cfgPage('Información personal', `<div class="cfgbox"><form id="pf2">
-      <label>Nombre y apellidos</label><input name="nombre" value="${esc(p.nombreCompleto||'')}" placeholder="Ej. Ginés Rodríguez Parra" maxlength="100" autocomplete="name"><div class="sub" style="margin-top:6px;line-height:1.4">🔒 Solo lo verán los administradores de los clubs a los que perteneces, y aparecerá en los listados de pagos que generen. El resto de usuarios solo ve tu nombre de usuario.</div>
+      <label>Nombre${sesion ? ' *' : ''}</label><input name="nombre" value="${esc((p.nombreReal || {}).nombre || '')}" placeholder="Ej. Ginés" maxlength="50" autocomplete="given-name" ${sesion ? 'required' : ''}>
+      <label>Apellidos${sesion ? ' *' : ''}</label><input name="apellidos" value="${esc((p.nombreReal || {}).apellidos || '')}" placeholder="Ej. Rodríguez Parra" maxlength="60" autocomplete="family-name" ${sesion ? 'required' : ''}><div class="sub" style="margin-top:6px;line-height:1.4">🔒 Tu nombre y apellidos solo los verán los administradores de los clubs a los que perteneces (también cuando pidas entrar), y aparecerán en los listados de pagos que generen. El resto de usuarios solo ve tu nombre de usuario.</div>
 
       ${sesion ? `<label>Nombre de usuario (lo que ven los demás)</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pusr">${AMI.yo ? esc(AMI.yo.usuario) + ' · Cambiar' : 'Elegir nombre de usuario'}</button></div>` : ''}
       <label>Foto de perfil</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pfoto2">${p.foto ? 'Cambiar foto' : 'Añadir foto'}</button>${p.foto ? '<button type="button" class="btn del" id="pnofoto2">Quitar foto</button>' : ''}</div>
@@ -799,7 +801,7 @@ a{color:var(--green)}
     const pu = $('#pusr'); if(pu) pu.onclick = () => elegirUsuario();
     $('#pfoto2').onclick = () => { $('#sheet').classList.remove('cfg'); close(); $('#pfile').click(); };
     const nf = $('#pnofoto2'); if(nf) nf.onclick = async () => { if(await confirmDlg('¿Quitar la foto de perfil?', '', 'Quitar')){ delete state.prefs.foto; $('#sheet').classList.remove('cfg'); close(); save(); } };
-    $('#pf2').onsubmit = ev => { ev.preventDefault(); const fd = new FormData(ev.target); p.nombreCompleto = (fd.get('nombre')||'').toString().trim(); if(typeof nombreRealSubir === 'function') nombreRealSubir();  $('#sheet').classList.remove('cfg'); close(); save(); };
+    $('#pf2').onsubmit = ev => { ev.preventDefault(); const fd = new FormData(ev.target); p.nombreReal = {nombre: (fd.get('nombre')||'').toString().trim(), apellidos: (fd.get('apellidos')||'').toString().trim()}; p.nombreCompleto = (p.nombreReal.nombre + ' ' + p.nombreReal.apellidos).trim(); if(typeof nombreRealSubir === 'function') nombreRealSubir();  $('#sheet').classList.remove('cfg'); close(); save(); };
   }
   function cfgCopia(){
     const n = state.events.length;
@@ -1441,10 +1443,36 @@ a{color:var(--green)}
     try { (await sbRest('nombres_reales?select=usuario,nombre_completo&usuario=in.(' + ids.join(',') + ')') || []).forEach(x => NOMBRES.set(x.usuario, x.nombre_completo)); } catch(e){}
   }
   const nombreReal = id => NOMBRES.get(id) || '';
+  const nombreCompleto = () => { const nr = state.prefs.nombreReal || {}; return !!((nr.nombre || '').trim() && (nr.apellidos || '').trim()); };
+  // nombre y apellidos obligatorios para tener cuenta (clubs y pagos)
+  function completarNombre(despues){
+    if($('#ovl').classList.contains('show') && $('#sheet').dataset.vista !== 'nombre') return;
+    let nr = state.prefs.nombreReal || {};
+    if(!nr.nombre && state.prefs.nombreCompleto){ const p = state.prefs.nombreCompleto.trim().split(/\s+/); nr = {nombre: p[0] || '', apellidos: p.slice(1).join(' ')}; }
+    $('#sheet').dataset.vista = 'nombre';
+    $('#sheet').innerHTML = `<div class="cfghead"><span style="width:44px"></span><div class="cfgtitle">Tu nombre y apellidos</div><span style="width:44px"></span></div>
+      <div class="cfgbox"><div class="sub" style="margin-bottom:8px">Para usar la app con cuenta necesitamos tu nombre y apellidos. Los clubs los usan para gestionar las inscripciones y los pagos.</div>
+      <form id="nf"><label>Nombre *</label><input name="nombre" required maxlength="50" autocomplete="given-name" value="${esc(nr.nombre || '')}" placeholder="Ej. Ginés">
+      <label>Apellidos *</label><input name="apellidos" required maxlength="60" autocomplete="family-name" value="${esc(nr.apellidos || '')}" placeholder="Ej. Rodríguez Parra">
+      <div class="sub" style="margin-top:8px;line-height:1.4">🔒 Solo los verán los administradores de los clubs a los que perteneces (también cuando pidas entrar), y aparecerán en los listados de pagos que generen. El resto de usuarios solo ve tu nombre de usuario.</div>
+      <div class="amsg" id="amsg"></div><div class="btns"><button class="btn pri" type="submit">Guardar</button></div></form></div>`;
+    $('#sheet').classList.add('cfg'); $('#ovl').classList.add('show');
+    $('#nf').onsubmit = async ev => {
+      ev.preventDefault();
+      const n = ev.target.nombre.value.trim(), ap = ev.target.apellidos.value.trim();
+      if(!n || !ap){ $('#amsg').textContent = 'Rellena tu nombre y tus apellidos.'; return; }
+      state.prefs.nombreReal = {nombre: n, apellidos: ap}; state.prefs.nombreCompleto = n + ' ' + ap;
+      userSave(); nubeGuardar(); await nombreRealSubir();
+      $('#sheet').dataset.vista = ''; close(); toast('Guardado ✓');
+      if(despues) despues();
+    };
+  }
   async function nombreRealSubir(){
     if(!sesion) return;
-    const n = (state.prefs.nombreCompleto || '').trim().slice(0, 100);
-    try { await sbRest('nombres_reales?on_conflict=usuario', {method: 'POST', headers: {'Prefer': 'resolution=merge-duplicates,return=minimal'}, body: JSON.stringify({usuario: sesion.user.id, nombre_completo: n, actualizado: new Date().toISOString()})}); setSync({nombreRealFirma: n}); }
+    const nr = state.prefs.nombreReal || {}, n = (state.prefs.nombreCompleto || '').trim().slice(0, 100);
+    const fila = {usuario: sesion.user.id, nombre_completo: n, nombre: (nr.nombre || '').slice(0, 50), apellidos: (nr.apellidos || '').slice(0, 60), actualizado: new Date().toISOString()};
+    const enviar = f => sbRest('nombres_reales?on_conflict=usuario', {method: 'POST', headers: {'Prefer': 'resolution=merge-duplicates,return=minimal'}, body: JSON.stringify(f)});
+    try { try { await enviar(fila); } catch(e){ if(/nombre|apellidos|column/i.test(e.message)){ const f2 = Object.assign({}, fila); delete f2.nombre; delete f2.apellidos; await enviar(f2); } else throw e; } setSync({nombreRealFirma: n}); }
     catch(e){ toast('Tu nombre y apellidos se guardarán cuando se ejecute nombres_modalidades.sql en Supabase.'); }
   }
   // captar #amigo=usuario (enlace de invitación)
@@ -1485,6 +1513,7 @@ a{color:var(--green)}
       const r = await sbRest('perfiles?select=id,usuario,nombre,foto&id=eq.' + sesion.user.id);
       AMI.yo = r && r[0] || null;
     } catch(e){ return null; }
+    if(AMI.yo && !nombreCompleto()){ setTimeout(() => completarNombre(), 400); }
     if(AMI.yo){ perfilQuizaSubir(); if((state.prefs.nombreCompleto || '') && syncInfo().nombreRealFirma !== (state.prefs.nombreCompleto || '').trim()) nombreRealSubir(); procesarInvitacion(); return AMI.yo; }
     if(preguntar !== false) elegirUsuario();
     return null;
@@ -1499,6 +1528,9 @@ a{color:var(--green)}
     $('#sheet').innerHTML = `<div class="cfghead"><button class="cfgx" id="ux" aria-label="Cerrar">✕</button><div class="cfgtitle">${actual ? 'Tu nombre de usuario' : 'Elige tu nombre de usuario'}</div><span style="width:44px"></span></div>
       <div class="cfgbox"><div class="sub" style="margin-bottom:8px">Es como te encontrarán tus amigos. Solo letras minúsculas, números, punto o guion bajo (3 a 20).</div>
       <form id="uf"><label>Nombre</label><input name="usuario" value="${esc(actual || sugerirUsuario())}" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="20">
+      ${actual ? '' : `<label>Nombre *</label><input name="nombre" required maxlength="50" autocomplete="given-name" value="${esc((state.prefs.nombreReal || {}).nombre || '')}" placeholder="Ej. Ginés">
+      <label>Apellidos *</label><input name="apellidos" required maxlength="60" autocomplete="family-name" value="${esc((state.prefs.nombreReal || {}).apellidos || '')}" placeholder="Ej. Rodríguez Parra">
+      <div class="sub" style="margin-top:6px;line-height:1.4">🔒 Tu nombre y apellidos solo los verán los administradores de tus clubs y aparecerán en sus listados de pagos.</div>`}
       <div class="amsg" id="amsg"></div><div class="btns"><button class="btn pri" type="submit">Guardar</button></div></form></div>
       <div class="sub" style="margin:12px 4px">Los demás usuarios solo ven tu nombre de usuario y tu foto. Tu agenda solo la ven los amigos que tú aceptes.</div>`;
     $('#sheet').classList.add('cfg'); $('#ovl').classList.add('show');
@@ -1508,9 +1540,15 @@ a{color:var(--green)}
     $('#uf').onsubmit = async ev => {
       ev.preventDefault();
       const u = inp.value.trim().toLowerCase();
+      if(!actual){
+        const n = (ev.target.nombre.value || '').trim(), ap = (ev.target.apellidos.value || '').trim();
+        if(!n || !ap){ $('#amsg').textContent = 'Rellena tu nombre y tus apellidos.'; return; }
+        state.prefs.nombreReal = {nombre: n, apellidos: ap}; state.prefs.nombreCompleto = n + ' ' + ap; userSave(); nubeGuardar();
+      }
       if(!USR_RE.test(u)){ $('#amsg').textContent = 'Usa de 3 a 20 caracteres: letras minúsculas, números, punto o guion bajo.'; return; }
       try { await perfilSubir(u); }
       catch(e){ $('#amsg').textContent = /duplicate|unique|23505|409/i.test(e.message) ? 'Ese nombre de usuario ya está cogido. Prueba con otro.' : 'No se pudo guardar. Revisa tu conexión.'; return; }
+      if(!actual) nombreRealSubir();
       pidiendoUsuario = false; close(); render(); toast('Listo, tu nombre de usuario es ' + u);
       if(despues) despues(); else procesarInvitacion();
     };
@@ -2958,7 +2996,7 @@ module.exports = QRCode;
 return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   // ---------- clubs ----------
   var WEBBASE = [], CLUBWEB = [];
-  var CLUB = {cargado: false, mis: [], eventos: [], resp: new Map(), pendientesAdmin: new Map(), syncT: null};
+  var CLUB = {cargado: false, mis: [], eventos: [], resp: new Map(), respMod: new Map(), pendientesAdmin: new Map(), syncT: null};
   const DIFS = ['Fácil', 'Moderada', 'Difícil', 'Muy difícil'];
   const MATERIAL_BASE = ['Linterna o frontal', 'Manta térmica', 'Cortavientos', 'Palos telescópicos', 'Envase para bebidas', 'Agua', 'Snacks'];
   const modsDe = e => Array.isArray(e.modalidades) ? e.modalidades.filter(m => m && (m.nombre || m.km)) : [];
@@ -2966,6 +3004,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   const modPrecio = m => { const s = m.precio || '', n = m.precio_no_socios || ''; if(s && n && s.trim() !== n.trim()) return 'Socios ' + precioBonito(s) + ' · No socios ' + precioBonito(n); return precioBonito(s || n); };
   const modTxt = m => [m.nombre || (TIPOS_EV.find(t => t[0] === m.tipo) || ['', ''])[1], m.km ? m.km + ' km' : '', m.desnivel ? m.desnivel + ' m D+' : '', m.dificultad ? m.dificultad : '', m.hora ? 'Salida ' + m.hora + ' h' : ''].filter(Boolean).join(' · ');
   const modCorto = m => (m.nombre || (TIPOS_EV.find(t => t[0] === m.tipo) || ['', 'Ruta'])[1]) + (m.km ? ' ' + String(m.km).replace('.', ',') + 'K' : '');
+  const plz = n => n + (+n === 1 ? ' plaza' : ' plazas');
   const matTxt = (e, t) => matDe(e).filter(m => m.t === t).map(m => m.n);
   const CLUB_CAMPOS = 'id,nombre,descripcion,localidad,provincia,abierto,cuota,periodo,mes_inicio,imagen', CLUB_CAMPOS2 = 'id,nombre,descripcion,localidad,provincia,abierto,cuota,periodo,mes_inicio';
   const MESES_C = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -3005,10 +3044,11 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     const club = e.clubs && e.clubs.nombre || 'Club';
     const mods = modsDe(e);
     const pr = mods.length < 2 && (e.precio || '') && (e.precio_no_socios || '') && e.precio.trim() !== e.precio_no_socios.trim() ? preciosTxt(e) : '';
-    const mod = [mods.length ? mods.map(modCorto).join(' · ') : '', e.hora ? 'Quedada ' + e.hora : '', e.dificultad && mods.length < 2 ? 'Dificultad ' + e.dificultad.toLowerCase() : '', e.plazas ? e.plazas + ' plazas' : '', pr].filter(Boolean).join(' · ');
+    const mod = [mods.length ? mods.map(modCorto).join(' · ') : '', e.hora ? 'Quedada ' + e.hora : '', e.dificultad && mods.length < 2 ? 'Dificultad ' + e.dificultad.toLowerCase() : '', e.plazas ? plz(e.plazas) : '', pr, e.recurrente && e.periodicidad ? '🔁 Se repite' : ''].filter(Boolean).join(' · ');
     return {id: 'club-' + e.id, clubEv: e.id, club: e.club, publico: e.publico, fuente: club, nombre: e.titulo, tipo: e.tipo, tipos: [...new Set([e.tipo].concat(modsDe(e).map(m => m.tipo).filter(Boolean)))], date: e.fecha,
       lugar: e.lugar || '', provincia: e.provincia || '', _p: e.provincia || '', km: e.km != null && mods.length < 2 ? String(e.km) : '', desnivel: e.desnivel != null && mods.length < 2 ? String(e.desnivel) : '',
       precio: pr || mods.length > 1 ? '' : (e.precio || e.precio_no_socios || ''), modalidades: mod, url: e.url || '', limite: e.limite || '', verificado: true, dificultad: e.dificultad || '',
+      recurrente: !!(e.recurrente && e.periodicidad),
       estado: e.limite ? 'Inscripción hasta ' + pd(e.limite).getDate() + ' ' + MESES[pd(e.limite).getMonth()] : ''};
   }
   function mezclarClubEventos(){
@@ -3025,11 +3065,13 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
         catch(e2){ mis = await sbRest('club_miembros?select=club,rol,clubs(id,nombre,descripcion,localidad,provincia,abierto)&usuario=eq.' + yo) || []; } }
       // si una parte falla, el resto sigue funcionando
       const intenta = async (path, def) => { try { return await sbRest(path) || def; } catch(e){ console.warn('clubs:', path, e.message); return def; } };
+      let generados = 0; try { generados = await sbRest('rpc/generar_recurrentes', {method: 'POST', body: '{}'}) || 0; } catch(e){}
       const eventos = await intenta('club_eventos?select=*,clubs(nombre)&fecha=gte.' + hoyISO() + '&order=fecha.asc,hora.asc&limit=300', []);
-      const resp = await intenta('evento_respuestas?select=evento,estado&usuario=eq.' + yo, []);
+      let resp = await intenta('evento_respuestas?select=evento,estado,modalidad&usuario=eq.' + yo, null);
+      if(resp === null) resp = await intenta('evento_respuestas?select=evento,estado&usuario=eq.' + yo, []);
       const admins = mis.filter(m => m.rol === 'admin').map(m => m.club);
       const pend = admins.length ? await intenta('club_miembros?select=club&rol=eq.pendiente&club=in.(' + admins.join(',') + ')', []) : [];
-      CLUB.mis = mis.filter(m => m.clubs); CLUB.eventos = eventos; CLUB.resp = new Map(resp.map(r => [r.evento, r.estado]));
+      CLUB.mis = mis.filter(m => m.clubs); CLUB.eventos = eventos; CLUB.resp = new Map(resp.map(r => [r.evento, r.estado])); CLUB.respMod = new Map(resp.map(r => [r.evento, r.modalidad == null ? null : r.modalidad]));
       CLUB.pendientesAdmin = new Map(); pend.forEach(p => CLUB.pendientesAdmin.set(p.club, (CLUB.pendientesAdmin.get(p.club) || 0) + 1));
       CLUB.cargado = true;
     } catch(e){ return; }
@@ -3038,7 +3080,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     if(v.startsWith('club:')) clubPantalla(v.slice(5));
     else if(v.startsWith('ev:')) eventoPantalla(v.slice(3));
   }
-  function clubReset(){ CLUB = {cargado: false, mis: [], eventos: [], resp: new Map(), pendientesAdmin: new Map(), syncT: null}; mezclarClubEventos(); marcarAvisosClub(); }
+  function clubReset(){ CLUB = {cargado: false, mis: [], eventos: [], resp: new Map(), respMod: new Map(), pendientesAdmin: new Map(), syncT: null}; mezclarClubEventos(); marcarAvisosClub(); }
   function avisosClub(){
     let n = CLUB.mis.filter(m => m.rol === 'invitado').length;
     CLUB.resp.forEach(est => { if(est === 'invitado') n++; });
@@ -3055,16 +3097,48 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     if(!sesion || !CLUB.cargado) return;
     clearTimeout(CLUB.syncT);
     CLUB.syncT = setTimeout(async () => {
-      const quiero = new Map();
-      state.events.forEach(e => { if(e.webId && e.webId.startsWith('club-')) quiero.set(e.webId.slice(5), e.estado === 'inscrito' ? 'voy' : 'interesa'); });
+      const quiero = new Map(), modQ = new Map();
+      state.events.forEach(e => { if(e.webId && e.webId.startsWith('club-')){ const id = e.webId.slice(5); quiero.set(id, e.estado === 'inscrito' ? 'voy' : 'interesa'); modQ.set(id, e.modalidad == null ? null : e.modalidad); } });
       const cambios = [];
-      quiero.forEach((est, id) => { if(CLUB.resp.get(id) !== est && CLUB.eventos.some(e => e.id === id)) cambios.push([id, est]); });
+      quiero.forEach((est, id) => { if((CLUB.resp.get(id) !== est || (CLUB.respMod.get(id) ?? null) !== modQ.get(id)) && CLUB.eventos.some(e => e.id === id)) cambios.push([id, est]); });
       CLUB.resp.forEach((est, id) => { if((est === 'voy' || est === 'interesa') && !quiero.has(id)) cambios.push([id, 'borrar']); });
       for(const [id, est] of cambios){
-        try { await sbRest('rpc/responder_evento', {method: 'POST', body: JSON.stringify({p_evento: id, p_estado: est})}); est === 'borrar' ? CLUB.resp.delete(id) : CLUB.resp.set(id, est); } catch(e){}
+        const m = est === 'borrar' ? null : modQ.get(id);
+        try {
+          try { await sbRest('rpc/responder_evento', {method: 'POST', body: JSON.stringify({p_evento: id, p_estado: est, p_modalidad: m})}); }
+          catch(err){ await sbRest('rpc/responder_evento', {method: 'POST', body: JSON.stringify({p_evento: id, p_estado: est})}); }
+          if(est === 'borrar'){ CLUB.resp.delete(id); CLUB.respMod.delete(id); } else { CLUB.resp.set(id, est); CLUB.respMod.set(id, m); }
+        } catch(e){}
       }
       if(cambios.length){ marcarAvisosClub(); if(!$('#tab-club').hidden) renderClub(); }
     }, 800);
+  }
+  // elegir modalidad al apuntarse (si el evento tiene varias)
+  function elegirModalidad(e, actual, cuentas){
+    const mods = modsDe(e);
+    return new Promise(res => {
+      $('#cfmbox').innerHTML = `<h3>¿En qué modalidad?</h3><p class="sub">${esc(e.titulo)}</p><div class="btns" style="flex-direction:column">${mods.map((m, i) => {
+        const ocup = cuentas && cuentas[i] != null ? cuentas[i] : null, llena = m.plazas && ocup != null && ocup >= m.plazas && actual !== i;
+        return `<button class="btn ${actual === i ? 'pri' : ''}" data-mo="${i}" ${llena ? 'disabled' : ''} style="text-align:left;flex-direction:column;align-items:flex-start;height:auto;padding:10px 14px"><b>${esc(m.nombre || modCorto(m))}</b><span style="font-weight:400;font-size:13px;opacity:.85">${esc([m.km ? m.km + ' km' : '', m.hora ? 'salida ' + m.hora : '', modPrecio(m), m.plazas ? (ocup != null ? ocup + ' de ' + m.plazas + ' plazas' : m.plazas + ' plazas') : '', llena ? 'completa' : ''].filter(Boolean).join(' · '))}</span></button>`; }).join('')}<button class="btn" data-mo="">Cancelar</button></div>`;
+      $('#cfm').classList.add('show');
+      $('#cfmbox').querySelectorAll('[data-mo]').forEach(b => b.onclick = () => { $('#cfm').classList.remove('show'); res(b.dataset.mo === '' ? null : +b.dataset.mo); });
+    });
+  }
+  async function apuntarClub(evId, estado){
+    const e = CLUB.eventos.find(x => x.id === evId), wid = 'club-' + evId;
+    const mine = state.events.find(x => x.webId === wid);
+    if(mine && mine.estado === estado && (!e || modsDe(e).length < 2)) return removeMine(mine);
+    let mod = null;
+    if(e && modsDe(e).length > 1){
+      let cuentas = null;
+      if(esSocioDe(e.club)){ try { const r = await sbRest('evento_respuestas?select=modalidad&estado=eq.voy&evento=eq.' + evId) || []; cuentas = modsDe(e).map((_, i) => r.filter(x => x.modalidad === i).length); } catch(err){} }
+      mod = await elegirModalidad(e, mine ? mine.modalidad : null, cuentas);
+      if(mod === null) return false;
+      if(mine && mine.estado === estado && mine.modalidad === mod) return removeMine(mine);
+    } else if(e && modsDe(e).length === 1) mod = 0;
+    if(mine){ mine.estado = estado; mine.modalidad = mod; save(); }
+    else { addFromWeb(wid, estado); const n = state.events.find(x => x.webId === wid); if(n){ n.modalidad = mod; save(); } }
+    return true;
   }
   async function clubRpc(fn, args, ok){
     try { const r = await sbRest('rpc/' + fn, {method: 'POST', body: JSON.stringify(args || {})}); if(ok) toast(typeof ok === 'function' ? ok(r) : ok); await clubCargar(); return r === null ? true : r; }
@@ -3130,7 +3204,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     };
     $('#kq').oninput = ev => { clearTimeout(qt); const q = ev.target.value.trim(); if(q.length < 2){ $('#kres').innerHTML = ''; return; } qt = setTimeout(() => buscar(q), 350); };
     el.querySelectorAll('[data-fev]').forEach(b => b.onclick = () => { try { localStorage.setItem('rutas-filtro-club', b.dataset.fev); } catch(e){} renderClub(); });
-    el.querySelectorAll('[data-add]').forEach(b => b.onclick = () => addFromWeb(b.dataset.add, b.dataset.st));
+    el.querySelectorAll('[data-add]').forEach(b => b.onclick = () => b.dataset.add.startsWith('club-') ? apuntarClub(b.dataset.add.slice(5), b.dataset.st) : addFromWeb(b.dataset.add, b.dataset.st));
     el.querySelectorAll('[data-cev]').forEach(b => b.onclick = () => eventoPantalla(b.dataset.cev));
     el.querySelectorAll('[data-share]').forEach(b => bindShare(b, () => state.web.find(x => x.id === b.dataset.share)));
   }
@@ -3141,10 +3215,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       clubRpc('responder_evento', {p_evento: id, p_estado: 'no'}, 'Respuesta enviada');
       return;
     }
-    const mine = state.events.find(e => e.webId === wid), quiero = est === 'voy' ? 'inscrito' : 'interesado';
-    if(mine){ if(mine.estado !== quiero){ mine.estado = quiero; save(); } else clubSyncAgenda(); }
-    else addFromWeb(wid, quiero);
-    toast(est === 'voy' ? 'Apuntado en tu agenda ✓' : 'Guardado como Me interesa ✓');
+    apuntarClub(id, est === 'voy' ? 'inscrito' : 'interesado').then(ok => { if(ok) toast(est === 'voy' ? 'Apuntado en tu agenda ✓' : 'Guardado como Me interesa ✓'); });
   }
 
   // ----- crear / editar club -----
@@ -3312,9 +3383,14 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       <label>Provincia</label><select name="provincia">${provOpts}</select>
       <div class="two"><div><label>Fecha</label><input name="fecha" type="date" required value="${esc(e.fecha || '')}" min="${hoyISO()}"></div><div><label>Hora de quedada</label><input name="hora" type="time" value="${esc(e.hora || '')}"></div></div>
       <label>Punto de encuentro</label><input name="encuentro" maxlength="120" value="${esc(e.encuentro || '')}" placeholder="Ej. Plaza del Ayuntamiento">
-      <div class="two"><div><label>Plazas</label><input name="plazas" type="number" inputmode="numeric" min="1" value="${e.plazas != null ? esc(e.plazas) : ''}" placeholder="Sin límite"></div><div><label>Inscripción hasta</label><input name="limite" type="date" value="${esc(e.limite || '')}"></div></div>
+      <label>Inscripción hasta</label><input name="limite" type="date" value="${esc(e.limite || '')}">
       <label>Descripción</label><textarea name="descripcion" rows="4" maxlength="1500" placeholder="Recorrido, avituallamiento, cómo llegar…">${esc(e.descripcion || '')}</textarea>
       <label>Enlace de inscripción o más información (opcional)</label><input name="url" type="url" maxlength="300" value="${esc(e.url || '')}" placeholder="https://…">
+      </div>
+      <div class="cfglabel">Repetición</div>
+      <div class="cfgbox">
+        <label class="sw" style="padding-top:0"><span><b>Evento recurrente</b><span class="cfgsub">Al día siguiente de cada salida se crea la siguiente automáticamente</span></span><input type="checkbox" id="rec" ${e.recurrente ? 'checked' : ''}><i></i></label>
+        <div id="recper" ${e.recurrente ? '' : 'hidden'}><label>¿Cada cuánto?</label><select name="periodicidad" id="persel"></select></div>
       </div>
       <div class="cfglabel">Modalidades</div>
       <div class="sub" style="margin:0 4px 8px">Cada prueba del evento con su tipo, distancia, hora de salida y precio. Si solo hay una, rellena solo la primera.</div>
@@ -3332,7 +3408,16 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     let publico = !!e.publico;
     // modalidades (los eventos antiguos sin modalidades se convierten en una)
     let mods = modsDe(e).map(m => Object.assign({}, m));
-    if(!mods.length) mods = [{nombre: '', tipo: e.tipo || 'senderismo', km: e.km != null ? +e.km : null, desnivel: e.desnivel != null ? +e.desnivel : null, dificultad: e.dificultad || '', hora: '', precio: e.precio || '', precio_no_socios: e.precio_no_socios || ''}];
+    if(!mods.length) mods = [{nombre: '', tipo: e.tipo || 'senderismo', km: e.km != null ? +e.km : null, desnivel: e.desnivel != null ? +e.desnivel : null, dificultad: e.dificultad || '', hora: '', precio: e.precio || '', precio_no_socios: e.precio_no_socios || '', plazas: e.plazas != null ? +e.plazas : null}];
+    // repetición
+    const pintaPer = () => {
+      const f = $('#ef').fecha.value, d = f ? pd(f) : null, dia = d ? d.toLocaleDateString('es-ES', {weekday: 'long'}) : 'mismo día de la semana';
+      const opts = [['semanal', 'Cada semana' + (d ? ' (los ' + dia + (/s$/.test(dia) ? '' : 's') + ')' : '')], ['mensual', 'Cada mes' + (d ? ' (el día ' + d.getDate() + ')' : ', el mismo día')], ['dia1', 'El día 1 de cada mes'], ['primer_dia', 'El primer ' + dia + ' de cada mes']];
+      const act = $('#persel').value || e.periodicidad || 'semanal';
+      $('#persel').innerHTML = opts.map(([k, l]) => `<option value="${k}" ${act === k ? 'selected' : ''}>${l}</option>`).join('');
+    };
+    $('#rec').onchange = ev => { $('#recper').hidden = !ev.target.checked; };
+    $('#ef').fecha.addEventListener('change', pintaPer); pintaPer();
     const pintaMods = () => {
       const tipOpts = sel => TIPOS_EV.map(([k, l]) => `<option value="${k}" ${sel === k ? 'selected' : ''}>${l}</option>`).join('');
       const difOpts = sel => '<option value="">Sin indicar</option>' + DIFS.map(d => `<option ${sel === d ? 'selected' : ''}>${d}</option>`).join('');
@@ -3341,13 +3426,13 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
         <label class="mini">Nombre${mods.length > 1 ? '' : ' (opcional)'}</label><input data-mf="nombre" maxlength="40" value="${esc(m.nombre || '')}" placeholder="Ej. Trail largo, Ruta senderista">
         <div class="two"><div><label class="mini">Tipo</label><select data-mf="tipo">${tipOpts(m.tipo || 'senderismo')}</select></div><div><label class="mini">Hora de salida</label><input data-mf="hora" type="time" value="${esc(m.hora || '')}"></div></div>
         <div class="two"><div><label class="mini">Distancia (km)</label><input data-mf="km" type="number" inputmode="decimal" min="0" step="0.1" value="${m.km != null ? esc(m.km) : ''}"></div><div><label class="mini">Desnivel (m)</label><input data-mf="desnivel" type="number" inputmode="numeric" min="0" value="${m.desnivel != null ? esc(m.desnivel) : ''}"></div></div>
-        <label class="mini">Dificultad</label><select data-mf="dificultad">${difOpts(m.dificultad || '')}</select>
+        <div class="two"><div><label class="mini">Dificultad</label><select data-mf="dificultad">${difOpts(m.dificultad || '')}</select></div><div><label class="mini">Plazas</label><input data-mf="plazas" type="number" inputmode="numeric" min="1" value="${m.plazas != null ? esc(m.plazas) : ''}" placeholder="Sin límite"></div></div>
         <div class="two"><div><label class="mini">Precio socios</label><input data-mf="precio" inputmode="decimal" maxlength="30" value="${esc(m.precio || '')}" placeholder="0 = gratis"></div><div><label class="mini">Precio no socios</label><input data-mf="precio_no_socios" inputmode="decimal" maxlength="30" value="${esc(m.precio_no_socios || '')}" placeholder="0 = gratis"></div></div>
       </div>`).join('');
-      $('#modlist').querySelectorAll('[data-mf]').forEach(inp => inp.oninput = inp.onchange = () => { const i = +inp.closest('[data-mi]').dataset.mi, k = inp.dataset.mf; mods[i][k] = (k === 'km' || k === 'desnivel') ? (inp.value === '' ? null : +inp.value) : inp.value; });
+      $('#modlist').querySelectorAll('[data-mf]').forEach(inp => inp.oninput = inp.onchange = () => { const i = +inp.closest('[data-mi]').dataset.mi, k = inp.dataset.mf; mods[i][k] = (k === 'km' || k === 'desnivel' || k === 'plazas') ? (inp.value === '' ? null : +inp.value) : inp.value; });
       $('#modlist').querySelectorAll('[data-mdel]').forEach(b => b.onclick = () => { mods.splice(+b.dataset.mdel, 1); pintaMods(); });
     };
-    $('#modadd').onclick = () => { const u = mods[mods.length - 1] || {}; mods.push({nombre: '', tipo: u.tipo || 'senderismo', km: null, desnivel: null, dificultad: '', hora: '', precio: '', precio_no_socios: ''}); pintaMods(); const ult = $('#modlist').lastElementChild; if(ult){ ult.scrollIntoView({behavior: 'smooth', block: 'center'}); ult.querySelector('input').focus(); } };
+    $('#modadd').onclick = () => { const u = mods[mods.length - 1] || {}; mods.push({nombre: '', tipo: u.tipo || 'senderismo', km: null, desnivel: null, dificultad: '', hora: '', precio: '', precio_no_socios: '', plazas: null}); pintaMods(); const ult = $('#modlist').lastElementChild; if(ult){ ult.scrollIntoView({behavior: 'smooth', block: 'center'}); ult.querySelector('input').focus(); } };
     pintaMods();
     // material
     const matIni = matDe(e);
@@ -3365,23 +3450,29 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     $('#ef').onsubmit = async ev => {
       ev.preventDefault();
       const f = ev.target;
-      const modalidades = mods.map(m => ({nombre: (m.nombre || '').trim(), tipo: m.tipo || 'senderismo', km: m.km, desnivel: m.desnivel != null ? Math.round(m.desnivel) : null, dificultad: m.dificultad || '', hora: m.hora || '', precio: (m.precio || '').trim(), precio_no_socios: (m.precio_no_socios || '').trim()}))
+      const modalidades = mods.map(m => ({nombre: (m.nombre || '').trim(), tipo: m.tipo || 'senderismo', km: m.km, desnivel: m.desnivel != null ? Math.round(m.desnivel) : null, dificultad: m.dificultad || '', hora: m.hora || '', precio: (m.precio || '').trim(), precio_no_socios: (m.precio_no_socios || '').trim(), plazas: m.plazas ? Math.round(m.plazas) : null}))
         .filter((m, i) => i === 0 || m.nombre || m.km != null || m.precio || m.precio_no_socios);
       if(modalidades.length > 1 && modalidades.some(m => !m.nombre)){ $('#amsg').textContent = 'Pon un nombre a cada modalidad (por ejemplo «Trail largo»).'; return; }
       const m0 = modalidades[0];
       // los datos generales del evento se toman de la primera modalidad (para listas, filtros y avisos)
       const d = {titulo: f.titulo.value.trim(), fecha: f.fecha.value, hora: f.hora.value, lugar: f.lugar.value.trim(), provincia: f.provincia.value, encuentro: f.encuentro.value.trim(),
         tipo: m0.tipo, km: m0.km, desnivel: m0.desnivel, dificultad: m0.dificultad, precio: m0.precio, precio_no_socios: m0.precio_no_socios,
-        plazas: f.plazas.value === '' ? null : Math.round(+f.plazas.value),
+        plazas: modalidades.every(m => m.plazas) ? modalidades.reduce((t, m) => t + m.plazas, 0) : null,
+        recurrente: $('#rec').checked, periodicidad: $('#rec').checked ? $('#persel').value : null,
         limite: f.limite.value || null, descripcion: f.descripcion.value.trim(), url: f.url.value.trim(), publico,
-        modalidades: modalidades.length === 1 && !m0.nombre && !m0.hora ? [] : modalidades,
+        modalidades: modalidades.length === 1 && !m0.nombre && !m0.hora && !m0.plazas ? [] : modalidades,
         material: mat.filter(m => m.t).map(m => ({n: m.n, t: m.t}))};
       if($('#matnew').value.trim()){ const v = $('#matnew').value.trim(); if(!d.material.some(m => m.n === v)) d.material.push({n: v, t: 'obligatorio'}); }
       if(d.url && !/^https?:\/\//i.test(d.url)) d.url = 'https://' + d.url;
       if(!d.fecha){ $('#amsg').textContent = 'Indica la fecha.'; return; }
       try {
-        const sinExtras = o => { const x = Object.assign({}, o); delete x.modalidades; delete x.material; return x; };
-        const intenta = async fn => { try { return await fn(d); } catch(err){ if(/modalidades|material|column/i.test(err.message)){ toast('Guardado sin modalidades ni material: falta ejecutar nombres_modalidades.sql en Supabase.'); return await fn(sinExtras(d)); } throw err; } };
+        const sinExtras = o => { const x = Object.assign({}, o); delete x.modalidades; delete x.material; delete x.recurrente; delete x.periodicidad; return x; };
+        const sinRec = o => { const x = Object.assign({}, o); delete x.recurrente; delete x.periodicidad; return x; };
+        const intenta = async fn => {
+          try { return await fn(d); } catch(err){
+            if(/recurrente|periodicidad/i.test(err.message)){ toast('Guardado sin repetición: falta ejecutar recurrentes.sql en Supabase.'); return await fn(sinRec(d)); }
+            if(/modalidades|material|column/i.test(err.message)){ toast('Guardado sin modalidades ni material: falta ejecutar nombres_modalidades.sql en Supabase.'); return await fn(sinExtras(d)); }
+            throw err; } };
         if(e.id){ await intenta(x => sbRest('club_eventos?id=eq.' + e.id, {method: 'PATCH', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify(x)})); toast('Evento guardado ✓'); await clubCargar(); eventoPantalla(e.id); }
         else {
           Object.assign(d, {club, creado_por: sesion.user.id});
@@ -3403,12 +3494,15 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     let asist = [], perf = new Map();
     if(socio){
       try {
-        asist = await sbRest('evento_respuestas?select=usuario,estado&evento=eq.' + id) || [];
+        try { asist = await sbRest('evento_respuestas?select=usuario,estado,modalidad&evento=eq.' + id) || []; } catch(err){ asist = await sbRest('evento_respuestas?select=usuario,estado&evento=eq.' + id) || []; }
         const ids = asist.map(x => x.usuario);
         if(ids.length) (await sbRest('perfiles?select=id,usuario,nombre,foto&id=in.(' + ids.join(',') + ')') || []).forEach(p => perf.set(p.id, p));
       } catch(err){}
     }
-    const grupo = est => asist.filter(x => x.estado === est).map(x => esc(nombreDe(perf.get(x.usuario)))).join(', ');
+    const nomMod = i => { const m = modsDe(e)[i]; return m ? (m.nombre || modCorto(m)) : ''; };
+    const grupo = est => asist.filter(x => x.estado === est).map(x => esc(nombreDe(perf.get(x.usuario))) + (modsDe(e).length > 1 && x.modalidad != null ? ' <span class="sub">(' + esc(nomMod(x.modalidad)) + ')</span>' : '')).join(', ');
+    const ocupadas = i => asist.filter(x => x.estado === 'voy' && (x.modalidad === i || (x.modalidad == null && modsDe(e).length === 1))).length;
+    const PER_TXT = {semanal: 'Se repite cada semana', mensual: 'Se repite cada mes', dia1: 'Se repite el día 1 de cada mes', primer_dia: 'Se repite el primer ' + pd(e.fecha).toLocaleDateString('es-ES', {weekday: 'long'}) + ' de cada mes'};
     const d = pd(e.fecha);
     const fila = (k, v) => v ? `<div class="drow"><span>${k}</span><b>${v}</b></div>` : '';
     const mismoPrecio = (e.precio || '').trim() === (e.precio_no_socios || '').trim();
@@ -3425,16 +3519,18 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
         ${conMods ? '' : fila('Desnivel', e.desnivel != null ? esc(e.desnivel) + ' m D+' : '')}
         ${conMods ? '' : fila('Dificultad', esc(e.dificultad))}
         ${conMods ? '' : mismoPrecio ? fila('Precio', esc(precioBonito(e.precio))) : fila('Precio socios', esc(precioBonito(e.precio)) || '—') + fila('Precio no socios', esc(precioBonito(e.precio_no_socios)) || '—')}
-        ${fila('Plazas', e.plazas ? (socio ? voyN + ' apuntados de ' + esc(e.plazas) : esc(e.plazas)) : '')}
+        ${conMods && modsDe(e).some(m => m.plazas) ? '' : fila('Plazas', e.plazas ? (socio ? voyN + ' apuntados de ' + esc(e.plazas) : esc(e.plazas)) : '')}
+        ${e.recurrente && e.periodicidad ? fila('Repetición', '🔁 ' + esc(PER_TXT[e.periodicidad] || '')) : ''}
         ${fila('Inscripción hasta', e.limite ? pd(e.limite).toLocaleDateString('es-ES', {day: 'numeric', month: 'long'}) : '')}
         ${e.descripcion ? `<p style="margin:12px 0 0;font-size:14.5px;line-height:1.5;white-space:pre-line">${esc(e.descripcion)}</p>` : ''}
-        ${conMods ? `<div class="evsec"><b>${modsDe(e).length > 1 ? 'Modalidades' : 'Modalidad'}</b>${modsDe(e).map(m => `<div class="evmod2"><div><span class="tipoico">${esc((TIPOS_EV.find(t => t[0] === m.tipo) || ['', ''])[1])}</span> <b>${esc(m.nombre || (TIPOS_EV.find(t => t[0] === m.tipo) || ['', 'Ruta'])[1])}</b></div><div class="sub">${esc([m.km ? m.km + ' km' : '', m.desnivel ? m.desnivel + ' m D+' : '', m.dificultad, m.hora ? 'Salida ' + m.hora + ' h' : ''].filter(Boolean).join(' · '))}</div>${modPrecio(m) ? `<div class="mprecio">💶 ${esc(modPrecio(m))}</div>` : ''}</div>`).join('')}</div>` : ''}
+        ${conMods ? `<div class="evsec"><b>${modsDe(e).length > 1 ? 'Modalidades' : 'Modalidad'}</b>${modsDe(e).map((m, i) => `<div class="evmod2"><div><span class="tipoico">${esc((TIPOS_EV.find(t => t[0] === m.tipo) || ['', ''])[1])}</span> <b>${esc(m.nombre || (TIPOS_EV.find(t => t[0] === m.tipo) || ['', 'Ruta'])[1])}</b></div><div class="sub">${esc([m.km ? m.km + ' km' : '', m.desnivel ? m.desnivel + ' m D+' : '', m.dificultad, m.hora ? 'Salida ' + m.hora + ' h' : ''].filter(Boolean).join(' · '))}</div>${modPrecio(m) ? `<div class="mprecio">💶 ${esc(modPrecio(m))}</div>` : ''}${m.plazas ? `<div class="sub">👥 ${socio ? ocupadas(i) + ' de ' + plz(m.plazas) + (ocupadas(i) >= m.plazas ? ' · <b>completa</b>' : '') : plz(m.plazas)}</div>` : ''}</div>`).join('')}</div>` : ''}
         ${matDe(e).length ? `<div class="evsec"><b>Material</b>${matTxt(e, 'obligatorio').length ? `<div class="evmat"><span class="mtag ob">Obligatorio</span>${matTxt(e, 'obligatorio').map(esc).join(', ')}</div>` : ''}${matTxt(e, 'recomendable').length ? `<div class="evmat"><span class="mtag re">Recomendable</span>${matTxt(e, 'recomendable').map(esc).join(', ')}</div>` : ''}</div>` : ''}
         ${e.url ? `<div class="btns"><a class="btn" href="${esc(e.url)}" target="_blank" rel="noopener">Inscripción / más info ↗</a></div>` : ''}
         ${e.cartel_estilo === 'propio' && e.cartel_url ? (esPdf(e.cartel_url) ? `<div class="btns"><a class="btn" href="${esc(e.cartel_url)}" target="_blank" rel="noopener">📄 Ver cartel (PDF)</a></div>` : `<a href="${esc(e.cartel_url)}" target="_blank" rel="noopener"><img class="evcartel" src="${esc(e.cartel_url)}" alt="Cartel del evento"></a>`) : ''}</div>
       <div class="cfglabel">Tu respuesta</div>
       <div class="cfgbox"><div class="resp"><button class="chip ${mine && mine.estado === 'inscrito' ? 'act-ins' : 'greenl'}" data-r="voy">✓ Voy</button><button class="chip ${mine && mine.estado === 'interesado' ? 'act-int' : 'amber'}" data-r="interesa">★ Me interesa</button><button class="chip ${!mine && r === 'no' ? 'act-no' : ''}" data-r="no">No voy</button></div>
-        <div class="sub" style="margin-top:8px">${mine ? 'Está en tu agenda.' : r === 'invitado' ? 'Te han invitado a este evento.' : 'Si respondes «Voy» o «Me interesa», se añade a tu agenda.'}</div></div>
+        <div class="sub" style="margin-top:8px">${mine ? 'Está en tu agenda' + (modsDe(e).length > 1 && mine.modalidad != null ? ' · modalidad: <b>' + esc(nomMod(mine.modalidad)) + '</b>' : '') + '.' : r === 'invitado' ? 'Te han invitado a este evento.' : 'Si respondes «Voy» o «Me interesa», se añade a tu agenda.'}</div>
+        ${mine && modsDe(e).length > 1 ? '<button class="alink" id="ecambmod" style="margin:6px 0 0">Cambiar de modalidad</button>' : ''}</div>
       ${socio ? `<div class="cfglabel">Asistentes</div><div class="cfgbox">${fila('✓ Van', grupo('voy') || '—')}${fila('★ Les interesa', grupo('interesa'))}${fila('No van', grupo('no'))}${admin ? fila('Invitados sin responder', grupo('invitado')) : ''}</div>` : ''}
       ${admin ? `<div class="cfglabel">Pagos del evento <span class="adm">solo administradores</span></div><div class="cfgbox" id="epagos"><div class="sub">Cargando…</div></div>` : ''}
       ${admin ? `<div class="cfggroup" style="margin-top:14px"><button id="einvall">Invitar a todos los socios${CHEV}</button><button id="einv">Invitar a usuarios concretos${CHEV}</button><button id="eedit">Editar evento${CHEV}</button><button id="edel" class="cdel">Borrar evento${CHEV}</button></div>` : ''}
@@ -3444,11 +3540,12 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       const est = b.dataset.r;
       if(!state.web.find(x => x.id === wid)){ CLUB.eventos.push(e); mezclarClubEventos(); }
       if(est === 'no'){ state.events = state.events.filter(x => x.webId !== wid); userSave(); nubeGuardar(); await clubRpc('responder_evento', {p_evento: id, p_estado: 'no'}, 'Respuesta enviada'); }
-      else { const quiero = est === 'voy' ? 'inscrito' : 'interesado', m2 = state.events.find(x => x.webId === wid);
-        if(m2 && m2.estado === quiero){ if(!await removeMine(m2)) return; }
-        else if(m2){ m2.estado = quiero; save(); } else addFromWeb(wid, quiero); }
+      else { if(!await apuntarClub(id, est === 'voy' ? 'inscrito' : 'interesado')) return; }
       setTimeout(() => eventoPantalla(id), 1100);
     });
+    const cm = $('#ecambmod'); if(cm) cm.onclick = async () => { const mi = state.events.find(x => x.webId === wid); if(!mi) return; const est = mi.estado; const e2 = CLUB.eventos.find(x => x.id === id) || e;
+      let cuentas = null; try { cuentas = modsDe(e2).map((_, i) => ocupadas(i)); } catch(err){}
+      const m = await elegirModalidad(e2, mi.modalidad, socio ? cuentas : null); if(m === null || m === mi.modalidad) return; mi.modalidad = m; mi.estado = est; save(); toast('Modalidad cambiada ✓'); setTimeout(() => eventoPantalla(id), 1100); };
     const ia = $('#einvall'); if(ia) ia.onclick = () => clubRpc('invitar_evento', {p_evento: id, p_usuarios: [], p_todos: true}, n => n ? `Invitación enviada a ${n} ${n === 1 ? 'socio' : 'socios'} ✓` : 'Todos los socios estaban ya invitados');
     const iu = $('#einv'); if(iu) iu.onclick = () => invitarUsuarios('Invitar al evento', async ids => sbRest('rpc/invitar_evento', {method: 'POST', body: JSON.stringify({p_evento: id, p_usuarios: ids, p_todos: false})}), () => eventoPantalla(id), new Set(asist.map(x => x.usuario)));
     const ed = $('#eedit'); if(ed) ed.onclick = () => eventoForm(e.club, e);
@@ -3613,11 +3710,14 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     if(pag === null){ box.innerHTML = '<div class="sub">Para anotar pagos, ejecuta antes el archivo cuotas.sql en Supabase.</div>'; return; }
     const van = asist.filter(x => x.estado === 'voy').map(x => x.usuario);
     const P = u => perf.get(u) || {id: u, usuario: '…', nombre: ''};
+    const modMap = new Map(asist.map(x => [x.usuario, x.modalidad]));
+    const varias = modsDe(e).length > 1;
+    const etq = u => { const m = varias ? modsDe(e)[modMap.get(u)] : null; return m ? `<span class="sub" style="margin-right:6px">${esc(m.nombre || modCorto(m))}</span>` : ''; };
     const pinta = () => {
       const n = van.filter(u => pag.has(u)).length;
-      box.innerHTML = van.length ? `<div class="sub" style="margin-bottom:4px">${preciosTxt(e) ? esc(preciosTxt(e)) + ' · ' : ''}<b>${n} de ${van.length}</b> han pagado</div>` + van.map(u => filaPago(P(u), pag.has(u))).join('') + '<div class="btns"><button class="btn" id="einforme">📄 Generar informe</button></div>'
+      box.innerHTML = van.length ? `<div class="sub" style="margin-bottom:4px">${preciosTxt(e) && !varias ? esc(preciosTxt(e)) + ' · ' : ''}<b>${n} de ${van.length}</b> han pagado</div>` + van.map(u => filaPago(P(u), pag.has(u), etq(u))).join('') + '<div class="btns"><button class="btn" id="einforme">📄 Generar informe</button></div>'
         : '<div class="sub">Cuando alguien responda «Voy», podrás anotar aquí si ha pagado.</div>';
-      const ei = $('#einforme'); if(ei) ei.onclick = () => informeEvento(e, van, perf);
+      const ei = $('#einforme'); if(ei) ei.onclick = () => informeEvento(e, van, perf, modMap);
       box.querySelectorAll('[data-pago]').forEach(b => b.onclick = async () => {
         const u = b.dataset.pago, ya = pag.has(u), quien = nombreDe(P(u));
         if(!await confirmDlg(ya ? '¿Quitar el pago?' : '¿Confirmar el pago?', ya ? `${quien} pasará a «Sin pagar» en ${e.titulo}.` : `Se anotará que ${quien} ha pagado ${e.titulo}.`, ya ? 'Quitar pago' : 'Confirmar pago')) return;
@@ -3671,9 +3771,10 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       ['📍', [e.lugar, e.provincia].filter(Boolean).join(', ')],
       ['🚩', e.encuentro ? 'Encuentro: ' + e.encuentro : ''],
       ['🥾', modsDe(e).length > 1 ? '' : [e.km != null ? e.km + ' km' : '', e.desnivel != null ? e.desnivel + ' m D+' : '', modsDe(e)[0] && modsDe(e)[0].hora ? 'salida ' + modsDe(e)[0].hora : ''].filter(Boolean).join('  ·  ')],
-      ...(modsDe(e).length > 1 ? modsDe(e).slice(0, 4).map(m => ['🏁', [modCorto(m), m.desnivel ? m.desnivel + ' m D+' : '', m.hora ? 'salida ' + m.hora : ''].filter(Boolean).join('  ·  ')]) : []),
+      ...(modsDe(e).length > 1 ? modsDe(e).slice(0, 4).map(m => ['🏁', [modCorto(m), m.desnivel ? m.desnivel + ' m D+' : '', m.hora ? 'salida ' + m.hora : '', m.plazas ? plz(m.plazas) : ''].filter(Boolean).join('  ·  ')]) : []),
       ['🎒', matTxt(e, 'obligatorio').length ? 'Obligatorio: ' + matTxt(e, 'obligatorio').join(', ').toLowerCase() : ''],
-      ['👥', e.plazas ? e.plazas + ' plazas' : ''],
+      [matTxt(e, 'obligatorio').length ? '' : '🎒', matTxt(e, 'recomendable').length ? 'Recomendable: ' + matTxt(e, 'recomendable').join(', ').toLowerCase() : ''],
+      ['👥', modsDe(e).length > 1 ? '' : e.plazas ? plz(e.plazas) : ''],
       ['⏳', e.limite ? 'Inscripción hasta el ' + pd(e.limite).getDate() + ' de ' + MESES_C[pd(e.limite).getMonth()] : '']
     ].filter(x => x[1]);
     const ps = modsDe(e).length > 1 ? '' : (e.precio || ''), pn = modsDe(e).length > 1 ? '' : (e.precio_no_socios || '');
@@ -3686,7 +3787,9 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       fs = Math.round(124 * s); ctx.font = `700 ${fs}px ${TIT}`;
       const todas = partirTexto(ctx, e.titulo.toUpperCase(), AN); lin = todas.slice(0, 4);
       if(todas.length > 4) return 1e9; // que el título entero quepa en 4 líneas
-      alto = 46 * s + 44 * s + 60 * s + lin.length * fs * .95 + 40 * s + 150 * s + 50 * s + datos.length * 62 * s;
+      ctx.font = `500 ${Math.round(40 * s)}px ${TXT}`;
+      const nl = datos.reduce((t, x) => t + Math.min(3, partirTexto(ctx, x[1], AN - 72 * s).length), 0);
+      alto = 46 * s + 44 * s + 60 * s + lin.length * fs * .95 + 40 * s + 150 * s + 50 * s + nl * 50 * s + datos.length * 12 * s;
       return P + 30 + alto;
     };
     while(medir() > FONDO && s > .5) s -= .04;
@@ -3718,7 +3821,10 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     ctx.font = `500 ${Math.round(38 * s)}px ${TXT}`; ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillText(d.getFullYear() + (e.hora ? '  ·  Quedada ' + e.hora + ' h' : ''), xf, y + 116 * s);
     y += 150 * s + 50 * s + hueco * .6;
     ctx.font = `500 ${Math.round(40 * s)}px ${TXT}`;
-    datos.forEach(([ic, t]) => { ctx.fillStyle = '#fff'; ctx.fillText(ic, P, y + 40 * s); ctx.fillText(recortar(ctx, t, AN - 72 * s), P + 72 * s, y + 40 * s); y += 62 * s; });
+    datos.forEach(([ic, t]) => { ctx.fillStyle = '#fff'; if(ic) ctx.fillText(ic, P, y + 40 * s);
+      const ls = partirTexto(ctx, t, AN - 72 * s), vis = ls.slice(0, 3);
+      vis.forEach((l, k) => { ctx.fillText(k === 2 && ls.length > 3 ? recortar(ctx, l + ' …', AN - 72 * s) : l, P + 72 * s, y + 40 * s); y += 50 * s; });
+      y += 12 * s; });
     // precios
     if(opt.qr){
       const xq = W - P - QRW, yq = H - P - PIE - QRH;
@@ -4011,22 +4117,32 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     elegirFormatoInforme(f => ({nombre: 'cuotas-' + nombreArchivo(c.nombre + '-' + ref),
       blob: f === 'pdf' ? crearPdf(titulo, sub, columnas, filas, resumen) : crearCsv(columnas, filas, [[titulo], [sub[0]], ...resumen])}));
   }
-  async function informeEvento(e, van, perf){
+  async function informeEvento(e, van, perf, modMap){
+    modMap = modMap || new Map();
+    const varias = modsDe(e).length > 1;
     const pag = await pagosDetalle(e.club, 'evento', e.id);
     let socios = new Set();
     try { socios = new Set((await sbRest('club_miembros?select=usuario,rol&club=eq.' + e.club) || []).filter(m => m.rol === 'admin' || m.rol === 'socio').map(m => m.usuario)); } catch(err){}
     const P = u => perf.get(u) || {usuario: '', nombre: ''};
-    const ps = numero(e.precio), pn = numero(e.precio_no_socios);
-    const precioDe = u => socios.has(u) ? (ps != null ? ps : pn) : (pn != null ? pn : ps);
+    const modU = u => modsDe(e)[varias ? modMap.get(u) : 0];
+    const preciosU = u => { const m = modU(u); return m && (m.precio || m.precio_no_socios) ? [numero(m.precio), numero(m.precio_no_socios)] : [numero(e.precio), numero(e.precio_no_socios)]; };
+    const precioDe = u => { const [ps, pn] = preciosU(u); return socios.has(u) ? (ps != null ? ps : pn) : (pn != null ? pn : ps); };
+    const hayPrecio = van.some(u => precioDe(u) != null) || numero(e.precio) != null || numero(e.precio_no_socios) != null;
     await cargarNombres(van);
     const lista = van.slice().sort((a, b) => (nombreReal(a) || nombreDe(P(a))).localeCompare(nombreReal(b) || nombreDe(P(b)), 'es'));
     let recaudado = 0, pendiente = 0;
     const filas = lista.map(u => { const pr = precioDe(u); if(pr != null){ if(pag.has(u)) recaudado += pr; else pendiente += pr; }
-      return [nombreReal(u) || '(sin indicar)', P(u).usuario || '', socios.has(u) ? 'Socio' : 'No socio', pr != null ? euros(pr) : '', pag.has(u) ? 'Pagado' : 'Pendiente', fechaCorta(pag.get(u))]; });
-    const columnas = [{t: 'Nombre y apellidos', x: 0, max: 24}, {t: 'Usuario', x: 150, max: 18}, {t: 'Tipo', x: 260}, {t: 'Precio', x: 320}, {t: 'Estado', x: 380, negrita: 'Pagado'}, {t: 'Anotado el', x: 450}];
+      const m = modU(u), nm = varias ? (m ? (m.nombre || modCorto(m)) : '(sin elegir)') : null;
+      const fila = [nombreReal(u) || '(sin indicar)', P(u).usuario || '', socios.has(u) ? 'Socio' : 'No socio', pr != null ? euros(pr) : '', pag.has(u) ? 'Pagado' : 'Pendiente', fechaCorta(pag.get(u))];
+      if(varias) fila.splice(2, 0, nm);
+      return fila; });
+    const columnas = varias
+      ? [{t: 'Nombre y apellidos', x: 0, max: 21}, {t: 'Usuario', x: 122, max: 13}, {t: 'Modalidad', x: 200, max: 14}, {t: 'Tipo', x: 285}, {t: 'Precio', x: 335}, {t: 'Estado', x: 388, negrita: 'Pagado'}, {t: 'Anotado el', x: 445}]
+      : [{t: 'Nombre y apellidos', x: 0, max: 24}, {t: 'Usuario', x: 150, max: 18}, {t: 'Tipo', x: 260}, {t: 'Precio', x: 320}, {t: 'Estado', x: 380, negrita: 'Pagado'}, {t: 'Anotado el', x: 450}];
     const n = lista.filter(u => pag.has(u)).length, d = pd(e.fecha);
     const resumen = [['Apuntados (Voy)', String(lista.length)], ['Han pagado', String(n)], ['Pendientes', String(lista.length - n)]];
-    if(ps != null || pn != null) resumen.push(['Precios', preciosTxt(e)], ['Recaudado', euros(recaudado)], ['Pendiente de cobro', euros(pendiente)]);
+    if(varias) modsDe(e).forEach((m, i) => { const k = lista.filter(u => modMap.get(u) === i).length; resumen.push([(m.nombre || modCorto(m)), k + ' apuntado' + (k === 1 ? '' : 's')]); });
+    if(hayPrecio) resumen.push(...(varias ? [] : [['Precios', preciosTxt(e)]]), ['Recaudado', euros(recaudado)], ['Pendiente de cobro', euros(pendiente)]);
     const titulo = 'Pagos · ' + e.titulo, sub = [(e.clubs ? e.clubs.nombre + ' · ' : '') + d.toLocaleDateString('es-ES', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'}) + (e.hora ? ' · ' + e.hora + ' h' : ''), 'Generado el ' + new Date().toLocaleString('es-ES', {dateStyle: 'long', timeStyle: 'short'})];
     elegirFormatoInforme(f => ({nombre: 'pagos-' + nombreArchivo(e.titulo + '-' + e.fecha),
       blob: f === 'pdf' ? crearPdf(titulo, sub, columnas, filas, resumen) : crearCsv(columnas, filas, [[titulo], [sub[0]], ...resumen])}));
@@ -4086,15 +4202,18 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       ['🚩', e.encuentro ? 'Quedamos en ' + e.encuentro : ''],
       ['🥾', modsDe(e).length > 1 ? '' : [e.km != null ? e.km + ' km' : '', e.desnivel != null ? e.desnivel + ' m de subida' : ''].filter(Boolean).join(' · ')],
       ['💪', modsDe(e).length > 1 || !e.dificultad ? '' : 'Dificultad ' + e.dificultad.toLowerCase()],
-      ...(modsDe(e).length > 1 ? modsDe(e).slice(0, 4).map(m => ['🏁', [modCorto(m), m.hora ? 'sale a las ' + m.hora : ''].filter(Boolean).join(' · ')]) : []),
-      ['🎒', matTxt(e, 'obligatorio').length ? 'Trae: ' + matTxt(e, 'obligatorio').join(', ').toLowerCase() : ''],
-      ['🎟️', [e.plazas ? e.plazas + ' plazas' : '', e.limite ? 'apúntate antes del ' + pd(e.limite).getDate() + ' de ' + MESES_C[pd(e.limite).getMonth()] : ''].filter(Boolean).join(' · ')]
+      ...(modsDe(e).length > 1 ? modsDe(e).slice(0, 4).map(m => ['🏁', [modCorto(m), m.hora ? 'sale a las ' + m.hora : '', m.plazas ? plz(m.plazas) : ''].filter(Boolean).join(' · ')]) : []),
+      ['🎒', matTxt(e, 'obligatorio').length ? 'Obligatorio: ' + matTxt(e, 'obligatorio').join(', ').toLowerCase() : ''],
+      [matTxt(e, 'obligatorio').length ? '' : '🎒', matTxt(e, 'recomendable').length ? 'Recomendable: ' + matTxt(e, 'recomendable').join(', ').toLowerCase() : ''],
+      ['🎟️', [e.plazas && modsDe(e).length < 2 ? plz(e.plazas) : '', e.limite ? 'apúntate antes del ' + pd(e.limite).getDate() + ' de ' + MESES_C[pd(e.limite).getMonth()] : ''].filter(Boolean).join(' · ')]
     ].filter(x => x[1]);
     const ps = modsDe(e).length > 1 ? '' : (e.precio || ''), pn = modsDe(e).length > 1 ? '' : (e.precio_no_socios || '');
     const precios = ps && pn && ps.trim() !== pn.trim() ? [['Socios', precioBonito(ps), '#ff6b9a'], ['No socios', precioBonito(pn), '#ff9f1c']] : (ps || pn) ? [['Precio', precioBonito(ps || pn), '#ff6b9a']] : [];
     const tablaD = modsDe(e).length > 1 ? modsDe(e).filter(m => modPrecio(m)).slice(0, 4) : [];
     const QRW = opt.qr ? 250 : 0, ZONA = Math.max(precios.length ? (opt.qr && precios.length > 1 ? 290 : 170) : tablaD.length ? tablaD.length * 66 + 30 : 0, opt.qr ? 300 : 0), PIE = 80;
-    const INFO = datos.length ? datos.length * 58 + 44 : 0;
+    ctx.font = `700 36px ${FT}`;
+    const lineasD = datos.map(x => { const ls = partirTexto(ctx, x[1], AN - 110); return ls.length > 3 ? [...ls.slice(0, 2), recortar(ctx, ls[2] + ' …', AN - 110)] : ls; });
+    const INFO = datos.length ? lineasD.reduce((t, l) => t + l.length * 46, 0) + datos.length * 12 + 44 : 0;
     const yInfo = H - P - PIE - (ZONA ? ZONA + 30 : 0) - INFO;
     let fs = opt.formato === 'historia' ? 150 : 124, lin;
     const anTit = AN - (compacto ? 270 : 210); // deja sitio al sol o a la fecha
@@ -4125,12 +4244,13 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     ctx.font = `700 40px ${FT}`; ctx.strokeText(t2, cx + 150, cy + 48); ctx.fillText(t2, cx + 150, cy + 48);
     }
     // emoji grande de la actividad
-    ctx.font = '150px sans-serif'; ctx.fillText(EMO[e.tipo] || '⛰️', W - P - 170, Math.min(yInfo - 30, base + 120));
+    if(yInfo - 30 - 150 > 360){ ctx.font = '150px sans-serif'; ctx.fillText(EMO[e.tipo] || '⛰️', W - P - 170, Math.min(yInfo - 30, base + 120)); }
     // tarjeta de datos
     if(datos.length){
       rrect(ctx, P, yInfo, AN, INFO, 30); ctx.fillStyle = 'rgba(255,255,255,.94)'; ctx.fill(); contorno(ctx, 6);
       ctx.font = `700 38px ${FT}`; ctx.fillStyle = '#1f2433';
-      datos.forEach(([ic, t], i) => { const yy = yInfo + 62 + i * 58; ctx.font = '38px sans-serif'; ctx.fillText(ic, P + 28, yy); ctx.font = `700 36px ${FT}`; ctx.fillText(recortar(ctx, t, AN - 110), P + 88, yy); });
+      let yy = yInfo + 62;
+      datos.forEach(([ic], i) => { ctx.font = '38px sans-serif'; if(ic) ctx.fillText(ic, P + 28, yy); ctx.font = `700 36px ${FT}`; lineasD[i].forEach(l => { ctx.fillText(l, P + 88, yy); yy += 46; }); yy += 12; });
     }
     // precios y QR
     const yz = H - P - PIE - ZONA;
@@ -4147,8 +4267,10 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       tablaD.forEach((m, i) => {
         const yy = yb + 15 + i * 66, s1 = precioBonito(m.precio || ''), s2 = precioBonito(m.precio_no_socios || '');
         rrect(ctx, P + 16, yy + 6, 18, 44, 9); ctx.fillStyle = cols[i % 4]; ctx.fill();
-        ctx.fillStyle = '#1f2433'; ctx.font = `700 32px ${FT}`; ctx.fillText(recortar(ctx, modCorto(m), anP * .48), P + 48, yy + 42);
-        ctx.textAlign = 'right'; ctx.font = `700 30px ${FT}`; ctx.fillText(s1 && s2 && s1 !== s2 ? 'socios ' + s1 + ' · resto ' + s2 : (s1 || s2), P + anP - 22, yy + 42); ctx.textAlign = 'left';
+        const pt = s1 && s2 && s1 !== s2 ? 'socios ' + s1 + ' · resto ' + s2 : (s1 || s2);
+        ctx.font = `700 30px ${FT}`; const pw = ctx.measureText(pt).width;
+        ctx.fillStyle = '#1f2433'; ctx.font = `700 32px ${FT}`; ctx.fillText(recortar(ctx, modCorto(m), anP - 48 - 22 - pw - 18), P + 48, yy + 42);
+        ctx.textAlign = 'right'; ctx.font = `700 30px ${FT}`; ctx.fillText(pt, P + anP - 22, yy + 42); ctx.textAlign = 'left';
       });
     }
     if(precios.length){
