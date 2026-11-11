@@ -277,6 +277,11 @@ body{position:fixed;inset:0}
 .okc{color:var(--green) !important;font-weight:600}
 .evrow{cursor:pointer;border-bottom:0 !important;padding:12px 14px !important}
 textarea{resize:vertical;min-height:70px}
+.seg3{display:grid;grid-template-columns:repeat(3,1fr);background:var(--card);border-radius:14px;padding:4px;gap:4px}
+.seg3 button{border:0;background:none;padding:10px 4px;border-radius:11px;font:600 13.5px Inter,sans-serif;color:var(--muted);cursor:pointer}
+.seg3 button.on{background:var(--green);color:#fff}
+.pdfbox{display:flex;flex-direction:column;align-items:center;gap:10px;padding:26px 10px;font-size:50px}.pdfbox b{font-size:16px}
+.evcartel{display:block;width:100%;border-radius:14px;margin-top:12px}
 .cartelprev{background:var(--card);border-radius:18px;padding:10px;text-align:center}
 .cartelprev img{max-width:100%;max-height:60vh;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.18)}
 .sw{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--line);cursor:pointer;font-weight:400 !important;margin:0 !important}
@@ -3336,14 +3341,15 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
         ${fila('Plazas', e.plazas ? (socio ? voyN + ' apuntados de ' + esc(e.plazas) : esc(e.plazas)) : '')}
         ${fila('Inscripción hasta', e.limite ? pd(e.limite).toLocaleDateString('es-ES', {day: 'numeric', month: 'long'}) : '')}
         ${e.descripcion ? `<p style="margin:12px 0 0;font-size:14.5px;line-height:1.5;white-space:pre-line">${esc(e.descripcion)}</p>` : ''}
-        ${e.url ? `<div class="btns"><a class="btn" href="${esc(e.url)}" target="_blank" rel="noopener">Inscripción / más info ↗</a></div>` : ''}</div>
+        ${e.url ? `<div class="btns"><a class="btn" href="${esc(e.url)}" target="_blank" rel="noopener">Inscripción / más info ↗</a></div>` : ''}
+        ${e.cartel_estilo === 'propio' && e.cartel_url ? (esPdf(e.cartel_url) ? `<div class="btns"><a class="btn" href="${esc(e.cartel_url)}" target="_blank" rel="noopener">📄 Ver cartel (PDF)</a></div>` : `<a href="${esc(e.cartel_url)}" target="_blank" rel="noopener"><img class="evcartel" src="${esc(e.cartel_url)}" alt="Cartel del evento"></a>`) : ''}</div>
       <div class="cfglabel">Tu respuesta</div>
       <div class="cfgbox"><div class="resp"><button class="chip ${mine && mine.estado === 'inscrito' ? 'act-ins' : 'greenl'}" data-r="voy">✓ Voy</button><button class="chip ${mine && mine.estado === 'interesado' ? 'act-int' : 'amber'}" data-r="interesa">★ Me interesa</button><button class="chip ${!mine && r === 'no' ? 'act-no' : ''}" data-r="no">No voy</button></div>
         <div class="sub" style="margin-top:8px">${mine ? 'Está en tu agenda.' : r === 'invitado' ? 'Te han invitado a este evento.' : 'Si respondes «Voy» o «Me interesa», se añade a tu agenda.'}</div></div>
       ${socio ? `<div class="cfglabel">Asistentes</div><div class="cfgbox">${fila('✓ Van', grupo('voy') || '—')}${fila('★ Les interesa', grupo('interesa'))}${fila('No van', grupo('no'))}${admin ? fila('Invitados sin responder', grupo('invitado')) : ''}</div>` : ''}
       ${admin ? `<div class="cfglabel">Pagos del evento <span class="adm">solo administradores</span></div><div class="cfgbox" id="epagos"><div class="sub">Cargando…</div></div>` : ''}
       ${admin ? `<div class="cfggroup" style="margin-top:14px"><button id="einvall">Invitar a todos los socios${CHEV}</button><button id="einv">Invitar a usuarios concretos${CHEV}</button><button id="eedit">Editar evento${CHEV}</button><button id="edel" class="cdel">Borrar evento${CHEV}</button></div>` : ''}
-      <div class="btns"><button class="btn" id="eshare">Compartir</button>${admin ? '<button class="btn" id="ecartel">🖼️ Crear cartel</button>' : ''}<button class="btn" id="eclub">Ver el club</button></div>`, false);
+      <div class="btns"><button class="btn" id="eshare">Compartir</button>${admin ? '<button class="btn" id="ecartel">🖼️ Cartel</button>' : ''}<button class="btn" id="eclub">Ver el club</button></div>`, false);
     $('#sheet').dataset.vista = 'ev:' + id;
     document.querySelectorAll('[data-r]').forEach(b => b.onclick = async () => {
       const est = b.dataset.r;
@@ -3661,46 +3667,105 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.font = `400 28px ${TXT}`; ctx.textAlign = 'right'; ctx.fillText(e.publico ? 'Evento abierto' : 'Solo socios', W - P, H - P - 20); ctx.textAlign = 'left';
     return cv;
   }
-  async function cartelPantalla(e){
-    const opt = {formato: 'post', foto: null, qr: true};
+  const ESTILOS = [['serio', 'Serio'], ['divertido', 'Divertido'], ['propio', 'Subir mi cartel']];
+  const esPdf = u => /\.pdf(\?|$)/i.test(u || '');
+  async function subirCartel(e, file){
+    const t = await tokenValido(); if(!t) throw new Error('sin sesión');
+    let blob = file, ext = 'pdf', tipo = 'application/pdf';
+    if(!/pdf/i.test(file.type) && !/\.pdf$/i.test(file.name || '')){
+      // las fotos se convierten a JPG y se reducen para que pesen poco
+      const img = await new Promise((r, rej) => { const im = new Image(); im.onload = () => r(im); im.onerror = rej; im.src = URL.createObjectURL(file); });
+      const k = Math.min(1, 2000 / Math.max(img.width, img.height)), cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', .86)); ext = 'jpg'; tipo = 'image/jpeg';
+    } else if(file.size > 10 * 1024 * 1024) throw new Error('grande');
+    const ruta = e.club + '/' + e.id + '-' + Date.now() + '.' + ext;
+    const r = await fetch(SB_URL + '/storage/v1/object/carteles/' + ruta, {method: 'POST', headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + t, 'Content-Type': tipo, 'x-upsert': 'true'}, body: blob});
+    if(!r.ok) throw new Error('subida ' + r.status);
+    if(e.cartel_url){ const vieja = e.cartel_url.split('/object/public/carteles/')[1]; if(vieja) fetch(SB_URL + '/storage/v1/object/carteles/' + vieja, {method: 'DELETE', headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + t}}).catch(() => {}); }
+    return SB_URL + '/storage/v1/object/public/carteles/' + ruta;
+  }
+  async function guardarEstiloCartel(e, cambios){
+    await sbRest('club_eventos?id=eq.' + e.id, {method: 'PATCH', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify(cambios)});
+    Object.assign(e, cambios); const ce = CLUB.eventos.find(x => x.id === e.id); if(ce && ce !== e) Object.assign(ce, cambios);
+  }
+  async function cartelPantalla(e, estiloIni){
+    const estiloEv = e.cartel_estilo === 'propio' && !e.cartel_url ? 'serio' : (e.cartel_estilo || 'serio');
+    const opt = {formato: 'post', foto: null, qr: true, estilo: estiloIni || estiloEv};
+    const propio = opt.estilo === 'propio', usable = !propio || !!e.cartel_url;
+    const nomEst = k => (ESTILOS.find(x => x[0] === k) || ESTILOS[0])[1].toLowerCase();
     cfgPage('Cartel del evento', `
-      <div class="seg" style="margin-bottom:10px"><button type="button" data-cf="post" class="on">Publicación (4:5)</button><button type="button" data-cf="historia">Historia (9:16)</button></div>
-      <div class="cartelprev"><img id="cimg" alt="Vista previa del cartel"></div>
-      <div class="btns"><button class="btn" id="cfoto">Añadir foto de fondo</button><button class="btn" id="cnofoto" hidden>Quitar foto</button></div>
-      <label class="chk" style="margin:12px 4px 0"><input type="checkbox" id="cqr" checked><span>Incluir código QR para apuntarse${e.publico ? '' : ' (solo funcionará para socios e invitados)'}</span></label>
-      <input type="file" id="cfile2" accept="image/*" hidden>
-      <div class="btns"><button class="btn pri" id="ccomp">Compartir o guardar cartel</button></div>
-      <div class="sub" style="margin:10px 4px">El cartel se hace con los datos del evento. Si cambias algo del evento, vuelve a abrir esta pantalla para que se actualice.</div>`, false);
+      <div class="seg3">${ESTILOS.map(([k, l]) => `<button type="button" data-est="${k}" class="${opt.estilo === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+      ${propio ? `
+        <div class="cartelprev" style="margin-top:10px">${e.cartel_url ? (esPdf(e.cartel_url) ? `<div class="pdfbox">📄<b>Cartel en PDF</b><a class="btn" href="${esc(e.cartel_url)}" target="_blank" rel="noopener">Ver el PDF ↗</a></div>` : `<img src="${esc(e.cartel_url)}" alt="Cartel del evento">`) : '<div class="sub" style="padding:30px 10px">Sube un cartel que ya tengas hecho: una foto, una imagen o un PDF, desde Fotos o desde Archivos.</div>'}</div>
+        <div class="btns"><button class="btn ${e.cartel_url ? '' : 'pri'}" id="csub">${e.cartel_url ? 'Cambiar cartel' : '⬆️ Subir cartel'}</button>${e.cartel_url ? '<button class="btn del" id="cquit">Quitar</button>' : ''}</div>
+        <input type="file" id="cfile3" accept="image/*,application/pdf,.pdf" hidden>
+        <div class="amsg" id="cmsg" style="color:var(--muted)"></div>`
+      : `
+        <div class="seg" style="margin:10px 0"><button type="button" data-cf="post" class="on">Publicación (4:5)</button><button type="button" data-cf="historia">Historia (9:16)</button></div>
+        <div class="cartelprev"><img id="cimg" alt="Vista previa del cartel"></div>
+        ${opt.estilo === 'serio' ? '<div class="btns"><button class="btn" id="cfoto">Añadir foto de fondo</button><button class="btn" id="cnofoto" hidden>Quitar foto</button></div><input type="file" id="cfile2" accept="image/*" hidden>' : ''}
+        <label class="chk" style="margin:12px 4px 0"><input type="checkbox" id="cqr" checked><span>Incluir código QR para apuntarse${e.publico ? '' : ' (solo funcionará para socios e invitados)'}</span></label>`}
+      <div class="btns"><button class="btn pri" id="ccomp" ${usable ? '' : 'disabled'}>Compartir o guardar cartel</button></div>
+      <div class="cfgbox" style="margin-top:12px"><div class="sub">${estiloEv === opt.estilo ? '✓ Este es el cartel que se envía al compartir el evento.' : 'Ahora, al compartir el evento se envía el cartel <b>' + nomEst(estiloEv) + '</b>.'}</div>
+        ${estiloEv !== opt.estilo && usable ? '<div class="btns"><button class="btn" id="cusar">Usar este cartel al compartir</button></div>' : ''}</div>`, false);
     $('#cfgx').onclick = () => eventoPantalla(e.id);
+    document.querySelectorAll('[data-est]').forEach(b => b.onclick = () => cartelPantalla(e, b.dataset.est));
+    const usar = $('#cusar'); if(usar) usar.onclick = async () => { try { await guardarEstiloCartel(e, {cartel_estilo: opt.estilo}); toast('Listo: se enviará este cartel al compartir ✓'); cartelPantalla(e, opt.estilo); } catch(err){ toast('No se pudo guardar. ¿Has ejecutado carteles.sql en Supabase?'); } };
+    const nombreBase = 'cartel-' + (e.titulo || 'evento').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').slice(0, 40);
+    if(propio){
+      $('#csub').onclick = () => $('#cfile3').click();
+      const q = $('#cquit'); if(q) q.onclick = async () => { if(!await confirmDlg('¿Quitar el cartel subido?', 'Al compartir el evento se volverá a usar el cartel serio.', 'Quitar')) return;
+        try { const vieja = e.cartel_url.split('/object/public/carteles/')[1], t = await tokenValido(); if(vieja && t) fetch(SB_URL + '/storage/v1/object/carteles/' + vieja, {method: 'DELETE', headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + t}}).catch(() => {});
+          await guardarEstiloCartel(e, {cartel_url: '', cartel_estilo: 'serio'}); toast('Cartel quitado'); cartelPantalla(e, 'propio'); } catch(err){ toast('No se pudo quitar.'); } };
+      $('#cfile3').onchange = async ev => {
+        const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; if(!f) return;
+        $('#cmsg').textContent = 'Subiendo cartel…'; $('#csub').disabled = true;
+        try { const url = await subirCartel(e, f); await guardarEstiloCartel(e, {cartel_url: url, cartel_estilo: 'propio'}); toast('Cartel subido ✓ Se enviará al compartir el evento'); cartelPantalla(e, 'propio'); }
+        catch(err){ $('#csub').disabled = false; $('#cmsg').textContent = /grande/.test(err.message) ? 'El archivo pesa más de 10 MB.' : 'No se pudo subir. ¿Has ejecutado carteles.sql en Supabase? Revisa también tu conexión.'; }
+      };
+      $('#ccomp').onclick = async () => {
+        try { const r = await fetch(e.cartel_url); const b = await r.blob(); await downloads.save({filename: nombreBase + (esPdf(e.cartel_url) ? '.pdf' : '.jpg'), data: b}); }
+        catch(err){ if(!err || err.code !== 'declined') toast('No se pudo compartir el cartel.'); }
+      };
+      return;
+    }
     let blob = null;
     const pintar = async () => {
-      const cv = await dibujarCartel(e, opt);
+      const cv = opt.estilo === 'divertido' ? await dibujarCartelDivertido(e, opt) : await dibujarCartel(e, opt);
       blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', .9));
       const im = $('#cimg'); if(im){ if(im.src) URL.revokeObjectURL(im.src); im.src = URL.createObjectURL(blob); }
     };
     document.querySelectorAll('[data-cf]').forEach(b => b.onclick = () => { opt.formato = b.dataset.cf; document.querySelectorAll('[data-cf]').forEach(x => x.classList.toggle('on', x === b)); pintar(); });
     $('#cqr').onchange = ev => { opt.qr = ev.target.checked; pintar(); };
-    $('#cfoto').onclick = () => $('#cfile2').click();
-    $('#cfile2').onchange = ev => {
-      const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; if(!f) return;
-      const img = new Image(); img.onload = () => { opt.foto = img; $('#cnofoto').hidden = false; $('#cfoto').textContent = 'Cambiar foto'; pintar(); };
-      img.onerror = () => toast('No se pudo abrir esa foto'); img.src = URL.createObjectURL(f);
-    };
-    $('#cnofoto').onclick = () => { opt.foto = null; $('#cnofoto').hidden = true; $('#cfoto').textContent = 'Añadir foto de fondo'; pintar(); };
+    const fo = $('#cfoto');
+    if(fo){
+      fo.onclick = () => $('#cfile2').click();
+      $('#cfile2').onchange = ev => {
+        const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; if(!f) return;
+        const img = new Image(); img.onload = () => { opt.foto = img; $('#cnofoto').hidden = false; fo.textContent = 'Cambiar foto'; pintar(); };
+        img.onerror = () => toast('No se pudo abrir esa foto'); img.src = URL.createObjectURL(f);
+      };
+      $('#cnofoto').onclick = () => { opt.foto = null; $('#cnofoto').hidden = true; fo.textContent = 'Añadir foto de fondo'; pintar(); };
+    }
     $('#ccomp').onclick = async () => {
       if(!blob) return;
-      const nombre = 'cartel-' + (e.titulo || 'evento').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').slice(0, 40) + '.jpg';
-      try { await downloads.save({filename: nombre, data: blob}); } catch(err){ if(!err || err.code !== 'declined') toast('No se pudo compartir el cartel.'); }
+      try { await downloads.save({filename: nombreBase + '.jpg', data: blob}); } catch(err){ if(!err || err.code !== 'declined') toast('No se pudo compartir el cartel.'); }
     };
     await pintar();
   }
   // ----- compartir un evento de club con su cartel -----
   var CARTELES = new Map();
-  const firmaCartel = e => e.id + '|' + JSON.stringify([e.titulo, e.fecha, e.hora, e.lugar, e.provincia, e.encuentro, e.km, e.desnivel, e.dificultad, e.precio, e.precio_no_socios, e.plazas, e.limite, e.tipo, e.publico, e.clubs && e.clubs.nombre, ((CLUB.mis.find(x => x.club === e.club) || {}).clubs || {}).imagen ? 'logo' : '']);
+  const firmaCartel = e => e.id + '|' + (e.cartel_estilo || 'serio') + '|' + (e.cartel_url || '') + '|' + JSON.stringify([e.titulo, e.fecha, e.hora, e.lugar, e.provincia, e.encuentro, e.km, e.desnivel, e.dificultad, e.precio, e.precio_no_socios, e.plazas, e.limite, e.tipo, e.publico, e.clubs && e.clubs.nombre, ((CLUB.mis.find(x => x.club === e.club) || {}).clubs || {}).imagen ? 'logo' : '']);
   async function cartelBlob(e){
     const k = firmaCartel(e);
     if(CARTELES.has(k)) return CARTELES.get(k);
-    const p = (async () => { const cv = await dibujarCartel(e, {formato: 'post', foto: null, qr: true}); return await new Promise(r => cv.toBlob(r, 'image/jpeg', .88)); })();
+    const p = (async () => {
+      if(e.cartel_estilo === 'propio' && e.cartel_url){ const r = await fetch(e.cartel_url); if(!r.ok) throw new Error('cartel'); return await r.blob(); }
+      const o = {formato: 'post', foto: null, qr: true};
+      const cv = e.cartel_estilo === 'divertido' ? await dibujarCartelDivertido(e, o) : await dibujarCartel(e, o);
+      return await new Promise(r => cv.toBlob(r, 'image/jpeg', .88));
+    })();
     CARTELES.set(k, p);
     try { return await p; } catch(err){ CARTELES.delete(k); return null; }
   }
@@ -3719,10 +3784,11 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   }
   async function compartirEventoClub(id){
     const e = CLUB.eventos.find(x => x.id === id); if(!e) return false;
-    const nombre = 'cartel-' + (e.titulo || 'evento').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').slice(0, 40) + '.jpg';
+    const pdf = e.cartel_estilo === 'propio' && esPdf(e.cartel_url);
+    const nombre = 'cartel-' + (e.titulo || 'evento').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').slice(0, 40) + (pdf ? '.pdf' : '.jpg');
     const texto = textoEvento(e);
     const enviar = async blob => {
-      const file = new File([blob], nombre, {type: 'image/jpeg'});
+      const file = new File([blob], nombre, {type: pdf ? 'application/pdf' : 'image/jpeg'});
       if(!(navigator.canShare && navigator.canShare({files: [file]}))) return 'sin-archivos';
       try { await navigator.share({files: [file], text: texto}); return 'ok'; }
       catch(err){ return err && err.name === 'AbortError' ? 'ok' : (err && err.name === 'NotAllowedError' ? 'permiso' : 'error'); }
@@ -3854,6 +3920,129 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     const titulo = 'Pagos · ' + e.titulo, sub = [(e.clubs ? e.clubs.nombre + ' · ' : '') + d.toLocaleDateString('es-ES', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'}) + (e.hora ? ' · ' + e.hora + ' h' : ''), 'Generado el ' + new Date().toLocaleString('es-ES', {dateStyle: 'long', timeStyle: 'short'})];
     elegirFormatoInforme(f => ({nombre: 'pagos-' + nombreArchivo(e.titulo + '-' + e.fecha),
       blob: f === 'pdf' ? crearPdf(titulo, sub, columnas, filas, resumen) : crearCsv(columnas, filas, [[titulo], [sub[0]], ...resumen])}));
+  }
+  // ----- cartel estilo divertido (tipo dibujo) -----
+  const FUN = {trail: ['#ff8a3d', '#ffb26b'], senderismo: ['#3fae5a', '#7ed36f'], carrera: ['#3b82f6', '#7cb6ff'], mtb: ['#9b5de5', '#c39bff'], otro: ['#64748b', '#a3b1c2']};
+  const EMO = {trail: '🏃', senderismo: '🥾', carrera: '🏃‍♀️', mtb: '🚵', otro: '⛰️'};
+  function contorno(ctx, w){ ctx.lineWidth = w || 8; ctx.strokeStyle = '#1f2433'; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke(); }
+  function rrect(ctx, x, y, w, h, r){ ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
+  function estrella(ctx, cx, cy, ro, ri, n){ ctx.beginPath(); for(let i = 0; i < n * 2; i++){ const r = i % 2 ? ri : ro, a = Math.PI * i / n - Math.PI / 2; ctx[i ? 'lineTo' : 'moveTo'](cx + r * Math.cos(a), cy + r * Math.sin(a)); } ctx.closePath(); }
+  function nube(ctx, x, y, k){ ctx.beginPath(); [[0, 0, 46], [50, -22, 56], [110, 0, 46], [55, 18, 50]].forEach(([dx, dy, r]) => { ctx.moveTo(x + dx * k + r * k, y + dy * k); ctx.arc(x + dx * k, y + dy * k, r * k, 0, Math.PI * 2); }); ctx.fillStyle = '#fff'; ctx.fill(); }
+  async function dibujarCartelDivertido(e, opt){
+    const W = 1080, H = opt.formato === 'historia' ? 1920 : 1350, P = 70, AN = W - 2 * P;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d'), col = FUN[e.tipo] || FUN.otro;
+    const FT = '"Chalkboard SE", "Marker Felt", "Comic Sans MS", "Barlow Condensed", "Arial Rounded MT Bold", sans-serif';
+    if(opt.logo === undefined){
+      const m = CLUB.mis.find(x => x.club === e.club), src = m && m.clubs && m.clubs.imagen;
+      opt.logo = src ? await new Promise(r => { const im = new Image(); im.onload = () => r(im); im.onerror = () => r(null); im.src = src; }) : null;
+    }
+    // cielo
+    const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#8fdcff'); g.addColorStop(.55, '#d8f4ff'); g.addColorStop(1, '#fff6d8');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    const compacto = opt.formato !== 'historia'; // en 4:5 la fecha ocupa el sitio del sol
+    // sol sonriente
+    const sx = W - 170, sy = 190;
+    if(!compacto){
+    ctx.save(); ctx.translate(sx, sy); for(let i = 0; i < 12; i++){ ctx.rotate(Math.PI / 6); ctx.beginPath(); ctx.moveTo(0, -105); ctx.lineTo(0, -140); ctx.lineWidth = 12; ctx.strokeStyle = '#ffb703'; ctx.lineCap = 'round'; ctx.stroke(); } ctx.restore();
+    ctx.beginPath(); ctx.arc(sx, sy, 88, 0, Math.PI * 2); ctx.fillStyle = '#ffd60a'; ctx.fill(); contorno(ctx, 7);
+    ctx.fillStyle = '#1f2433'; ctx.beginPath(); ctx.arc(sx - 28, sy - 14, 9, 0, Math.PI * 2); ctx.arc(sx + 28, sy - 14, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx, sy + 8, 36, .15 * Math.PI, .85 * Math.PI); ctx.lineWidth = 7; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,120,120,.55)'; ctx.beginPath(); ctx.arc(sx - 50, sy + 18, 13, 0, Math.PI * 2); ctx.arc(sx + 50, sy + 18, 13, 0, Math.PI * 2); ctx.fill();
+    }
+    nube(ctx, 110, 330, 1); nube(ctx, W - 420, 420, .8);
+    // montañas y colinas
+    const base = H * .62;
+    const monte = (x0, x1, pico, alto, color) => {
+      ctx.beginPath(); ctx.moveTo(x0, base + 40); ctx.quadraticCurveTo(pico - 60, base - alto + 40, pico, base - alto); ctx.quadraticCurveTo(pico + 60, base - alto + 40, x1, base + 40); ctx.closePath();
+      ctx.fillStyle = color; ctx.fill(); contorno(ctx, 7);
+      ctx.beginPath(); ctx.moveTo(pico - 52, base - alto + 70); ctx.quadraticCurveTo(pico, base - alto - 8, pico + 52, base - alto + 70); ctx.lineTo(pico + 26, base - alto + 58); ctx.lineTo(pico, base - alto + 80); ctx.lineTo(pico - 26, base - alto + 58); ctx.closePath();
+      ctx.fillStyle = '#fff'; ctx.fill(); contorno(ctx, 5);
+    };
+    monte(-80, 560, 240, 380, col[0]); monte(380, W + 80, 760, 470, col[1]); monte(200, 760, 470, 300, col[0]);
+    ctx.beginPath(); ctx.moveTo(0, base + 20); ctx.bezierCurveTo(W * .3, base - 60, W * .6, base + 90, W, base - 10); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+    ctx.fillStyle = '#8bd67a'; ctx.fill(); contorno(ctx, 7);
+    ctx.setLineDash([2, 26]); ctx.lineWidth = 12; ctx.strokeStyle = '#fff'; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(W * .15, H); ctx.bezierCurveTo(W * .25, base + 260, W * .7, base + 220, W * .55, base + 60); ctx.stroke(); ctx.setLineDash([]);
+    // banderín del club
+    ctx.save(); ctx.translate(P, 60); ctx.rotate(-.03);
+    ctx.font = `700 40px ${FT}`; const club = recortar(ctx, (e.clubs ? e.clubs.nombre : 'Club'), AN - 330), bw = ctx.measureText(club).width + (opt.logo ? 120 : 60);
+    rrect(ctx, 0, 0, bw, 84, 42); ctx.fillStyle = '#ffd60a'; ctx.fill(); contorno(ctx, 6);
+    if(opt.logo){ ctx.save(); ctx.beginPath(); ctx.arc(46, 42, 30, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(opt.logo, 16, 12, 60, 60); ctx.restore(); ctx.beginPath(); ctx.arc(46, 42, 30, 0, Math.PI * 2); contorno(ctx, 4); }
+    ctx.fillStyle = '#1f2433'; ctx.fillText(club, opt.logo ? 90 : 30, 56); ctx.restore();
+    // título con contorno
+    const datos = [
+      ['📍', [e.lugar, e.provincia].filter(Boolean).join(', ')],
+      ['🚩', e.encuentro ? 'Quedamos en ' + e.encuentro : ''],
+      ['🥾', [e.km != null ? e.km + ' km' : '', e.desnivel != null ? e.desnivel + ' m de subida' : ''].filter(Boolean).join(' · ')],
+      ['💪', e.dificultad ? 'Dificultad ' + e.dificultad.toLowerCase() : ''],
+      ['🎟️', [e.plazas ? e.plazas + ' plazas' : '', e.limite ? 'apúntate antes del ' + pd(e.limite).getDate() + ' de ' + MESES_C[pd(e.limite).getMonth()] : ''].filter(Boolean).join(' · ')]
+    ].filter(x => x[1]);
+    const ps = e.precio || '', pn = e.precio_no_socios || '';
+    const precios = ps && pn && ps.trim() !== pn.trim() ? [['Socios', precioBonito(ps), '#ff6b9a'], ['No socios', precioBonito(pn), '#ff9f1c']] : (ps || pn) ? [['Precio', precioBonito(ps || pn), '#ff6b9a']] : [];
+    const QRW = opt.qr ? 250 : 0, ZONA = Math.max(precios.length ? (opt.qr && precios.length > 1 ? 290 : 170) : 0, opt.qr ? 300 : 0), PIE = 80;
+    const INFO = datos.length ? datos.length * 58 + 44 : 0;
+    const yInfo = H - P - PIE - (ZONA ? ZONA + 30 : 0) - INFO;
+    let fs = opt.formato === 'historia' ? 150 : 124, lin;
+    const anTit = AN - (compacto ? 270 : 210); // deja sitio al sol o a la fecha
+    const altoTit = () => { ctx.font = `700 ${fs}px ${FT}`; lin = partirTexto(ctx, e.titulo, anTit); return lin.length; };
+    const hueco = compacto ? yInfo - 200 - 100 : yInfo - 260 - 300; // espacio para título + fecha
+    while((altoTit() > 3 || lin.length * fs * 1.02 > hueco) && fs > 64) fs -= 6;
+    let y = 200 + (opt.formato === 'historia' ? 60 : 0);
+    ctx.save(); ctx.translate(P, y); ctx.rotate(-.035);
+    ctx.font = `700 ${fs}px ${FT}`; ctx.lineJoin = 'round';
+    lin.slice(0, 3).forEach((l, i) => { const yy = fs * .9 + i * fs * 1.02; ctx.lineWidth = 18; ctx.strokeStyle = '#1f2433'; ctx.strokeText(l, 0, yy); ctx.fillStyle = '#fff'; ctx.fillText(l, 0, yy); });
+    ctx.restore();
+    y += lin.slice(0, 3).length * fs * 1.02 + 40;
+    // fecha en estrella
+    const d = pd(e.fecha), dia = d.toLocaleDateString('es-ES', {weekday: 'long'});
+    if(compacto){
+      ctx.save(); ctx.translate(W - P - 115, 200); ctx.rotate(.12); estrella(ctx, 0, 0, 125, 98, 14); ctx.fillStyle = '#ff5d73'; ctx.fill(); contorno(ctx, 7);
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = `700 78px ${FT}`; ctx.fillText(String(d.getDate()), 0, 18); ctx.font = `700 32px ${FT}`; ctx.fillText(MESES_C[d.getMonth()].slice(0, 3).toUpperCase(), 0, 56); ctx.restore(); ctx.textAlign = 'left';
+      const t = '¡' + dia.charAt(0).toUpperCase() + dia.slice(1) + '!' + (e.hora ? '  Salimos a las ' + e.hora : '');
+      ctx.font = `700 46px ${FT}`; ctx.lineWidth = 10; ctx.strokeStyle = '#fff'; ctx.lineJoin = 'round';
+      const yt = Math.min(y + 30, yInfo - 30); ctx.strokeText(recortar(ctx, t, AN), P, yt); ctx.fillStyle = '#1f2433'; ctx.fillText(recortar(ctx, t, AN), P, yt);
+    } else {
+    const cx = P + 120, cy = y + 105;
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(.12); estrella(ctx, 0, 0, 125, 98, 14); ctx.fillStyle = '#ff5d73'; ctx.fill(); contorno(ctx, 7);
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = `700 78px ${FT}`; ctx.fillText(String(d.getDate()), 0, 18); ctx.font = `700 32px ${FT}`; ctx.fillText(MESES_C[d.getMonth()].slice(0, 3).toUpperCase(), 0, 56); ctx.restore(); ctx.textAlign = 'left';
+    ctx.font = `700 50px ${FT}`; ctx.lineWidth = 10; ctx.strokeStyle = '#fff';
+    const t1 = '¡' + dia.charAt(0).toUpperCase() + dia.slice(1) + '!', t2 = e.hora ? 'Salimos a las ' + e.hora : d.getFullYear() + '';
+    ctx.strokeText(t1, cx + 150, cy - 6); ctx.fillStyle = '#1f2433'; ctx.fillText(t1, cx + 150, cy - 6);
+    ctx.font = `700 40px ${FT}`; ctx.strokeText(t2, cx + 150, cy + 48); ctx.fillText(t2, cx + 150, cy + 48);
+    }
+    // emoji grande de la actividad
+    ctx.font = '150px sans-serif'; ctx.fillText(EMO[e.tipo] || '⛰️', W - P - 170, Math.min(yInfo - 30, base + 120));
+    // tarjeta de datos
+    if(datos.length){
+      rrect(ctx, P, yInfo, AN, INFO, 30); ctx.fillStyle = 'rgba(255,255,255,.94)'; ctx.fill(); contorno(ctx, 6);
+      ctx.font = `700 38px ${FT}`; ctx.fillStyle = '#1f2433';
+      datos.forEach(([ic, t], i) => { const yy = yInfo + 62 + i * 58; ctx.font = '38px sans-serif'; ctx.fillText(ic, P + 28, yy); ctx.font = `700 36px ${FT}`; ctx.fillText(recortar(ctx, t, AN - 110), P + 88, yy); });
+    }
+    // precios y QR
+    const yz = H - P - PIE - ZONA;
+    if(opt.qr){
+      const xq = W - P - QRW, hq = ZONA;
+      rrect(ctx, xq, yz, QRW, hq, 26); ctx.fillStyle = '#fff'; ctx.fill(); contorno(ctx, 6);
+      try { const q = new QRLIB.QRCode(-1, QRLIB.ECL.M); q.addData(APP_URL + '#evento=' + e.id); q.make(); const n = q.getModuleCount(), lado = QRW - 44, m = lado / n; ctx.fillStyle = '#111';
+        for(let r = 0; r < n; r++) for(let c = 0; c < n; c++) if(q.isDark(r, c)) ctx.fillRect(xq + 22 + c * m, yz + 18 + r * m, m + .6, m + .6); } catch(err){}
+      ctx.fillStyle = '#1f2433'; ctx.font = `700 22px ${FT}`; ctx.textAlign = 'center'; ctx.fillText(recortar(ctx, '¡Escanea y apúntate!', QRW - 20), xq + QRW / 2, yz + hq - 18); ctx.textAlign = 'left';
+    }
+    if(precios.length){
+      const anP = AN - (QRW ? QRW + 24 : 0), col1 = QRW && precios.length > 1;
+      const bw = col1 ? anP : (anP - (precios.length - 1) * 24) / precios.length, bh = col1 ? (ZONA - 20) / 2 : Math.min(ZONA, 170);
+      precios.forEach(([k, v, c], i) => {
+        const x = col1 ? P : P + i * (bw + 24), yb = col1 ? yz + i * (bh + 20) : yz + ZONA - bh;
+        ctx.save(); ctx.translate(x + bw / 2, yb + bh / 2); ctx.rotate(i % 2 ? .02 : -.02);
+        rrect(ctx, -bw / 2, -bh / 2, bw, bh, 30); ctx.fillStyle = c; ctx.fill(); contorno(ctx, 6);
+        ctx.fillStyle = '#fff'; ctx.font = `700 34px ${FT}`; ctx.fillText(k, -bw / 2 + 28, col1 ? 12 : -bh / 2 + 52);
+        ctx.font = `700 ${col1 ? 66 : 80}px ${FT}`; ctx.textAlign = col1 ? 'right' : 'left'; ctx.lineWidth = 10; ctx.strokeStyle = '#1f2433';
+        const xv = col1 ? bw / 2 - 28 : -bw / 2 + 28, yv = col1 ? 24 : bh / 2 - 26; ctx.strokeText(v, xv, yv); ctx.fillText(v, xv, yv); ctx.textAlign = 'left'; ctx.restore();
+      });
+    }
+    // pie
+    ctx.font = `700 34px ${FT}`; ctx.fillStyle = '#1f2433'; ctx.fillText('¡Apúntate en la app Mis rutas y trails!', P, H - P - 10);
+    return cv;
   }
 
   render(); showTab(); cargarEventos();
