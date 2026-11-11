@@ -345,6 +345,12 @@ textarea{min-height:64px;resize:vertical}
 .btn.pri{background:var(--green);border-color:var(--green);color:var(--card)}
 .btn.del{flex:0 0 auto;color:var(--red);border-color:var(--red2);background:var(--red2)}
 a{color:var(--green)}
+
+@supports (height:100dvh){
+  html,body{height:100dvh}
+  .sheet{max-height:calc(92dvh - env(safe-area-inset-top))}
+  .sheet.cfg{max-height:calc(100dvh - 12px - env(safe-area-inset-top));min-height:min(80dvh, calc(100dvh - 12px - env(safe-area-inset-top)))}
+}
 </style>
 </head>
 <body>
@@ -691,7 +697,6 @@ a{color:var(--green)}
           <div class="pnum" title="Rutas realizadas">${rutasRealizadas().length}</div>
         </div>
         <div class="pinfo">
-          <button class="pedit" id="pedit">Edita</button>
           <div class="pname">${esc(nombre)}</div>
           ${misClubsPerfil().map(c => `<button class="pclub" data-pclub="${esc(c.id)}">${esc(c.nombre)}</button>`).join('')}
         </div>
@@ -713,7 +718,7 @@ a{color:var(--green)}
     ph.addEventListener('pointerup', () => { ph.classList.remove('press'); const long = Date.now() - t0 >= 450; if(!moved && (long || !p.foto)) fi.click(); });
     ph.addEventListener('contextmenu', e => e.preventDefault());
     fi.onchange = () => { const f = fi.files && fi.files[0]; if(f) setFoto(f); fi.value = ''; };
-    $('#pedit').onclick = editPerfil;
+
     $('#pgear').onclick = ajustes;
     $('#pshare').onclick = sharePerfil;
     $('#pamigos').onclick = amigosPantalla;
@@ -803,10 +808,10 @@ a{color:var(--green)}
       <label>Nombre${sesion ? ' *' : ''}</label><input name="nombre" value="${esc((p.nombreReal || {}).nombre || '')}" placeholder="Ej. Ginés" maxlength="50" autocomplete="given-name" ${sesion ? 'required' : ''}>
       <label>Apellidos${sesion ? ' *' : ''}</label><input name="apellidos" value="${esc((p.nombreReal || {}).apellidos || '')}" placeholder="Ej. Rodríguez Parra" maxlength="60" autocomplete="family-name" ${sesion ? 'required' : ''}><div class="sub" style="margin-top:6px;line-height:1.4">🔒 Tu nombre y apellidos solo los verán los administradores de los clubs a los que perteneces (también cuando pidas entrar). El resto de usuarios solo ve tu nombre de usuario.</div>
 
-      ${sesion ? `<label>Nombre de usuario (lo que ven los demás)</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pusr">${AMI.yo ? esc(AMI.yo.usuario) + ' · Cambiar' : 'Elegir nombre de usuario'}</button></div>` : ''}
+      ${sesion ? `<label>Nombre de usuario (lo que ven los demás)</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pusr">${AMI.yo ? esc(AMI.yo.usuario) + (usuarioFijo() || AMI.yo.usuario_fijo === undefined ? ' 🔒' : ' · Confirmar') : 'Elegir nombre de usuario'}</button></div>${AMI.yo && (usuarioFijo() || AMI.yo.usuario_fijo === undefined) ? '<div class="sub" style="margin-top:4px">El nombre de usuario no se puede cambiar.</div>' : ''}` : ''}
       <label>Foto de perfil</label><div class="btns" style="margin-top:4px"><button type="button" class="btn" id="pfoto2">${p.foto ? 'Cambiar foto' : 'Añadir foto'}</button>${p.foto ? '<button type="button" class="btn del" id="pnofoto2">Quitar foto</button>' : ''}</div>
       <div class="btns"><button class="btn pri" type="submit">Guardar</button></div></form></div>`, true);
-    const pu = $('#pusr'); if(pu) pu.onclick = () => elegirUsuario();
+    const pu = $('#pusr'); if(pu) pu.onclick = () => { if(!AMI.yo) elegirUsuario(); else if(AMI.yo.usuario_fijo === false) confirmarUsuario(); else toast('El nombre de usuario no se puede cambiar'); };
     $('#pfoto2').onclick = () => { $('#sheet').classList.remove('cfg'); close(); $('#pfile').click(); };
     const nf = $('#pnofoto2'); if(nf) nf.onclick = async () => { if(await confirmDlg('¿Quitar la foto de perfil?', '', 'Quitar')){ delete state.prefs.foto; $('#sheet').classList.remove('cfg'); close(); save(); } };
     $('#pf2').onsubmit = ev => { ev.preventDefault(); const fd = new FormData(ev.target); p.nombreReal = {nombre: (fd.get('nombre')||'').toString().trim(), apellidos: (fd.get('apellidos')||'').toString().trim()}; p.nombreCompleto = (p.nombreReal.nombre + ' ' + p.nombreReal.apellidos).trim(); if(typeof nombreRealSubir === 'function') nombreRealSubir();  $('#sheet').classList.remove('cfg'); close(); save(); };
@@ -908,7 +913,7 @@ a{color:var(--green)}
       ${sec('Primeros pasos', `
         <p><b>Instalar la app.</b> En iPhone, abre la app en Safari y pulsa Compartir › «Añadir a pantalla de inicio». En Android, abre el menú de Chrome › «Instalar aplicación» o «Añadir a pantalla de inicio».</p>
         <p><b>Con o sin cuenta.</b> Sin cuenta puedes buscar rutas y usar tu agenda; todo se guarda solo en tu móvil. Con una cuenta (correo y contraseña, o Google) tus datos se guardan en la nube, los tienes en cualquier dispositivo y puedes usar Amigos y Clubs.</p>
-        <p><b>Al crear la cuenta</b> te pedimos un nombre de usuario (lo que ven los demás) y tu nombre y apellidos (privados, solo para los administradores de tus clubs).</p>`, true)}
+        <p><b>Al crear la cuenta</b> te pedimos un nombre de usuario (lo que ven los demás; es único y no se puede cambiar después) y tu nombre y apellidos (privados, solo para los administradores de tus clubs).</p>`, true)}
       ${sec('Buscar rutas y eventos', `
         <p>Escribe en «Encuentra rutas» el nombre, el pueblo o la provincia, o usa <b>Filtros</b> para elegir actividad, fechas y provincias en el mapa.</p>
         <p>La lista de eventos se actualiza cada mañana a partir de webs públicas de inscripción y cronometraje (puedes verlas en Configuración › Acerca de). Comprueba siempre los datos en la web oficial antes de inscribirte.</p>
@@ -923,7 +928,7 @@ a{color:var(--green)}
         <p>Los eventos de club se comparten con su cartel y con un enlace que lleva directamente a la inscripción en la app.</p>`)}
       ${sec('Perfil y datos personales', `
         <p>En Perfil verás tu foto, tus rutas realizadas y tus clubs. Mantén pulsada la foto para cambiarla.</p>
-        <p>En Configuración › Información personal puedes cambiar tu nombre de usuario, tu nombre y tus apellidos. Los demás usuarios solo ven tu nombre de usuario y tu foto.</p>`)}
+        <p>En Configuración › Información personal puedes cambiar tu nombre, tus apellidos y tu foto. Los demás usuarios solo ven tu nombre de usuario y tu foto.</p><p><b>El nombre de usuario es único y definitivo:</b> nadie más puede tener el mismo y, una vez elegido, no se puede cambiar.</p>`)}
       ${sec('Amigos', `
         <p>Entra en Perfil › Amigos para invitar a tus amigos con un enlace o buscarlos por su nombre de usuario. La amistad empieza cuando la otra persona acepta.</p>
         <p>Tus amigos ven las rutas de tu agenda y tus clubs, y en cada evento aparece qué amigos van. En Configuración › Tus preferencias y privacidad eliges qué pueden ver. Puedes eliminar a un amigo cuando quieras.</p>`)}
@@ -965,7 +970,7 @@ a{color:var(--green)}
       ${sec('3. Tu cuenta', `
         <p>Los datos que indiques deben ser verdaderos, especialmente tu nombre y apellidos, porque los clubs los usan para gestionar inscripciones.</p>
         <p>Eres responsable de guardar tu contraseña y de lo que se haga con tu cuenta. Cada cuenta es personal.</p>
-        <p>Tu nombre de usuario no puede ser ofensivo, engañoso ni hacerse pasar por otra persona o entidad.</p>`)}
+        <p>Tu nombre de usuario es único y, una vez elegido, no se puede cambiar. No puede ser ofensivo, engañoso ni hacerse pasar por otra persona o entidad; si lo es, podremos retirarlo.</p>`)}
       ${sec('4. Información de los eventos', `
         <p>La información de los eventos públicos se recopila automáticamente de webs públicas de inscripción y cronometraje. Puede contener errores o cambiar sin aviso. La web oficial de cada evento es la única fuente válida para fechas, precios, plazos, modalidades y requisitos.</p>
         <p>Las inscripciones a esos eventos se hacen siempre en la web del organizador. La app no inscribe a nadie ni cobra nada por ellos.</p>`)}
@@ -1631,11 +1636,46 @@ a{color:var(--green)}
       img.onerror = () => res(null); img.src = dataUrl;
     });
   }
-  async function perfilSubir(usuario){
+  async function perfilSubir(usuario, fijar){
     const foto = await miniFoto(state.prefs.foto);
     const fila = {id: sesion.user.id, usuario, nombre: '', foto, actualizado: new Date().toISOString()};
-    await sbRest('perfiles?on_conflict=id', {method: 'POST', headers: {'Prefer': 'resolution=merge-duplicates,return=minimal'}, body: JSON.stringify(fila)});
-    AMI.yo = fila; setSync({perfilFirma: firmaPerfil()});
+    if(fijar) fila.usuario_fijo = true;
+    const enviar = f => sbRest('perfiles?on_conflict=id', {method: 'POST', headers: {'Prefer': 'resolution=merge-duplicates,return=minimal'}, body: JSON.stringify(f)});
+    try { await enviar(fila); }
+    catch(e){ if(fijar && /usuario_fijo|column/i.test(e.message)){ delete fila.usuario_fijo; await enviar(fila); } else throw e; }
+    AMI.yo = Object.assign({}, AMI.yo || {}, fila); setSync({perfilFirma: firmaPerfil()});
+  }
+  const usuarioFijo = () => !!(AMI.yo && AMI.yo.usuario_fijo);
+  const AVISO_USR = 'Elígelo bien: una vez guardado <b>no se podrá cambiar</b>. Es único, nadie más puede tener el mismo.';
+  // usuarios que ya tenían nombre de usuario: confirmar o cambiarlo una última vez
+  function confirmarUsuario(despues){
+    if(pidiendoUsuario || !AMI.yo) return;
+    if($('#ovl').classList.contains('show')){ setTimeout(() => confirmarUsuario(despues), 800); return; }
+    pidiendoUsuario = true;
+    const actual = AMI.yo.usuario;
+    $('#sheet').dataset.vista = 'usuario';
+    $('#sheet').innerHTML = `<div class="cfghead"><span style="width:44px"></span><div class="cfgtitle">Tu nombre de usuario</div><span style="width:44px"></span></div>
+      <div class="cfgbox"><div class="sub" style="margin-bottom:8px;line-height:1.45">Hemos cambiado cómo funcionan los nombres de usuario: a partir de ahora <b>no se podrán cambiar</b> una vez confirmados, y cada uno es único.<br><br>Tu nombre de usuario es <b>${esc(actual)}</b>. Puedes mantenerlo o cambiarlo ahora por última vez.</div>
+      <form id="uf"><label class="lusr">Nombre de usuario</label><input name="usuario" value="${esc(actual)}" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="20">
+      <div class="sub" style="margin-top:6px">Solo letras minúsculas, números, punto o guion bajo (3 a 20).</div>
+      <div class="amsg" id="amsg"></div><div class="btns"><button class="btn pri" type="submit" id="ufok">Mantener ${esc(actual)}</button></div></form></div>`;
+    $('#sheet').classList.add('cfg'); $('#ovl').classList.add('show');
+    const inp = $('#uf').usuario;
+    inp.oninput = () => { const v = inp.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''); if(v !== inp.value) inp.value = v; $('#ufok').textContent = v === actual ? 'Mantener ' + actual : 'Cambiar a ' + (v || '…'); };
+    $('#uf').onsubmit = async ev => {
+      ev.preventDefault();
+      const u = inp.value.trim().toLowerCase();
+      if(!USR_RE.test(u)){ $('#amsg').textContent = 'Usa de 3 a 20 caracteres: letras minúsculas, números, punto o guion bajo.'; return; }
+      pidiendoUsuario = false;
+      const ok = await confirmDlg(u === actual ? '¿Mantener «' + u + '»?' : '¿Cambiar a «' + u + '»?', 'Será tu nombre de usuario definitivo: después no se podrá cambiar.', 'Confirmar');
+      pidiendoUsuario = true;
+      if(!ok){ $('#ovl').classList.add('show'); return; }
+      $('#ovl').classList.add('show');
+      try { await perfilSubir(u, true); }
+      catch(e){ $('#amsg').textContent = /duplicate|unique|23505|409/i.test(e.message) ? 'Ese nombre de usuario ya está cogido. Prueba con otro.' : 'No se pudo guardar. Revisa tu conexión.'; return; }
+      pidiendoUsuario = false; $('#sheet').dataset.vista = ''; close(); render(); toast('Listo, tu nombre de usuario es ' + u);
+      if(despues) despues();
+    };
   }
   const firmaPerfil = () => 'v2|' + (state.prefs.foto ? state.prefs.foto.length + state.prefs.foto.slice(-24) : '');
   // tras guardar: si cambió el nombre o la foto, actualizar el perfil público
@@ -1646,10 +1686,13 @@ a{color:var(--green)}
   async function perfilAsegurar(preguntar){
     if(!sesion) return null;
     try {
-      const r = await sbRest('perfiles?select=id,usuario,nombre,foto&id=eq.' + sesion.user.id);
+      let r; try { r = await sbRest('perfiles?select=id,usuario,nombre,foto,usuario_fijo&id=eq.' + sesion.user.id); }
+      catch(e){ r = await sbRest('perfiles?select=id,usuario,nombre,foto&id=eq.' + sesion.user.id); }
       AMI.yo = r && r[0] || null;
     } catch(e){ return null; }
-    if(AMI.yo && !nombreCompleto()){ setTimeout(() => completarNombre(), 400); }
+    const pedirFijo = AMI.yo && AMI.yo.usuario_fijo === false;
+    if(AMI.yo && !nombreCompleto()){ setTimeout(() => completarNombre(pedirFijo ? () => confirmarUsuario() : null), 400); }
+    else if(pedirFijo){ setTimeout(() => confirmarUsuario(), 600); }
     if(AMI.yo){ perfilQuizaSubir(); if((state.prefs.nombreCompleto || '') && syncInfo().nombreRealFirma !== (state.prefs.nombreCompleto || '').trim()) nombreRealSubir(); procesarInvitacion(); return AMI.yo; }
     if(preguntar !== false) elegirUsuario();
     return null;
@@ -1659,11 +1702,12 @@ a{color:var(--green)}
     return base.length >= 3 ? base : (base + 'trail').slice(0, 16);
   }
   function elegirUsuario(despues){
+    if(AMI.yo){ if(!usuarioFijo() && AMI.yo.usuario_fijo === false) confirmarUsuario(despues); else if(despues) despues(); return; }
     if(pidiendoUsuario) return; pidiendoUsuario = true;
-    const actual = AMI.yo ? AMI.yo.usuario : '';
+    const actual = '';
     $('#sheet').innerHTML = `<div class="cfghead"><button class="cfgx" id="ux" aria-label="Cerrar">✕</button><div class="cfgtitle">${actual ? 'Tu nombre de usuario' : 'Elige tu nombre de usuario'}</div><span style="width:44px"></span></div>
-      <div class="cfgbox"><div class="sub" style="margin-bottom:8px">Es como te encontrarán tus amigos. Solo letras minúsculas, números, punto o guion bajo (3 a 20).</div>
-      <form id="uf"><label>Nombre</label><input name="usuario" value="${esc(actual || sugerirUsuario())}" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="20">
+      <div class="cfgbox"><div class="sub" style="margin-bottom:8px;line-height:1.45">Es como te encontrarán tus amigos. Solo letras minúsculas, números, punto o guion bajo (3 a 20).<br>${AVISO_USR}</div>
+      <form id="uf"><label class="lusr">Nombre de usuario</label><input name="usuario" value="${esc(actual || sugerirUsuario())}" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="20">
       ${actual ? '' : `<label>Nombre *</label><input name="nombre" required maxlength="50" autocomplete="given-name" value="${esc((state.prefs.nombreReal || {}).nombre || '')}" placeholder="Ej. Ginés">
       <label>Apellidos *</label><input name="apellidos" required maxlength="60" autocomplete="family-name" value="${esc((state.prefs.nombreReal || {}).apellidos || '')}" placeholder="Ej. Rodríguez Parra">
       <div class="sub" style="margin-top:6px;line-height:1.4">🔒 Tu nombre y apellidos solo los verán los administradores de tus clubs.</div>`}
@@ -1682,7 +1726,11 @@ a{color:var(--green)}
         state.prefs.nombreReal = {nombre: n, apellidos: ap}; state.prefs.nombreCompleto = n + ' ' + ap; userSave(); nubeGuardar();
       }
       if(!USR_RE.test(u)){ $('#amsg').textContent = 'Usa de 3 a 20 caracteres: letras minúsculas, números, punto o guion bajo.'; return; }
-      try { await perfilSubir(u); }
+      pidiendoUsuario = false;
+      const ok = await confirmDlg('¿Usar «' + u + '»?', 'Será tu nombre de usuario definitivo: después no se podrá cambiar.', 'Confirmar');
+      pidiendoUsuario = true; $('#ovl').classList.add('show');
+      if(!ok) return;
+      try { await perfilSubir(u, true); }
       catch(e){ $('#amsg').textContent = /duplicate|unique|23505|409/i.test(e.message) ? 'Ese nombre de usuario ya está cogido. Prueba con otro.' : 'No se pudo guardar. Revisa tu conexión.'; return; }
       if(!actual) nombreRealSubir();
       pidiendoUsuario = false; close(); render(); toast('Listo, tu nombre de usuario es ' + u);
@@ -1780,7 +1828,7 @@ a{color:var(--green)}
     const amigos = amigosAceptados();
     const P = id => AMI.perfiles.get(id) || {id, usuario: '…', nombre: ''};
     cfgPage('Amigos', `
-      <div class="cfgbox"><div class="prow">${avatar({foto: AMI.yo.foto, nombre: AMI.yo.nombre, usuario: AMI.yo.usuario}, 42)}<div class="finfo"><b>${esc(AMI.yo.usuario)}</b><span>Tú</span></div><div class="pacts"><button class="chip" id="aeditu">Cambiar</button></div></div>
+      <div class="cfgbox"><div class="prow">${avatar({foto: AMI.yo.foto, nombre: AMI.yo.nombre, usuario: AMI.yo.usuario}, 42)}<div class="finfo"><b>${esc(AMI.yo.usuario)}</b><span>Tú</span></div></div>
         <div class="btns"><button class="btn pri" id="ainv">Invitar amigos con un enlace</button></div></div>
       <div class="cfglabel">Buscar</div>
       <div class="cfgbox"><input id="aq" placeholder="Buscar por nombre de usuario" autocapitalize="none" autocorrect="off" spellcheck="false"><div id="ares"></div></div>
@@ -1790,7 +1838,6 @@ a{color:var(--green)}
       ${enviadas.length ? `<div class="cfglabel">Solicitudes enviadas</div><div class="cfgbox">${enviadas.map(f => filaPersona(P(f.para), `<button class="chip" data-del="${f.id}" data-msg="Solicitud cancelada">Cancelar</button>`)).join('')}</div>` : ''}`);
     $('#sheet').dataset.vista = 'amigos';
     $('#ainv').onclick = invitar;
-    $('#aeditu').onclick = () => elegirUsuario(amigosPantalla);
     document.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => amistadAccion('aceptar_amistad', +b.dataset.acc, '¡Ya sois amigos! ✓'));
     document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => amistadAccion('eliminar_amistad', +b.dataset.del, b.dataset.msg));
     document.querySelectorAll('[data-open]').forEach(b => b.onclick = () => amigoPantalla(b.dataset.open));
