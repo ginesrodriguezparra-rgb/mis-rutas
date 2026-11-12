@@ -4632,9 +4632,9 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
   async function pushPrueba(){
     const sub = await pushSuscripcion(); if(!sub){ toast('Activa primero las notificaciones'); return; }
     try {
-      const r = await fetch(SB_URL + '/functions/v1/avisar-rutas', {method: 'POST', headers: {'Content-Type': 'application/json', 'apikey': SB_KEY}, body: JSON.stringify({prueba: sub.endpoint})});
+      const r = await fetch(SB_URL + '/functions/v1/clever-api', {method: 'POST', headers: {'Content-Type': 'application/json', 'apikey': SB_KEY}, body: JSON.stringify({prueba: sub.endpoint})});
       const d = await r.json().catch(() => ({}));
-      toast(d.ok ? 'Enviada. Debería llegarte en unos segundos.' : 'No se pudo enviar la prueba' + (d.motivo ? ' (' + d.motivo + ')' : r.status === 404 ? ' (falta crear la función avisar-rutas)' : ''));
+      toast(d.ok ? 'Enviada. Debería llegarte en unos segundos.' : 'No se pudo enviar la prueba' + (d.motivo ? ' (' + d.motivo + ')' : r.status === 404 ? ' (no se encuentra la función de notificaciones)' : ''));
     } catch(e){ toast('No se pudo enviar la prueba'); }
   }
 
