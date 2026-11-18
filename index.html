@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Mis rutas y trails</title>
+<title>Sendalia</title>
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Mis rutas y trails">
-<meta property="og:title" content="Mis rutas y trails">
+<meta property="og:site_name" content="Sendalia">
+<meta property="og:title" content="Sendalia">
 <meta property="og:description" content="Rutas de senderismo, trail, carreras y MTB de toda España. Organiza tu agenda y las salidas de tu club.">
 <meta property="og:url" content="https://ginesrodriguezparra-rgb.github.io/mis-rutas/">
 <meta property="og:image" content="https://ginesrodriguezparra-rgb.github.io/mis-rutas/icon-512.png">
@@ -18,7 +18,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Mis rutas">
+<meta name="apple-mobile-web-app-title" content="Sendalia">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -810,7 +810,7 @@ a{color:var(--green)}
         <button data-cfg="privacidad">Política de privacidad${CHEV}</button>
         <button data-cfg="acerca">Acerca de${CHEV}</button>
       </div>
-      <div class="cfgfoot"><b>¿Te gusta Mis rutas y trails?</b><span>Compártela con tus compañeros de ruta.</span>
+      <div class="cfgfoot"><b>¿Te gusta Sendalia?</b><span>Compártela con tus compañeros de ruta.</span>
         <button class="cfgdanger" id="cfgborrar">Borrar mis datos</button>
         <div class="cfgver">Versión 2.0</div></div>`);
     const go = {personal: cfgPersonal, copia: cfgCopia, prefs: cfgPrefs, notif: cfgNotif, ayuda: cfgAyuda, condiciones: cfgCondiciones, privacidad: cfgPrivacidad, acerca: cfgAcerca};
@@ -856,7 +856,7 @@ a{color:var(--green)}
     $('#cfile').onchange = async ev => {
       const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; if(!f) return;
       let d; try { d = JSON.parse(await f.text()); } catch(e){ $('#cmsg').textContent = 'Ese archivo no es una copia válida.'; return; }
-      if(!d || d.app !== 'mis-rutas-y-trails' || !Array.isArray(d.events)){ $('#cmsg').textContent = 'Ese archivo no es una copia de Mis rutas y trails.'; return; }
+      if(!d || d.app !== 'mis-rutas-y-trails' || !Array.isArray(d.events)){ $('#cmsg').textContent = 'Ese archivo no es una copia de Sendalia.'; return; }
       const fecha = d.fecha ? new Date(d.fecha).toLocaleDateString('es-ES') : '';
       if(!await confirmDlg('¿Recuperar esta copia?', `Copia${fecha ? ' del ' + fecha : ''} con ${d.events.length} rutas. Sustituirá tu agenda y tu perfil actuales.`, 'Recuperar')) return;
       state.events = sinDuplicados(d.events); state.ocultas = Array.isArray(d.ocultas) ? d.ocultas : []; state.prefs = d.prefs || {};
@@ -905,7 +905,7 @@ a{color:var(--green)}
     const n = (state.web || []).filter(w => !w.clubEv && w.date && days(w.date) >= 0).length;
     cfgPage('Acerca de', `
       <div class="cfgbox help">
-        <p><b>Mis rutas y trails</b><br>Una app para encontrar rutas de senderismo, trail, carreras y MTB de toda España, organizar tu agenda, ver a qué van tus amigos y apuntarte a las salidas de tu club.</p>
+        <p><b>Sendalia</b><br>Una app para encontrar rutas de senderismo, trail, carreras y MTB de toda España, organizar tu agenda, ver a qué van tus amigos y apuntarte a las salidas de tu club.</p>
         <p><b>¿De dónde salen las rutas del buscador?</b><br>Las rutas y carreras de la pestaña Rutas se recogen de las webs públicas de inscripción y cronometraje que ves más abajo. Cada mañana se revisan esas webs, se añaden los eventos nuevos, se corrigen los que han cambiado y se quitan los que ya han pasado. Además, se buscan webs nuevas por comunidades autónomas para ir cubriendo toda España.</p>
         <p><b>Modalidades</b><br>Muchos eventos tienen varias pruebas (por ejemplo, trail y una ruta senderista). Para etiquetarlos bien se lee la ficha de cada evento. Si todavía no se ha podido comprobar, verás la etiqueta «Modalidades sin confirmar».</p>
         <p><b>Filtros</b><br>En Rutas puedes buscar por nombre o pueblo, y en Filtros elegir actividad, fechas y provincias en el mapa. Tu zona y tu actividad preferida se guardan en Preferencias.</p>
@@ -955,7 +955,7 @@ a{color:var(--green)}
         </ul>
         <p>Las notificaciones en el móvil necesitan tu cuenta iniciada y aceptar el permiso. En iPhone solo funcionan con la app instalada en la pantalla de inicio (iOS 16.4 o posterior). Con «Enviar prueba» puedes comprobar que llegan.</p>`)}
       ${sec('Compartir', `
-        <p>Toca el icono de compartir de una tarjeta para enviarla por WhatsApp, Telegram u otra app. Mantenlo pulsado para compartirla como imagen.</p><p>El mensaje empieza según desde dónde compartes: desde el buscador, «¡Mira lo que encontré en la aplicación Mis rutas y trails!»; desde tu agenda, «¡Estoy interesado en esta ruta!» o «¡Estoy inscrito en esta ruta!». Siempre lleva el enlace a la app.</p>
+        <p>Toca el icono de compartir de una tarjeta para enviarla por WhatsApp, Telegram u otra app. Mantenlo pulsado para compartirla como imagen.</p><p>El mensaje empieza según desde dónde compartes: desde el buscador, «¡Mira lo que encontré en la aplicación Sendalia!»; desde tu agenda, «¡Estoy interesado en esta ruta!» o «¡Estoy inscrito en esta ruta!». Siempre lleva el enlace a la app.</p>
         <p>Los eventos de club se comparten con su cartel y con un enlace que lleva directamente a la inscripción en la app.</p>`)}
       ${sec('Perfil y datos personales', `
         <p>En Perfil verás tu foto, tus rutas realizadas y tus clubs. Mantén pulsada la foto para cambiarla.</p>
@@ -996,7 +996,7 @@ a{color:var(--green)}
   function cfgCondiciones(){
     cfgPage('Condiciones de uso', `<div class="cfgbox help hlist">
       <p class="sub">Última actualización: ${LEGAL_FECHA}</p>
-      ${sec('1. Qué es Mis rutas y trails', `<p>Mis rutas y trails es una aplicación gratuita para encontrar y organizar rutas y eventos de senderismo, trail, carreras y bicicleta de montaña, y para que los clubs organicen sus salidas. Al usarla aceptas estas condiciones. Si no estás de acuerdo, no la uses.</p>`, true)}
+      ${sec('1. Qué es Sendalia', `<p>Sendalia es una aplicación gratuita para encontrar y organizar rutas y eventos de senderismo, trail, carreras y bicicleta de montaña, y para que los clubs organicen sus salidas. Al usarla aceptas estas condiciones. Si no estás de acuerdo, no la uses.</p>`, true)}
       ${sec('2. Quién puede usarla', `<p>Para crear una cuenta debes tener al menos 14 años. Si eres menor de esa edad, solo puedes usarla con el permiso y la supervisión de tus padres o tutores.</p>`)}
       ${sec('3. Tu cuenta', `
         <p>Los datos que indiques deben ser verdaderos, especialmente tu nombre y apellidos, porque los clubs los usan para gestionar inscripciones.</p>
@@ -1033,7 +1033,7 @@ a{color:var(--green)}
     cfgPage('Política de privacidad', `<div class="cfgbox help hlist">
       <p class="sub">Última actualización: ${LEGAL_FECHA}</p>
       <p>En resumen: solo guardamos los datos necesarios para que la app funcione, no los vendemos, no los usamos para publicidad y puedes borrarlos cuando quieras.</p>
-      ${sec('1. Responsable', `<p>El responsable del tratamiento es el titular de la app Mis rutas y trails. Contacto: ${MAIL}.</p>`, true)}
+      ${sec('1. Responsable', `<p>El responsable del tratamiento es el titular de la app Sendalia. Contacto: ${MAIL}.</p>`, true)}
       ${sec('2. Qué datos tratamos', `
         <p><b>Sin cuenta:</b> tu agenda, preferencias, foto y provincias se guardan solo en tu móvil y no se envían a ningún servidor.</p>
         <p><b>Con cuenta:</b></p>
@@ -1076,7 +1076,7 @@ a{color:var(--green)}
           <li><b>Servicios de notificaciones de Apple, Google o Mozilla</b>, solo si activas las notificaciones: reciben el aviso cifrado para entregarlo en tu móvil y no pueden leer su contenido.</li>
         </ul>
         <p>Estos proveedores solo tratan los datos para prestarnos su servicio. Las transferencias a EE. UU. están amparadas por el Marco de Privacidad de Datos UE-EE. UU. o por cláusulas contractuales tipo de la Comisión Europea.</p>
-        <p>Al pulsar «Ver web», WhatsApp, Telegram u otras apps se abren fuera de Mis rutas y trails y se aplican sus propias políticas.</p>`)}
+        <p>Al pulsar «Ver web», WhatsApp, Telegram u otras apps se abren fuera de Sendalia y se aplican sus propias políticas.</p>`)}
       ${sec('6. Cuánto tiempo los guardamos', `
         <p>Mientras tengas la cuenta. El identificador de notificaciones de un móvil se borra al desactivarlas, al cerrar sesión o cuando el móvil deja de aceptarlas. Si borras la cuenta desde Configuración › Borrar mi cuenta, se eliminan tu cuenta, tu perfil, tu nombre y apellidos, tu agenda, tus amistades, tus respuestas a eventos y los pagos anotados. Pueden quedar durante un tiempo limitado en las copias de seguridad técnicas del proveedor.</p>
         <p>Los clubs y eventos que creaste siguen existiendo para sus socios. Los informes que un administrador haya descargado quedan bajo su responsabilidad.</p>`)}
@@ -1102,11 +1102,11 @@ a{color:var(--green)}
     if(p.foto){ const im = new Image(); await new Promise(r => { im.onload = r; im.onerror = r; im.src = p.foto; }); ctx.drawImage(im, px, py, PS, PS); }
     else { ctx.fillStyle = C.g2; ctx.fillRect(px, py, PS, PS); ctx.fillStyle = C.g; ctx.font = '700 120px "Barlow Condensed"'; ctx.textAlign = 'center'; ctx.fillText(((p.nombre||'⛰').charAt(0)).toUpperCase(), px+PS/2, py+PS/2+42); ctx.textAlign = 'left'; }
     ctx.restore();
-    ctx.fillStyle = C.ink; ctx.font = '700 60px Inter'; ctx.fillText((typeof AMI !== 'undefined' && AMI.yo && AMI.yo.usuario) || 'Mis rutas', 380, 190);
+    ctx.fillStyle = C.ink; ctx.font = '700 60px Inter'; ctx.fillText((typeof AMI !== 'undefined' && AMI.yo && AMI.yo.usuario) || 'Sendalia', 380, 190);
     ctx.fillStyle = C.muted; ctx.font = '400 34px Inter'; if(misClubsPerfil().length) ctx.fillText(misClubsPerfil().map(c => c.nombre).join(' · ').slice(0, 40), 380, 245);
     const cols = [[st.insc,'Inscrito'],[st.int,'Me interesa']];
     cols.forEach(([n,l],i) => { const x = 380 + i*200; ctx.fillStyle = C.ink; ctx.font = '600 56px Inter'; ctx.fillText(String(n), x, 345); ctx.fillStyle = C.muted; ctx.font = '400 28px Inter'; ctx.fillText(l, x, 385); });
-    ctx.fillStyle = C.muted; ctx.font = '600 32px Inter'; ctx.fillText('⛰ Mis rutas y trails', 58, H-40);
+    ctx.fillStyle = C.muted; ctx.font = '600 32px Inter'; ctx.fillText('⛰ Sendalia', 58, H-40);
     const blob = await new Promise(r => cv.toBlob(r, 'image/png')), url = URL.createObjectURL(blob);
     $('#sheet').innerHTML = `<h2>Compartir perfil</h2><img class="shareimg" src="${url}" alt="Imagen del perfil"><div class="note" id="shmsg" style="font-size:13px;color:var(--muted);min-height:18px;margin-top:6px"></div>
       <div class="btns">${downloads ? '<button class="btn pri" id="shimg">Compartir imagen</button>' : ''}<button class="btn" id="shclose">Cerrar</button></div>`;
@@ -1183,12 +1183,12 @@ a{color:var(--green)}
       y += 14; let px = TX; ctx.font = '600 30px Inter';
       pills.forEach(([txt, c]) => { const w = ctx.measureText(txt).width + 36; if(px + w > W - P - 30) return; rr(ctx, px, y-38, w, 54, 14); ctx.fillStyle = c ? c[0] : C.bg; ctx.fill(); ctx.fillStyle = c ? c[1] : C.muted; ctx.fillText(txt, px+18, y-2); px += w + 14; });
     }
-    ctx.fillStyle = C.muted; ctx.font = '600 32px Inter'; ctx.fillText('⛰ Mis rutas y trails', P+8, H - 40);
+    ctx.fillStyle = C.muted; ctx.font = '600 32px Inter'; ctx.fillText('⛰ Sendalia', P+8, H - 40);
     if(x.url){ let host = ''; try { host = new URL(x.url).host.replace(/^www\./,''); } catch(e){} ctx.textAlign = 'right'; ctx.font = '400 30px Inter'; ctx.fillText(host, W-P-8, H-40); }
     return cv;
   }
   function introShare(x){
-    const app = 'la aplicación Mis rutas y trails';
+    const app = 'la aplicación Sendalia';
     if(SHARE_CTX === 'agenda'){
       const m = state.events.find(e => e.id === x.id || (e.webId && (e.webId === x.id || e.webId === x.webId)));
       if(m && m.estado === 'inscrito') return '¡Estoy inscrito en esta ruta! La encontré en ' + app + '.';
@@ -1200,7 +1200,7 @@ a{color:var(--green)}
     const d = pd(x.date);
     const pr = normProv(x.provincia), lg = x.lugar || '';
     const lugar = lg && pr && lg.toLowerCase().includes(pr.toLowerCase()) ? lg : [lg, pr].filter(Boolean).join(', ');
-    return [x.nombre, `📅 ${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`, lugar && '📍 ' + lugar, x.modalidades && '🏁 ' + x.modalidades, x.url].filter(Boolean).join('\n').replace(/^/, introShare(x) + '\n\n') + (x.clubEv ? '' : '\n\n📲 Mis rutas y trails: ' + APP_URL);
+    return [x.nombre, `📅 ${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`, lugar && '📍 ' + lugar, x.modalidades && '🏁 ' + x.modalidades, x.url].filter(Boolean).join('\n').replace(/^/, introShare(x) + '\n\n') + (x.clubEv ? '' : '\n\n📲 Sendalia: ' + APP_URL);
   }
 
   function toast(msg){
@@ -1858,8 +1858,8 @@ a{color:var(--green)}
   }
   async function invitar(){
     if(!AMI.yo) return;
-    const url = enlaceInvitacion(AMI.yo.usuario), text = `Agrégame como amigo en Mis rutas y trails para ver a qué rutas vamos. Mi usuario es ${AMI.yo.usuario}`;
-    if(navigator.share){ try { await navigator.share({title: 'Mis rutas y trails', text, url}); } catch(e){} }
+    const url = enlaceInvitacion(AMI.yo.usuario), text = `Agrégame como amigo en Sendalia para ver a qué rutas vamos. Mi usuario es ${AMI.yo.usuario}`;
+    if(navigator.share){ try { await navigator.share({title: 'Sendalia', text, url}); } catch(e){} }
     else { try { await navigator.clipboard.writeText(text + ' ' + url); toast('Enlace copiado ✓'); } catch(e){ toast(url); } }
   }
   function filaPersona(p, derecha, abrir){
@@ -3837,13 +3837,13 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
       <div class="cfgbox" style="text-align:center">${avatar({nombre: c ? c.nombre : '?', foto: c && c.imagen}, 84)}
         <p style="font-size:18px;font-weight:700;margin:12px 0 4px">Te han invitado a ${esc(nombre)}</p>
         ${c && (c.localidad || c.provincia) ? `<div class="sub">${esc([c.localidad, c.provincia].filter(Boolean).join(', '))}</div>` : ''}
-        <p class="sub" style="margin:12px 0 0">En <b>Mis rutas y trails</b> encontrarás rutas de senderismo, trail, carreras y MTB de toda España, y podrás apuntarte a las salidas de tu club.</p>
+        <p class="sub" style="margin:12px 0 0">En <b>Sendalia</b> encontrarás rutas de senderismo, trail, carreras y MTB de toda España, y podrás apuntarte a las salidas de tu club.</p>
         <div class="btns" style="flex-direction:column"><button class="btn pri" id="breg">Crear cuenta y unirme</button><button class="btn" id="bent">Ya tengo cuenta</button></div></div>
       <div class="sub" style="margin:12px 4px">Es gratis. Después de crear tu cuenta y elegir tu nombre de usuario, entrarás en el club.</div>`;
     $('#sheet').classList.add('cfg'); $('#ovl').classList.add('show');
     $('#bx').onclick = close; $('#breg').onclick = () => cuentaPantalla('registro'); $('#bent').onclick = () => cuentaPantalla('entrar');
   }
-  function textoInvClub(c){ return `¡Únete a ${c.nombre} en Mis rutas y trails! Encuentra rutas de senderismo, trail, carreras y MTB de toda España y apúntate a las salidas del club.`; }
+  function textoInvClub(c){ return `¡Únete a ${c.nombre} en Sendalia! Encuentra rutas de senderismo, trail, carreras y MTB de toda España y apúntate a las salidas del club.`; }
   async function compartirClub(c, codigo){
     const url = APP_URL + '#club=' + c.id + (codigo ? '&c=' + codigo : ''), text = textoInvClub(c);
     if(navigator.share){ try { await navigator.share({title: c.nombre, text, url}); } catch(e){} }
@@ -3896,7 +3896,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     $('#sheet').innerHTML = `<div class="cfghead"><button class="cfgx" id="bx" aria-label="Cerrar">✕</button><div class="cfgtitle">${pub ? 'Te han invitado' : 'Evento de club'}</div><span style="width:44px"></span></div>
       <div class="cfgbox">${pub ? `<div class="frow" style="border:0;padding:0"><div class="date t-${esc(i.tipo || 'senderismo')}">${d ? `<b>${d.getDate()}</b><span>${MESES[d.getMonth()]}</span>` : ''}</div><div class="finfo"><b style="white-space:normal">${esc(i.titulo)}</b><span>${esc(i.club_nombre)}${i.lugar ? ' · ' + esc(i.lugar) : ''}</span></div></div>`
         : `<p style="font-weight:700;font-size:17px;margin:0">${i ? 'Evento solo para socios de ' + esc(i.club_nombre) : 'Evento de un club'}</p><p class="sub">Para verlo tienes que ser socio del club.</p>`}
-        <p class="sub" style="margin:12px 0 0">Crea tu cuenta gratis en <b>Mis rutas y trails</b> para ver todos los detalles y apuntarte.</p>
+        <p class="sub" style="margin:12px 0 0">Crea tu cuenta gratis en <b>Sendalia</b> para ver todos los detalles y apuntarte.</p>
         <div class="btns" style="flex-direction:column"><button class="btn pri" id="breg">Crear cuenta</button><button class="btn" id="bent">Ya tengo cuenta</button></div></div>`;
     $('#sheet').classList.add('cfg'); $('#ovl').classList.add('show');
     $('#bx').onclick = close; $('#breg').onclick = () => cuentaPantalla('registro'); $('#bent').onclick = () => cuentaPantalla('entrar');
@@ -4115,7 +4115,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     }
     // pie
     ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(P, H - P - 82, AN, 2);
-    ctx.fillStyle = '#fff'; ctx.font = `600 34px ${TXT}`; ctx.fillText('Apúntate en la app Mis rutas y trails', P, H - P - 20);
+    ctx.fillStyle = '#fff'; ctx.font = `600 34px ${TXT}`; ctx.fillText('Apúntate en la app Sendalia', P, H - P - 20);
     ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.font = `400 28px ${TXT}`; ctx.textAlign = 'right'; ctx.fillText(e.publico ? 'Evento abierto' : 'Solo socios', W - P, H - P - 20); ctx.textAlign = 'left';
     return cv;
   }
@@ -4317,7 +4317,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     obj[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
     obj[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
     pags.forEach((c, i) => {
-      const pie = `0.42 0.44 0.41 rg BT /F1 8.5 Tf ${M} 24 Td (${pdfTexto('Mis rutas y trails · ' + new Date().toLocaleDateString('es-ES') + ' · Página ' + (i + 1) + ' de ' + n)}) Tj ET`;
+      const pie = `0.42 0.44 0.41 rg BT /F1 8.5 Tf ${M} 24 Td (${pdfTexto('Sendalia · ' + new Date().toLocaleDateString('es-ES') + ' · Página ' + (i + 1) + ' de ' + n)}) Tj ET`;
       const cont = c + '\n' + pie;
       obj[5 + i * 2] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${6 + i * 2} 0 R >>`;
       obj[6 + i * 2] = `<< /Length ${cont.length} >>\nstream\n${cont}\nendstream`;
@@ -4532,7 +4532,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     }
     // ---- pie: banda de color ----
     ctx.fillStyle = ac; ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(0, H - FOOT + 18); ctx.lineTo(W, H - FOOT - 18); ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = OSC; encaja('APÚNTATE EN LA APP MIS RUTAS Y TRAILS', AN - 240, 46, z => `italic 800 ${z}px ${CON}`); ctx.fillText('APÚNTATE EN LA APP MIS RUTAS Y TRAILS', P, H - 34);
+    ctx.fillStyle = OSC; encaja('APÚNTATE EN LA APP SENDALIA', AN - 240, 46, z => `italic 800 ${z}px ${CON}`); ctx.fillText('APÚNTATE EN LA APP SENDALIA', P, H - 34);
     ctx.font = `800 24px ${TX}`; ctx.textAlign = 'right'; ctx.fillText(e.publico ? 'EVENTO ABIERTO' : 'SOLO SOCIOS', W - P, H - 38); ctx.textAlign = 'left';
     return cv;
   }
@@ -4658,7 +4658,7 @@ return {QRCode: M['index'], ECL: M['QRErrorCorrectLevel']}; })();
     let noPuede = '';
     if(!sesion) noPuede = 'Para recibir notificaciones en el móvil, entra con tu cuenta.';
     else if(!pushSoportado()) noPuede = esIOS() && !instalada() ? 'En iPhone las notificaciones solo funcionan con la app instalada: en Safari pulsa <b>Compartir</b> › <b>Añadir a pantalla de inicio</b> y ábrela desde el icono.' : 'Este navegador no permite notificaciones.';
-    else if(perm === 'denied') noPuede = 'Has bloqueado las notificaciones. Actívalas en los ajustes del móvil (Ajustes › Notificaciones › Mis rutas y trails) y vuelve aquí.';
+    else if(perm === 'denied') noPuede = 'Has bloqueado las notificaciones. Actívalas en los ajustes del móvil (Ajustes › Notificaciones › Sendalia) y vuelve aquí.';
     const movilOn = !!n.movil && !!sub, agendaOn = !!n.agenda && !!sub;
     const sw = (id, on, titulo, sub2, dis) => `<label class="sw"><span><b>${titulo}</b><span class="cfgsub">${sub2}</span></span><input type="checkbox" id="${id}" ${on ? 'checked' : ''} ${dis ? 'disabled' : ''}><i></i></label>`;
     cfgPage('Notificaciones', `

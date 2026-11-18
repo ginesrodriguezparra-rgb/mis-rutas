@@ -1,5 +1,5 @@
-// Mis rutas y trails: funciona sin conexión y se actualiza sola
-const CACHE = 'mis-rutas-v4';
+// Sendalia: funciona sin conexión y se actualiza sola
+const CACHE = 'mis-rutas-v5';
 const BASE = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'eventos.json'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(BASE)).then(() => self.skipWaiting()));
@@ -30,7 +30,7 @@ self.addEventListener('fetch', e => {
 self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch(err){ d = {body: e.data ? e.data.text() : ''}; }
-  e.waitUntil(self.registration.showNotification(d.title || 'Mis rutas y trails', {
+  e.waitUntil(self.registration.showNotification(d.title || 'Sendalia', {
     body: d.body || 'Hay rutas nuevas para ti', icon: 'icon-192.png', badge: 'icon-192.png',
     tag: d.tag || 'rutas', data: {url: d.url || './#nuevas'}
   }));
