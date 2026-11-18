@@ -915,7 +915,7 @@ a{color:var(--green)}
       <div class="cfglabel">Webs de eventos que se revisan (${(state.fuentes || []).length})</div>
       <div class="cfgbox">${(state.fuentes || []).map(f => `<a class="fuente" href="${escUrl(f.url)}" target="_blank" rel="noopener"><b>${esc(f.nombre)} ↗</b>${f.zona ? `<span>${esc(f.zona)}</span>` : ''}</a>`).join('') || '<span class="sub">—</span>'}
         <div class="sub" style="margin-top:10px">${n} eventos próximos en el buscador${state.webActualizado ? ' · última actualización: ' + esc(state.webActualizado) : ''}.</div></div>
-      <div class="cfgfoot"><span>Versión 2.0</span><span>Contacto: <a href="mailto:misrutasytrail@gmail.com" style="color:var(--green)">misrutasytrail@gmail.com</a></span></div>`, true);
+      <div class="cfgfoot"><span>Versión 2.0</span><span>Contacto: <a href="mailto:sendalia.app@gmail.com" style="color:var(--green)">sendalia.app@gmail.com</a></span></div>`, true);
   }
   function cfgNotifAntigua(){
     const d = avisoDias(), opts = [[0,'No avisarme'],[3,'3 días antes'],[7,'7 días antes'],[10,'10 días antes'],[15,'15 días antes']];
@@ -928,7 +928,7 @@ a{color:var(--green)}
   }
   // ---------- Centro de ayuda, condiciones de uso y política de privacidad ----------
   const LEGAL_FECHA = '12 de noviembre de 2026';
-  const MAIL = '<a href="mailto:misrutasytrail@gmail.com">misrutasytrail@gmail.com</a>';
+  const MAIL = '<a href="mailto:sendalia.app@gmail.com">sendalia.app@gmail.com</a>';
   const sec = (t, html, abierto) => `<details class="hsec"${abierto ? ' open' : ''}><summary>${t}</summary><div>${html}</div></details>`;
   function cfgAyuda(){
     cfgPage('Centro de ayuda', `<div class="sub" style="margin:0 4px 10px">Toca cada apartado para ver cómo funciona.</div><div class="cfgbox help hlist">
